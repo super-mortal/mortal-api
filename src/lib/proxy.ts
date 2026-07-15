@@ -41,7 +41,13 @@ export async function callUpstream(
     body: JSON.stringify(body),
   });
   const duration = Date.now() - start;
-  if (!res.ok) throw new Error(`Upstream error ${res.status}: ${await res.text()}`);
+  if (!res.ok) {
+    const text = await res.text();
+    const err: any = new Error(text);
+    err.status = res.status;
+    err.body = text;
+    throw err;
+  }
 
   const data = await res.json() as any;
   const usagePrompt = data.usage?.prompt_tokens ?? estimateTokens(JSON.stringify(relayReq.messages));
@@ -79,7 +85,13 @@ export async function callUpstreamStreaming(
     body: JSON.stringify(body),
   });
   const duration = Date.now() - start;
-  if (!res.ok) throw new Error(`Upstream error ${res.status}: ${await res.text()}`);
+  if (!res.ok) {
+    const text = await res.text();
+    const err: any = new Error(text);
+    err.status = res.status;
+    err.body = text;
+    throw err;
+  }
   if (!res.body) throw new Error('No response body');
 
   return { stream: res.body, duration };
