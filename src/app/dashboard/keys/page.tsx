@@ -74,19 +74,19 @@ export default function KeysPage() {
     const chModelIds = new Set(chModels.map((m: any) => m.id));
     const aliases = (d.aliases || []).filter((a: any) => a.is_active);
 
-    // 哪些 channel_model 有别名
-    const aliasedModelIds = new Set(
-      aliases.filter((a: any) => chModelIds.has(a.channel_model_id)).map((a: any) => a.channel_model_id)
+    // 哪些 model_id 字符串有别名（跨渠道统一过滤）
+    const aliasedModelNames = new Set(
+      aliases.filter((a: any) => a.model_id).map((a: any) => a.model_id)
     );
 
-    // 别名作为选项
+    // 别名作为选项（只取当前渠道相关的）
     const aliasOptions = aliases
       .filter((a: any) => chModelIds.has(a.channel_model_id))
       .map((a: any) => a.alias_name);
 
-    // 原始 model_id 中排除有别名的那部分
+    // 原始 model_id 中排除有别名的那部分（按 model_id 字符串判断）
     const nativeOptions = chModels
-      .filter((m: any) => !aliasedModelIds.has(m.id))
+      .filter((m: any) => !aliasedModelNames.has(m.model_id))
       .map((m: any) => m.model_id);
 
     return [...new Set([...aliasOptions, ...nativeOptions])].sort();
@@ -196,119 +196,140 @@ export default function KeysPage() {
       </div>
 
       {/* Create Modal */}
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="创建 API Key">
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs text-gray-500 mb-1.5">名称</label>
-            <input value={newName} onChange={(e) => setNewName(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" placeholder="My Key" />
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} title={chPickerOpen && chPickerMode === 'create' ? '选择渠道' : '创建 API Key'}>
+        {chPickerOpen && chPickerMode === 'create' ? (
+          <div className="space-y-3">
+            <p className="text-xs text-gray-500">勾选此 Key 可以使用的渠道，留空=全部可用</p>
+            <div className="max-h-60 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+              {channels.map(ch => {
+                const checked = chPickerSelected.includes(ch.id);
+                return (
+                  <label key={ch.id} className={'flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition-colors text-sm ' + (checked ? 'bg-indigo-50 border border-indigo-200' : 'bg-gray-50 border border-gray-100 hover:border-gray-200')}>
+                    <input type="checkbox" checked={checked} onChange={() => {
+                      setChPickerSelected(prev => checked ? prev.filter(x => x !== ch.id) : [...prev, ch.id]);
+                    }} className="w-3.5 h-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 shrink-0" />
+                    <span className="text-xs text-gray-700 truncate">{ch.name}</span>
+                  </label>
+                );
+              })}
+              {channels.length === 0 && <p className="text-xs text-gray-400 text-center py-4 col-span-full">暂无渠道</p>}
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={confirmChannels} className="flex-1 px-4 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors">确认</button>
+              <button onClick={() => setChPickerOpen(false)} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">取消</button>
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+        ) : (
+          <div className="space-y-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5">额度上限 (0=无限制)</label>
-              <input type="number" value={newBalance} onChange={(e) => setNewBalance(Number(e.target.value))}
-                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+              <label className="block text-xs text-gray-500 mb-1.5">名称</label>
+              <input value={newName} onChange={(e) => setNewName(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" placeholder="My Key" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1.5">额度上限 (0=无限制)</label>
+                <input type="number" value={newBalance} onChange={(e) => setNewBalance(Number(e.target.value))}
+                  className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1.5">有效天数 <span className="text-gray-400">（留空=永久有效）</span></label>
+                <input type="number" min="1" value={newExpiryDays} onChange={(e) => setNewExpiryDays(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" placeholder="留空=永久有效" />
+              </div>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5">有效天数 <span className="text-gray-400">（留空=永久有效）</span></label>
-              <input type="number" min="1" value={newExpiryDays} onChange={(e) => setNewExpiryDays(e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" placeholder="留空=永久有效" />
+              <label className="block text-xs text-gray-500 mb-1.5">允许的渠道 <span className="text-gray-400">（留空=全部渠道）</span></label>
+              <button onClick={() => openChPicker('create')}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-gray-200 text-sm hover:bg-gray-50 transition-colors">
+                <span className="text-gray-700">
+                  {newAllowedChannels.length === 0 ? '点击选择渠道...' : '已选择 ' + newAllowedChannels.length + ' 个渠道'}
+                </span>
+                <InlineIcon name="chevronDown" className="w-4 h-4 text-gray-400" />
+              </button>
+              {newAllowedChannels.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {newAllowedChannels.map(cId => {
+                    const ch = channels.find(c => c.id === cId);
+                    return (
+                      <span key={cId} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-[10px] font-mono">
+                        {ch?.name || cId}
+                        <button onClick={() => {
+                          const next = newAllowedChannels.filter(x => x !== cId);
+                          setNewAllowedChannels(next);
+                          loadCreateModels(next);
+                        }} className="hover:text-red-500"><InlineIcon name="x" className="w-2.5 h-2.5" /></button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1.5">允许的渠道 <span className="text-gray-400">（留空=全部渠道）</span></label>
-            <button onClick={() => openChPicker('create')}
-              className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-gray-200 text-sm hover:bg-gray-50 transition-colors">
-              <span className="text-gray-700">
-                {newAllowedChannels.length === 0 ? '点击选择渠道...' : '已选择 ' + newAllowedChannels.length + ' 个渠道'}
-              </span>
-              <InlineIcon name="chevronDown" className="w-4 h-4 text-gray-400" />
-            </button>
-            {newAllowedChannels.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {newAllowedChannels.map(cId => {
-                  const ch = channels.find(c => c.id === cId);
-                  return (
-                    <span key={cId} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-[10px] font-mono">
-                      {ch?.name || cId}
-                      <button onClick={() => {
-                        const next = newAllowedChannels.filter(x => x !== cId);
-                        setNewAllowedChannels(next);
-                        loadCreateModels(next);
-                      }} className="hover:text-red-500"><InlineIcon name="x" className="w-2.5 h-2.5" /></button>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5">允许的模型 <span className="text-gray-400">（基于选择的渠道，留空=全部可用）</span></label>
+              {newAllowedChannels.length === 0 ? (
+                <div className="text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">请先选择渠道</div>
+              ) : modelLoading ? (
+                <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-2.5"><InlineIcon name="loaderCircle" className="w-3.5 h-3.5 animate-spin" /> 加载模型...</div>
+              ) : (
+                <ComboBox
+                  options={createModelOptions}
+                  value=""
+                  onChange={() => {}}
+                  allowCustom={true}
+                  placeholder="搜索模型名称后回车添加..."
+                  emptyText="该渠道无可用模型"
+                  multi
+                  selectedValues={newAllowedModels}
+                  onSelectionChange={setNewAllowedModels}
+                />
+              )}
+              {newAllowedModels.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {newAllowedModels.map(m => (
+                    <span key={m} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-50 text-amber-700 text-[10px] font-mono">
+                      {m}
+                      <button onClick={() => setNewAllowedModels(newAllowedModels.filter(x => x !== m))} className="hover:text-red-500"><InlineIcon name="x" className="w-2.5 h-2.5" /></button>
                     </span>
-                  );
-                })}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={handleCreate}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors">创建</button>
+              <button onClick={() => setShowCreate(false)}
+                className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">取消</button>
+            </div>
           </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1.5">允许的模型 <span className="text-gray-400">（基于选择的渠道，留空=全部可用）</span></label>
-            {newAllowedChannels.length === 0 ? (
-              <div className="text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">请先选择渠道</div>
-            ) : modelLoading ? (
-              <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-2.5"><InlineIcon name="loaderCircle" className="w-3.5 h-3.5 animate-spin" /> 加载模型...</div>
-            ) : (
-              <ComboBox
-                options={createModelOptions}
-                value=""
-                onChange={() => {}}
-                allowCustom={true}
-                placeholder="搜索模型名称后回车添加..."
-                emptyText="该渠道无可用模型"
-                multi
-                selectedValues={newAllowedModels}
-                onSelectionChange={setNewAllowedModels}
-              />
-            )}
-            {newAllowedModels.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {newAllowedModels.map(m => (
-                  <span key={m} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-50 text-amber-700 text-[10px] font-mono">
-                    {m}
-                    <button onClick={() => setNewAllowedModels(newAllowedModels.filter(x => x !== m))} className="hover:text-red-500"><InlineIcon name="x" className="w-2.5 h-2.5" /></button>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="flex gap-2 pt-1">
-            <button onClick={handleCreate}
-              className="flex-1 px-4 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors">创建</button>
-            <button onClick={() => setShowCreate(false)}
-              className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">取消</button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Channel Picker Modal */}
-      <Modal open={chPickerOpen} onClose={() => setChPickerOpen(false)} title="选择渠道" portal>
-        <div className="space-y-3">
-          <p className="text-xs text-gray-500">勾选此 Key 可以使用的渠道，留空=全部可用</p>
-          <div className="max-h-60 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-            {channels.map(ch => {
-              const checked = chPickerSelected.includes(ch.id);
-              return (
-                <label key={ch.id} className={'flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition-colors text-sm ' + (checked ? 'bg-indigo-50 border border-indigo-200' : 'bg-gray-50 border border-gray-100 hover:border-gray-200')}>
-                  <input type="checkbox" checked={checked} onChange={() => {
-                    setChPickerSelected(prev => checked ? prev.filter(x => x !== ch.id) : [...prev, ch.id]);
-                  }} className="w-3.5 h-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 shrink-0" />
-                  <span className="text-xs text-gray-700 truncate">{ch.name}</span>
-                </label>
-              );
-            })}
-            {channels.length === 0 && <p className="text-xs text-gray-400 text-center py-4 col-span-full">暂无渠道</p>}
-          </div>
-          <div className="flex gap-2 pt-1">
-            <button onClick={confirmChannels} className="flex-1 px-4 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors">确认</button>
-            <button onClick={() => setChPickerOpen(false)} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">取消</button>
-          </div>
-        </div>
+        )}
       </Modal>
 
       {/* Edit Modal */}
-      <Modal open={!!showEdit} onClose={() => setShowEdit(null)} title="编辑 Key">
-        {showEdit && (
+      <Modal open={!!showEdit} onClose={() => setShowEdit(null)} title={chPickerOpen && chPickerMode === 'edit' ? '选择渠道' : '编辑 Key'}>
+        {showEdit && (chPickerOpen && chPickerMode === 'edit' ? (
+          <div className="space-y-3">
+            <p className="text-xs text-gray-500">勾选此 Key 可以使用的渠道，留空=全部可用</p>
+            <div className="max-h-60 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+              {channels.map(ch => {
+                const checked = chPickerSelected.includes(ch.id);
+                return (
+                  <label key={ch.id} className={'flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition-colors text-sm ' + (checked ? 'bg-indigo-50 border border-indigo-200' : 'bg-gray-50 border border-gray-100 hover:border-gray-200')}>
+                    <input type="checkbox" checked={checked} onChange={() => {
+                      setChPickerSelected(prev => checked ? prev.filter(x => x !== ch.id) : [...prev, ch.id]);
+                    }} className="w-3.5 h-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 shrink-0" />
+                    <span className="text-xs text-gray-700 truncate">{ch.name}</span>
+                  </label>
+                );
+              })}
+              {channels.length === 0 && <p className="text-xs text-gray-400 text-center py-4 col-span-full">暂无渠道</p>}
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={confirmChannels} className="flex-1 px-4 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors">确认</button>
+              <button onClick={() => setChPickerOpen(false)} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">取消</button>
+            </div>
+          </div>
+        ) : (
           <div className="space-y-4">
             <div>
               <label className="block text-xs text-gray-500 mb-1.5">名称</label>
@@ -392,10 +413,8 @@ export default function KeysPage() {
                 className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">取消</button>
             </div>
           </div>
-        )}
+        ))}
       </Modal>
-
-      {/* Table */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
