@@ -33,9 +33,13 @@ export async function POST(request: NextRequest) {
   try { body = await request.json(); } catch { return NextResponse.json({ error: { message: 'Invalid JSON', type: 'invalid_request_error' } }, { status: 400 }); }
   if (!body.messages?.length) return NextResponse.json({ error: { message: 'messages required', type: 'invalid_request_error' } }, { status: 400 });
 
-  // Determine allowed channel IDs
+  // Determine allowed channel IDs and model names
   const keyAllowedChannels = getAllowedChannelIds(relayKey);
   const hasChannelRestriction = keyAllowedChannels.length > 0;
+  const keyAllowedModels = relayKey.allowed_models
+    ? relayKey.allowed_models.split(',').map(m => m.trim()).filter(Boolean)
+    : [];
+  const hasModelRestriction = keyAllowedModels.length > 0;
 
   const isStream = body.stream === true;
   let modelName = body.model || 'auto';
@@ -48,7 +52,11 @@ export async function POST(request: NextRequest) {
     const all = getModelsForAuto();
     if (!all.length) return NextResponse.json({ error: { message: 'No available channels', type: 'server_error' } }, { status: 503 });
     // Filter by allowed channels if needed
-    const filtered = hasChannelRestriction ? all.filter(m => keyAllowedChannels.includes(m.channel.id)) : all;
+    let filtered = hasChannelRestriction ? all.filter(m => keyAllowedChannels.includes(m.channel.id)) : all;
+    // Filter by allowed models if needed
+    if (hasModelRestriction) {
+      filtered = filtered.filter(m => keyAllowedModels.includes(m.modelId));
+    }
     if (!filtered.length) return NextResponse.json({ error: { message: 'No available channels for this API key', type: 'server_error' } }, { status: 503 });
     const picked = filtered[Math.floor(Math.random() * filtered.length)];
     channel = picked.channel;
@@ -59,6 +67,10 @@ export async function POST(request: NextRequest) {
 
     // Check channel restriction
     if (hasChannelRestriction && !keyAllowedChannels.includes(resolved.channelId)) {
+      return NextResponse.json({ error: { message: `Model "${modelName}" not allowed for this API key`, type: 'invalid_request_error' } }, { status: 403 });
+    }
+    // Check model restriction
+    if (hasModelRestriction && !keyAllowedModels.includes(modelName)) {
       return NextResponse.json({ error: { message: `Model "${modelName}" not allowed for this API key`, type: 'invalid_request_error' } }, { status: 403 });
     }
 
