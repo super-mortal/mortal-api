@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { InlineIcon } from './icon';
 
 interface ModalProps {
@@ -8,10 +9,10 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  zIndex?: string;
+  portal?: boolean;
 }
 
-export function Modal({ open, onClose, title, children, zIndex = 'z-50' }: ModalProps) {
+export function Modal({ open, onClose, title, children, portal }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -33,10 +34,10 @@ export function Modal({ open, onClose, title, children, zIndex = 'z-50' }: Modal
 
   if (!open) return null;
 
-  return (
+  const el = (
     <div
       ref={overlayRef}
-      className={`fixed inset-0 ${zIndex} flex items-start justify-center pt-[10vh] sm:pt-[15vh] px-4 bg-black/30 backdrop-blur-sm animate-in fade-in duration-200`}
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] sm:pt-[15vh] px-4 bg-black/30 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
       <div
@@ -59,4 +60,6 @@ export function Modal({ open, onClose, title, children, zIndex = 'z-50' }: Modal
       </div>
     </div>
   );
+
+  return portal ? createPortal(el, document.body) : el;
 }
