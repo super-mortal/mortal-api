@@ -282,7 +282,7 @@ export default function KeysPage() {
       </Modal>
 
       {/* Channel Picker Modal */}
-      <Modal open={chPickerOpen} onClose={() => setChPickerOpen(false)} title="选择渠道">
+      <Modal open={chPickerOpen} onClose={() => setChPickerOpen(false)} title="选择渠道" zIndex="z-[60]">
         <div className="space-y-3">
           <p className="text-xs text-gray-500">勾选此 Key 可以使用的渠道，留空=全部可用</p>
           <div className="max-h-60 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 gap-1.5">
