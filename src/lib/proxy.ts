@@ -2,7 +2,19 @@
 // LLM Proxy - forwards requests to upstream providers
 // ============================================================
 import { Channel, ChatCompletionRequest, ChatCompletionResponse } from './types';
-import { estimateTokens } from './token-counter';
+
+/** Extract cached_input_tokens from upstream usage response (multi-provider) */
+export function extractCachedInputTokens(usage: any): number {
+  if (!usage) return 0;
+  // DeepSeek: usage.prompt_cache_hit_tokens
+  if (typeof usage.prompt_cache_hit_tokens === 'number') return usage.prompt_cache_hit_tokens;
+  // OpenAI: usage.prompt_tokens_details?.cached_tokens
+  if (usage.prompt_tokens_details?.cached_tokens) return usage.prompt_tokens_details.cached_tokens;
+  // Anthropic: usage.cache_read_input_tokens + usage.cache_creation_input_tokens
+  const anthropicCache = (usage.cache_read_input_tokens || 0) + (usage.cache_creation_input_tokens || 0);
+  if (anthropicCache > 0) return anthropicCache;
+  return 0;
+}
 
 export function getChatUrl(baseUrl: string): string {
   let base = baseUrl.replace(/\/+$/, '');
@@ -30,7 +42,7 @@ export async function callUpstream(
   channel: Channel,
   relayReq: ChatCompletionRequest,
   apiKey: string
-): Promise<{ response: ChatCompletionResponse; duration: number }> {
+): Promise<{ response: ChatCompletionResponse; duration: number; cachedInputTokens: number }> {
   const url = getChatUrl(channel.base_url);
   const body = buildUpstreamBody({ ...relayReq, stream: false });
 
@@ -50,8 +62,9 @@ export async function callUpstream(
   }
 
   const data = await res.json() as any;
-  const usagePrompt = data.usage?.prompt_tokens ?? estimateTokens(JSON.stringify(relayReq.messages));
-  const usageCompletion = data.usage?.completion_tokens ?? estimateTokens(data.choices?.[0]?.message?.content || '');
+  const usagePrompt = data.usage?.prompt_tokens ?? 0;
+  const usageCompletion = data.usage?.completion_tokens ?? 0;
+  const cachedInputTokens = extractCachedInputTokens(data.usage);
 
   return {
     response: {
@@ -67,6 +80,7 @@ export async function callUpstream(
       usage: { prompt_tokens: usagePrompt, completion_tokens: usageCompletion, total_tokens: usagePrompt + usageCompletion },
     },
     duration,
+    cachedInputTokens,
   };
 }
 

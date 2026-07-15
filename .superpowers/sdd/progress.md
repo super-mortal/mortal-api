@@ -5,3 +5,4 @@ Minor: Task 3 log error_message may be long (raw err.body); let/const style per 
 Task 4: complete (commits fb07a85..f0ec8da, review clean)
 Task 5: complete (commits f0ec8da..898a536, review clean)
 --- All 5 tasks complete ---
+Fix commit: 8af50ff (dedup + const fixes from final review)

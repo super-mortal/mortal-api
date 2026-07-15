@@ -13,6 +13,7 @@ export function createCallLog(data: {
   channel_name: string;
   prompt_tokens: number;
   completion_tokens: number;
+  cached_input_tokens?: number;
   cost?: number;
   status: string;
   error_message?: string | null;
@@ -21,10 +22,11 @@ export function createCallLog(data: {
   const db = getDb();
   const id = nanoid(16);
   const total = data.prompt_tokens + data.completion_tokens;
+  const cachedInput = data.cached_input_tokens || 0;
   db.prepare(`
     INSERT INTO call_logs (id, relay_key_id, relay_key_name, model, channel_id, channel_name,
-      prompt_tokens, completion_tokens, total_tokens, cost, status, error_message, ip)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      prompt_tokens, completion_tokens, cached_input_tokens, total_tokens, cost, status, error_message, ip)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     data.relay_key_id,
@@ -34,6 +36,7 @@ export function createCallLog(data: {
     data.channel_name,
     data.prompt_tokens,
     data.completion_tokens,
+    cachedInput,
     total,
     data.cost,
     data.status,

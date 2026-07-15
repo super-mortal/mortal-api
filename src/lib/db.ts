@@ -119,6 +119,11 @@ function initSchema(db: Database.Database) {
       CREATE INDEX IF NOT EXISTS idx_model_aliases_alias ON model_aliases(alias_name);
     `);
   }
+
+  // Migration: add cached_input_tokens column to call_logs
+  if (!cols.find(c => c.name === 'cached_input_tokens')) {
+    db.exec("ALTER TABLE call_logs ADD COLUMN cached_input_tokens INTEGER NOT NULL DEFAULT 0");
+  }
 }
 
 export function closeDb() {

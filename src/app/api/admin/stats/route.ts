@@ -54,6 +54,8 @@ export async function GET(request: NextRequest) {
       COALESCE(SUM(prompt_tokens), 0) as total_prompt_tokens,
       COALESCE(SUM(completion_tokens), 0) as total_completion_tokens,
       COALESCE(SUM(total_tokens), 0) as total_tokens,
+      COALESCE(SUM(cached_input_tokens), 0) as total_cached_input_tokens,
+      COALESCE(SUM(prompt_tokens - cached_input_tokens), 0) as total_uncached_input_tokens,
       COALESCE(SUM(cost), 0) as total_cost
     FROM call_logs ${whereClause}
   `).get(...params) as any;
@@ -63,6 +65,9 @@ export async function GET(request: NextRequest) {
       date(created_at) as date,
       COUNT(*) as calls,
       COALESCE(SUM(total_tokens), 0) as tokens,
+      COALESCE(SUM(completion_tokens), 0) as completion_tokens,
+      COALESCE(SUM(cached_input_tokens), 0) as cached_tokens,
+      COALESCE(SUM(prompt_tokens - cached_input_tokens), 0) as uncached_tokens,
       COALESCE(SUM(cost), 0) as cost
     FROM call_logs ${whereClause}
     GROUP BY date(created_at)
@@ -73,7 +78,10 @@ export async function GET(request: NextRequest) {
     SELECT
       model,
       COUNT(*) as calls,
-      COALESCE(SUM(total_tokens), 0) as tokens
+      COALESCE(SUM(total_tokens), 0) as tokens,
+      COALESCE(SUM(completion_tokens), 0) as completion_tokens,
+      COALESCE(SUM(cached_input_tokens), 0) as cached_tokens,
+      COALESCE(SUM(prompt_tokens - cached_input_tokens), 0) as uncached_tokens
     FROM call_logs ${whereClause}
     GROUP BY model
     ORDER BY calls DESC
@@ -85,7 +93,10 @@ export async function GET(request: NextRequest) {
       SELECT
         strftime('%H', created_at) as hour,
         COUNT(*) as calls,
-        COALESCE(SUM(total_tokens), 0) as tokens
+        COALESCE(SUM(total_tokens), 0) as tokens,
+        COALESCE(SUM(completion_tokens), 0) as completion_tokens,
+        COALESCE(SUM(cached_input_tokens), 0) as cached_tokens,
+        COALESCE(SUM(prompt_tokens - cached_input_tokens), 0) as uncached_tokens
       FROM call_logs ${whereClause}
       GROUP BY hour
       ORDER BY hour ASC

@@ -57,7 +57,9 @@ export interface CallLog {
   channel_name: string;
   prompt_tokens: number;
   completion_tokens: number;
+  cached_input_tokens: number;
   total_tokens: number;
+  cost?: number;
   status: string;
   error_message: string | null;
   ip: string;

@@ -11,10 +11,12 @@ import {
 interface DashboardData {
   stats: {
     total_calls: number; success_calls: number; fail_calls: number;
-    total_prompt_tokens: number; total_completion_tokens: number; total_tokens: number; total_cost: number;
+    total_prompt_tokens: number; total_completion_tokens: number; total_tokens: number;
+    total_cached_input_tokens: number; total_uncached_input_tokens: number;
+    total_cost: number;
   };
-  dailyStats: { date: string; calls: number; tokens: number; cost: number }[];
-  modelStats: { model: string; calls: number; tokens: number }[];
+  dailyStats: { date: string; calls: number; tokens: number; completion_tokens: number; cached_tokens: number; uncached_tokens: number; cost: number }[];
+  modelStats: { model: string; calls: number; tokens: number; completion_tokens: number; cached_tokens: number; uncached_tokens: number }[];
 }
 
 interface RelayKey { id: string; name: string; key: string; }
@@ -86,9 +88,10 @@ export default function DashboardPage() {
     { label: '总调用次数', value: data.stats.total_calls.toLocaleString(), sub: `成功率 ${successRate}%`, color: 'text-gray-900', icon: 'activity' },
     { label: '成功', value: data.stats.success_calls.toLocaleString(), sub: '调用', color: 'text-emerald-600', icon: 'check' },
     { label: '失败', value: data.stats.fail_calls.toLocaleString(), sub: '调用', color: data.stats.fail_calls > 0 ? 'text-red-500' : 'text-gray-900', icon: 'x' },
-    { label: '总 Token', value: data.stats.total_tokens.toLocaleString(), sub: `费用 ${data.stats.total_cost.toFixed(4)}`, color: 'text-indigo-600', icon: 'database' },
-    { label: 'Prompt', value: data.stats.total_prompt_tokens.toLocaleString(), sub: '输入 Token', color: 'text-violet-500', icon: 'arrowRight' },
-    { label: 'Completion', value: data.stats.total_completion_tokens.toLocaleString(), sub: '输出 Token', color: 'text-purple-500', icon: 'checkCheck' },
+    { label: '总 Tokens', value: data.stats.total_tokens.toLocaleString(), sub: `费用 ${data.stats.total_cost.toFixed(4)}`, color: 'text-indigo-600', icon: 'database' },
+    { label: '输出 Tokens', value: data.stats.total_completion_tokens.toLocaleString(), sub: 'Completion', color: 'text-purple-500', icon: 'checkCheck' },
+    { label: '命中缓存', value: data.stats.total_cached_input_tokens.toLocaleString(), sub: '缓存输入 Tokens', color: 'text-emerald-500', icon: 'zap' },
+    { label: '未命中缓存', value: data.stats.total_uncached_input_tokens.toLocaleString(), sub: '未缓存输入 Tokens', color: 'text-amber-500', icon: 'flame' },
   ];
 
   const pieData = data.modelStats.map((m, i) => ({ name: m.model, value: m.calls, color: COLORS[i % COLORS.length] }));
@@ -131,7 +134,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3">
         {statCards.map((c) => (
           <div key={c.label} className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4 hover:shadow-sm transition-shadow">
             <div className={`text-lg sm:text-xl font-semibold ${c.color} truncate`}>{c.value}</div>
@@ -169,7 +172,7 @@ export default function DashboardPage() {
         </div>
         <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
           <h3 className="text-sm font-semibold text-gray-900 mb-1">每日 Token 消耗</h3>
-          <p className="text-xs text-gray-400 mb-4">按日期统计的 Token 用量</p>
+          <p className="text-xs text-gray-400 mb-4">输出 / 缓存输入 / 未缓存输入</p>
           {data.dailyStats.length > 0 ? (
             <div className="h-52 sm:h-64">
               <ResponsiveContainer width="100%" height="100%">
@@ -177,11 +180,17 @@ export default function DashboardPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                   <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(v) => v.slice(5)} axisLine={{ stroke: '#e2e8f0' }} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={36} />
-                  <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
-                    formatter={(value: any) => [Number(value).toLocaleString(), 'Token']} />
-                  <Bar dataKey="tokens" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                  <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }} />
+                  <Bar dataKey="uncached_tokens" name="未缓存输入" fill="#f59e0b" stackId="a" />
+                  <Bar dataKey="cached_tokens" name="缓存输入" fill="#22c55e" stackId="a" />
+                  <Bar dataKey="completion_tokens" name="输出" fill="#8b5cf6" stackId="a" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
+              <div className="flex items-center gap-3 sm:gap-4 mt-3 text-[10px] sm:text-xs text-gray-500">
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#f59e0b]" /> 未缓存输入</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#22c55e]" /> 缓存输入</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#8b5cf6]" /> 输出</span>
+              </div>
             </div>
           ) : (
             <div className="h-52 sm:h-64 flex items-center justify-center text-sm text-gray-400">暂无数据</div>
@@ -221,7 +230,7 @@ export default function DashboardPage() {
         </div>
         <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
           <h3 className="text-sm font-semibold text-gray-900 mb-1">Token 构成</h3>
-          <p className="text-xs text-gray-400 mb-4">Prompt vs Completion</p>
+          <p className="text-xs text-gray-400 mb-4">输出 / 缓存输入 / 未缓存输入</p>
           {data.dailyStats.length > 0 ? (
             <div className="h-44 sm:h-48">
               <ResponsiveContainer width="100%" height="100%">
@@ -230,16 +239,22 @@ export default function DashboardPage() {
                   <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={(v) => v.slice(5)} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={26} />
                   <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }} />
-                  <Bar dataKey="tokens" fill="#a78bfa" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="uncached_tokens" name="未缓存输入" fill="#f59e0b" stackId="a" />
+                  <Bar dataKey="cached_tokens" name="缓存输入" fill="#22c55e" stackId="a" />
+                  <Bar dataKey="completion_tokens" name="输出" fill="#a78bfa" stackId="a" radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           ) : (
             <div className="h-44 sm:h-48 flex items-center justify-center text-sm text-gray-400">暂无数据</div>
           )}
-          <div className="flex items-center gap-2 sm:gap-4 mt-2 sm:mt-3 text-[10px] sm:text-xs text-gray-500">
-            <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#a78bfa]" /> Total</div>
-            <span className="font-mono text-gray-700">{data.stats.total_tokens.toLocaleString()}</span>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 sm:mt-3 text-[10px] sm:text-xs text-gray-500">
+            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#f59e0b]" /> 未缓存</span>
+            <span className="font-mono text-gray-700">{data.stats.total_uncached_input_tokens.toLocaleString()}</span>
+            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#22c55e]" /> 缓存</span>
+            <span className="font-mono text-gray-700">{data.stats.total_cached_input_tokens.toLocaleString()}</span>
+            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#a78bfa]" /> 输出</span>
+            <span className="font-mono text-gray-700">{data.stats.total_completion_tokens.toLocaleString()}</span>
           </div>
         </div>
         <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">

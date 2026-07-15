@@ -10,7 +10,7 @@ import {
   resolveChannelApiKey,
   getChannelById,
 } from '@/lib/channels';
-import { callUpstream, callUpstreamStreaming } from '@/lib/proxy';
+import { callUpstream, callUpstreamStreaming, extractCachedInputTokens } from '@/lib/proxy';
 import { createCallLog } from '@/lib/logs';
 import { ChatCompletionRequest, ChatCompletionChunk } from '@/lib/types';
 
@@ -111,6 +111,7 @@ export async function POST(request: NextRequest) {
       const writer = recordingStream.writable.getWriter();
       const reader = result.stream.getReader();
       let totalCompletionTokens = 0;
+      let cachedInputTokens = 0;
 
       (async () => {
         try {
@@ -122,6 +123,7 @@ export async function POST(request: NextRequest) {
                 model: modelName, channel_id: channel.id, channel_name: channel.name,
                 prompt_tokens: body.messages ? Math.ceil(JSON.stringify(body.messages).length / 2) : 0,
                 completion_tokens: totalCompletionTokens,
+                cached_input_tokens: cachedInputTokens,
                 status: 'success',
                 ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
               });
@@ -136,8 +138,13 @@ export async function POST(request: NextRequest) {
               if (data === '[DONE]') continue;
               try {
                 const parsed = JSON.parse(data);
-                if (parsed.usage?.completion_tokens) totalCompletionTokens = parsed.usage.completion_tokens;
-                else for (const choice of parsed.choices || []) { if (choice.delta?.content) totalCompletionTokens += Math.ceil(choice.delta.content.length / 2); }
+                if (parsed.usage) {
+                  if (parsed.usage.completion_tokens) totalCompletionTokens = parsed.usage.completion_tokens;
+                  const cacheTokens = extractCachedInputTokens(parsed.usage);
+                  if (cacheTokens > 0) cachedInputTokens = cacheTokens;
+                } else {
+                  for (const choice of parsed.choices || []) { if (choice.delta?.content) totalCompletionTokens += Math.ceil(choice.delta.content.length / 2); }
+                }
               } catch {}
             }
             await writer.write(value);
@@ -147,6 +154,7 @@ export async function POST(request: NextRequest) {
             relay_key_id: relayKey.id, relay_key_name: relayKey.name,
             model: modelName, channel_id: channel.id, channel_name: channel.name,
             prompt_tokens: 0, completion_tokens: totalCompletionTokens,
+            cached_input_tokens: cachedInputTokens,
             status: 'fail', error_message: err instanceof Error ? err.message : 'Stream error',
             ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
           });
@@ -165,6 +173,7 @@ export async function POST(request: NextRequest) {
         relay_key_id: relayKey.id, relay_key_name: relayKey.name,
         model: modelName, channel_id: channel.id, channel_name: channel.name,
         prompt_tokens, completion_tokens,
+        cached_input_tokens: result.cachedInputTokens,
         status: 'success',
         ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
       });
