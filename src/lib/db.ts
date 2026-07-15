@@ -65,7 +65,7 @@ function initSchema(db: Database.Database) {
 
     CREATE TABLE IF NOT EXISTS model_aliases (
       id TEXT PRIMARY KEY,
-      alias_name TEXT NOT NULL UNIQUE,
+      alias_name TEXT NOT NULL,
       channel_model_id TEXT NOT NULL,
       is_active INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -98,6 +98,26 @@ function initSchema(db: Database.Database) {
   const cols = db.prepare("PRAGMA table_info('call_logs')").all() as { name: string }[];
   if (!cols.find(c => c.name === 'cost')) {
     db.exec("ALTER TABLE call_logs ADD COLUMN cost REAL");
+  }
+
+  // Migration: remove UNIQUE constraint from model_aliases.alias_name
+  const aliasIndexes = db.prepare("PRAGMA index_list('model_aliases')").all() as any[];
+  const hasUniqueOnAlias = aliasIndexes.some((idx: any) => idx.unique === 1 && idx.origin === 'u');
+  if (hasUniqueOnAlias) {
+    db.exec(`
+      CREATE TABLE model_aliases_migrated (
+        id TEXT PRIMARY KEY,
+        alias_name TEXT NOT NULL,
+        channel_model_id TEXT NOT NULL,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (channel_model_id) REFERENCES channel_models(id) ON DELETE CASCADE
+      );
+      INSERT INTO model_aliases_migrated SELECT * FROM model_aliases;
+      DROP TABLE model_aliases;
+      ALTER TABLE model_aliases_migrated RENAME TO model_aliases;
+      CREATE INDEX IF NOT EXISTS idx_model_aliases_alias ON model_aliases(alias_name);
+    `);
   }
 }
 

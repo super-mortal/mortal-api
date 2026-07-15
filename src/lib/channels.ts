@@ -91,8 +91,6 @@ export function listModelAliases(): ModelAlias[] {
 
 export function createModelAlias(aliasName: string, channelModelId: string): ModelAlias | null {
   const db = getDb();
-  const existing = db.prepare('SELECT id FROM model_aliases WHERE alias_name = ?').get(aliasName);
-  if (existing) return null;
   const id = nanoid(16);
   db.prepare('INSERT INTO model_aliases (id, alias_name, channel_model_id, is_active) VALUES (?, ?, ?, 1)').run(id, aliasName, channelModelId);
   return db.prepare('SELECT * FROM model_aliases WHERE id = ?').get(id) as ModelAlias;
