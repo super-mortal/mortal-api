@@ -115,11 +115,13 @@ export function resolveModel(modelName: string): { channelId: string; upstreamMo
   `).get(modelName) as any;
   if (alias) return { channelId: alias.channel_id, upstreamModelId: alias.model_id };
 
-  // 2. Check direct model_id match (only if channel is active)
+  // 2. Check direct model_id match (only if channel is active, NO alias exists)
   const model = db.prepare(`
     SELECT cm.*, c.is_active as ch_active FROM channel_models cm
     LEFT JOIN channels c ON c.id = cm.channel_id
+    LEFT JOIN model_aliases ma ON ma.channel_model_id = cm.id AND ma.is_active = 1
     WHERE cm.model_id = ? AND cm.is_active = 1 AND c.is_active = 1
+      AND ma.id IS NULL
   `).get(modelName) as any;
   if (model) return { channelId: model.channel_id, upstreamModelId: model.model_id };
 
