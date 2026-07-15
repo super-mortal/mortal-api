@@ -10,9 +10,10 @@ interface ModalProps {
   title: string;
   children: React.ReactNode;
   portal?: boolean;
+  zIndex?: number;
 }
 
-export function Modal({ open, onClose, title, children, portal }: ModalProps) {
+export function Modal({ open, onClose, title, children, portal, zIndex }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,7 +38,8 @@ export function Modal({ open, onClose, title, children, portal }: ModalProps) {
   const el = (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] sm:pt-[15vh] px-4 bg-black/30 backdrop-blur-sm animate-in fade-in duration-200"
+      className={`fixed inset-0 flex items-start justify-center pt-[10vh] sm:pt-[15vh] px-4 bg-black/30 backdrop-blur-sm animate-in fade-in duration-200 ${zIndex ? '' : 'z-50'}`}
+      style={zIndex ? { zIndex } : undefined}
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
       <div
