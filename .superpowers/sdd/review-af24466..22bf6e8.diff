@@ -1,0 +1,72 @@
+# Review package: af24466..22bf6e8
+
+## Commits
+22bf6e8 feat: callUpstream() throws structured error with status + body
+
+## Files changed
+ src/lib/proxy.ts | 16 ++++++++++++++--
+ 1 file changed, 14 insertions(+), 2 deletions(-)
+
+## Diff
+diff --git a/src/lib/proxy.ts b/src/lib/proxy.ts
+index 721f1cb..efcf83d 100644
+--- a/src/lib/proxy.ts
++++ b/src/lib/proxy.ts
+@@ -34,21 +34,27 @@ export async function callUpstream(
+   const url = getChatUrl(channel.base_url);
+   const body = buildUpstreamBody({ ...relayReq, stream: false });
+ 
+   const start = Date.now();
+   const res = await fetch(url, {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+     body: JSON.stringify(body),
+   });
+   const duration = Date.now() - start;
+-  if (!res.ok) throw new Error(`Upstream error ${res.status}: ${await res.text()}`);
++  if (!res.ok) {
++    const text = await res.text();
++    const err: any = new Error(text);
++    err.status = res.status;
++    err.body = text;
++    throw err;
++  }
+ 
+   const data = await res.json() as any;
+   const usagePrompt = data.usage?.prompt_tokens ?? estimateTokens(JSON.stringify(relayReq.messages));
+   const usageCompletion = data.usage?.completion_tokens ?? estimateTokens(data.choices?.[0]?.message?.content || '');
+ 
+   return {
+     response: {
+       id: data.id || `chatcmpl-${Date.now()}`,
+       object: 'chat.completion',
+       created: data.created || Math.floor(Date.now() / 1000),
+@@ -72,21 +78,27 @@ export async function callUpstreamStreaming(
+   const url = getChatUrl(channel.base_url);
+   const body = buildUpstreamBody({ ...relayReq, stream: true });
+ 
+   const start = Date.now();
+   const res = await fetch(url, {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+     body: JSON.stringify(body),
+   });
+   const duration = Date.now() - start;
+-  if (!res.ok) throw new Error(`Upstream error ${res.status}: ${await res.text()}`);
++  if (!res.ok) {
++    const text = await res.text();
++    const err: any = new Error(text);
++    err.status = res.status;
++    err.body = text;
++    throw err;
++  }
+   if (!res.body) throw new Error('No response body');
+ 
+   return { stream: res.body, duration };
+ }
+ 
+ export async function healthCheckChannel(channel: Channel): Promise<boolean> {
+   try {
+     const url = getChatUrl(channel.base_url);
+     const res = await fetch(url, {
+       method: 'POST',

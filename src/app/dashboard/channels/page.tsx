@@ -324,27 +324,32 @@ export default function ChannelsPage() {
                       const alias = als.length > 0 ? als[0] : null;
                       return (
                         <div key={m.id} className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-3 group shadow-sm hover:border-indigo-200 transition-all">
-                          {/* Left: model_id */}
-                          <code className="text-sm font-semibold text-gray-800 font-mono flex-1 truncate">{m.model_id}</code>
-                          {/* Arrow */}
-                          <InlineIcon name="arrowRight" className="w-4 h-4 text-gray-300 shrink-0" />
-                          {/* Right: alias (or add button) */}
-                          {alias ? (
-                            <div className="flex-1 flex items-center gap-1.5 min-w-0">
-                              <span className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1 font-mono truncate flex-1">{alias.alias_name}</span>
-                              <button onClick={() => deleteAlias(alias.id)} className="p-1 rounded text-red-200 hover:text-red-500 hover:bg-red-50 transition-all shrink-0"><InlineIcon name="x" className="w-3 h-3" /></button>
-                            </div>
-                          ) : (
-                            <button onClick={() => { setAliasChannelModelId(m.id); setAliasName(''); setAliasModal(true); }}
-                              className="flex-1 flex items-center justify-center gap-1 text-xs text-gray-400 border border-dashed border-gray-300 rounded-lg px-2.5 py-1 hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50 transition-all">
-                              <InlineIcon name="plus" className="w-3 h-3" /> 别名</button>
-                          )}
-                          {/* Delete model */}
+                          {/* Left: primary display */}
+                          <div className="flex-1 min-w-0">
+                            {alias ? (
+                              <>
+                                <div className="flex items-center gap-1.5">
+                                  <code className="text-sm font-semibold text-amber-700 font-mono truncate">{alias.alias_name}</code>
+                                  <button onClick={() => deleteAlias(alias.id)} className="p-0.5 rounded text-red-200 hover:text-red-500 hover:bg-red-50 transition-all shrink-0"><InlineIcon name="x" className="w-3 h-3" /></button>
+                                </div>
+                                <div className="text-[10px] text-gray-400 mt-0.5 font-mono">
+                                  <span className="text-gray-300">model: </span>{m.model_id}
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <code className="text-sm font-semibold text-gray-800 font-mono truncate block">{m.model_id}</code>
+                                <button onClick={() => { setAliasChannelModelId(m.id); setAliasName(''); setAliasModal(true); }}
+                                  className="mt-1 inline-flex items-center gap-1 text-[10px] text-gray-400 border border-dashed border-gray-300 rounded px-2 py-0.5 hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50 transition-all">
+                                  <InlineIcon name="plus" className="w-3 h-3" /> 别名</button>
+                              </>
+                            )}
+                          </div>
+                          {/* Right: delete model */}
                           <button onClick={() => deleteModel(m.id)} className="p-1 rounded text-red-200 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all shrink-0"><InlineIcon name="x" className="w-3 h-3" /></button>
                         </div>
                       );
                     })}
-                    {/* Add new alias button at bottom */}
                   </div>
                 ) : (
                   <div className="w-full py-6 text-center text-sm text-gray-400">

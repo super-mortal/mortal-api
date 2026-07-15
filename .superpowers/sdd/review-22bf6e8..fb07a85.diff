@@ -1,0 +1,48 @@
+# Review package: 22bf6e8..fb07a85
+
+## Commits
+fb07a85 feat: pass through upstream errors verbatim
+
+## Files changed
+ src/app/api/v1/chat/completions/route.ts | 14 +++++++++++---
+ 1 file changed, 11 insertions(+), 3 deletions(-)
+
+## Diff
+diff --git a/src/app/api/v1/chat/completions/route.ts b/src/app/api/v1/chat/completions/route.ts
+index 1277bd7..f1aae11 100644
+--- a/src/app/api/v1/chat/completions/route.ts
++++ b/src/app/api/v1/chat/completions/route.ts
+@@ -155,22 +155,30 @@ export async function POST(request: NextRequest) {
+         prompt_tokens, completion_tokens,
+         status: 'success',
+         ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+       });
+       if (relayKey.balance > 0) addUsedTokens(relayKey.id, prompt_tokens + completion_tokens);
+       updateChannelHealth(channel.id, 'healthy');
+ 
+       result.response.model = body.model || 'auto';
+       return NextResponse.json(result.response);
+     }
+-  } catch (err) {
++  } catch (err: any) {
+     updateChannelHealth(channel.id, 'unhealthy');
+     createCallLog({
+       relay_key_id: relayKey.id, relay_key_name: relayKey.name,
+       model: modelName, channel_id: channel.id, channel_name: channel.name,
+       prompt_tokens: 0, completion_tokens: 0,
+-      status: 'fail', error_message: err instanceof Error ? err.message : 'Upstream error',
++      status: 'fail', error_message: err.body || (err instanceof Error ? err.message : 'Upstream error'),
+       ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+     });
+-    return NextResponse.json({ error: { message: `Upstream error: ${err instanceof Error ? err.message : ''}`, type: 'server_error' } }, { status: 502 });
++
++    let status = err.status || 502;
++    let errorBody: any;
++    try {
++      errorBody = JSON.parse(err.body || '{}');
++    } catch {
++      errorBody = { error: { message: err.body || err.message || 'Upstream error', type: 'server_error' } };
++    }
++    return NextResponse.json(errorBody, { status });
+   }
+ }

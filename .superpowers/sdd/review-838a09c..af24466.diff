@@ -1,0 +1,43 @@
+# Review package: 838a09c..af24466
+
+## Commits
+af24466 feat: resolveModel() rejects original model_id when alias exists
+
+## Files changed
+ src/lib/channels.ts | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+## Diff
+diff --git a/src/lib/channels.ts b/src/lib/channels.ts
+index 9fd49d6..42c0d80 100644
+--- a/src/lib/channels.ts
++++ b/src/lib/channels.ts
+@@ -108,25 +108,27 @@ export function resolveModel(modelName: string): { channelId: string; upstreamMo
+   const db = getDb();
+ 
+   // 1. Check aliases first
+   const alias = db.prepare(`
+     SELECT ma.*, cm.model_id, cm.channel_id FROM model_aliases ma
+     LEFT JOIN channel_models cm ON cm.id = ma.channel_model_id
+     WHERE ma.alias_name = ? AND ma.is_active = 1
+   `).get(modelName) as any;
+   if (alias) return { channelId: alias.channel_id, upstreamModelId: alias.model_id };
+ 
+-  // 2. Check direct model_id match (only if channel is active)
++  // 2. Check direct model_id match (only if channel is active, NO alias exists)
+   const model = db.prepare(`
+     SELECT cm.*, c.is_active as ch_active FROM channel_models cm
+     LEFT JOIN channels c ON c.id = cm.channel_id
++    LEFT JOIN model_aliases ma ON ma.channel_model_id = cm.id AND ma.is_active = 1
+     WHERE cm.model_id = ? AND cm.is_active = 1 AND c.is_active = 1
++      AND ma.id IS NULL
+   `).get(modelName) as any;
+   if (model) return { channelId: model.channel_id, upstreamModelId: model.model_id };
+ 
+   return null;
+ }
+ 
+ export function getModelsForAuto(): { modelId: string; channel: Channel }[] {
+   const db = getDb();
+   const rows = db.prepare(`
+     SELECT cm.model_id, c.* FROM channel_models cm
