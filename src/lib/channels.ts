@@ -102,10 +102,22 @@ export function deleteModelAlias(id: string): boolean {
 
 // ── Routing ──
 
-export function resolveModel(modelName: string): { channelId: string; upstreamModelId: string } | null {
+export function resolveModel(modelName: string, allowedChannelIds?: string[]): { channelId: string; upstreamModelId: string } | null {
   const db = getDb();
 
-  // 1. Check aliases first
+  // 1. Check aliases — prioritized by allowed channels if provided
+  if (allowedChannelIds && allowedChannelIds.length > 0) {
+    const placeholders = allowedChannelIds.map(() => '?').join(',');
+    const alias = db.prepare(`
+      SELECT ma.*, cm.model_id, cm.channel_id FROM model_aliases ma
+      LEFT JOIN channel_models cm ON cm.id = ma.channel_model_id
+      WHERE ma.alias_name = ? AND ma.is_active = 1
+        AND cm.channel_id IN (${placeholders})
+    `).get(modelName, ...allowedChannelIds) as any;
+    if (alias) return { channelId: alias.channel_id, upstreamModelId: alias.model_id };
+  }
+
+  // 2. Check aliases — fallback to any channel
   const alias = db.prepare(`
     SELECT ma.*, cm.model_id, cm.channel_id FROM model_aliases ma
     LEFT JOIN channel_models cm ON cm.id = ma.channel_model_id
@@ -113,7 +125,7 @@ export function resolveModel(modelName: string): { channelId: string; upstreamMo
   `).get(modelName) as any;
   if (alias) return { channelId: alias.channel_id, upstreamModelId: alias.model_id };
 
-  // 2. Check direct model_id match (only if channel is active, NO alias exists)
+  // 3. Check direct model_id match (only if channel is active, NO alias exists)
   const model = db.prepare(`
     SELECT cm.*, c.is_active as ch_active FROM channel_models cm
     LEFT JOIN channels c ON c.id = cm.channel_id

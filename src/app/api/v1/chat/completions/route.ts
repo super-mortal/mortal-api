@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     channel = picked.channel;
     upstreamModelId = picked.modelId;
   } else {
-    const resolved = resolveModel(modelName);
+    const resolved = resolveModel(modelName, keyAllowedChannels.length > 0 ? keyAllowedChannels : undefined);
     if (!resolved) return NextResponse.json({ error: { message: `Model "${modelName}" not found`, type: 'invalid_request_error' } }, { status: 404 });
 
     // Check channel restriction
