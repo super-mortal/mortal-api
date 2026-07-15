@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
       ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
     });
 
-    let status = err.status || 502;
+    const status = err.status || 502;
     let errorBody: any;
     try {
       errorBody = JSON.parse(err.body || '{}');

@@ -89,7 +89,7 @@ export default function KeysPage() {
       .filter((m: any) => !aliasedModelIds.has(m.id))
       .map((m: any) => m.model_id);
 
-    return [...aliasOptions, ...nativeOptions].sort();
+    return [...new Set([...aliasOptions, ...nativeOptions])].sort();
   }, []);
 
   const loadCreateModels = useCallback(async (chIds: string[]) => {

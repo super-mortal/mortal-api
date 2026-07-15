@@ -1,0 +1,928 @@
+# Full branch review: 838a09c..898a536
+
+## Commits
+898a536 feat: swap alias/model_id display in channel cards
+f0ec8da feat: filter out aliased model_ids in key management UI
+fb07a85 feat: pass through upstream errors verbatim
+22bf6e8 feat: callUpstream() throws structured error with status + body
+af24466 feat: resolveModel() rejects original model_id when alias exists
+
+## Files changed
+ .superpowers/sdd/progress.md                  |  5 ++
+ .superpowers/sdd/review-22bf6e8..fb07a85.diff | 48 ++++++++++++++++++
+ .superpowers/sdd/review-838a09c..af24466.diff | 43 ++++++++++++++++
+ .superpowers/sdd/review-af24466..22bf6e8.diff | 72 +++++++++++++++++++++++++++
+ .superpowers/sdd/review-fb07a85..f0ec8da.diff | 70 ++++++++++++++++++++++++++
+ package-lock.json                             | 45 +++++++----------
+ src/app/api/v1/chat/completions/route.ts      | 14 ++++--
+ src/app/dashboard/channels/page.tsx           | 39 ++++++++-------
+ src/app/dashboard/keys/page.tsx               | 35 +++++++++----
+ src/lib/channels.ts                           |  4 +-
+ src/lib/proxy.ts                              | 16 +++++-
+ 11 files changed, 331 insertions(+), 60 deletions(-)
+
+## Diff
+diff --git a/.superpowers/sdd/progress.md b/.superpowers/sdd/progress.md
+new file mode 100644
+index 0000000..69a073e
+--- /dev/null
++++ b/.superpowers/sdd/progress.md
+@@ -0,0 +1,5 @@
++Task 1: complete (commits 838a09c..af24466, review clean)
++Task 2: complete (commits af24466..22bf6e8, review clean)
++Task 3: complete (commits 22bf6e8..fb07a85, review clean)
++Minor: Task 3 log error_message may be long (raw err.body); let/const style per spec
++Task 4: complete (commits fb07a85..f0ec8da, review clean)
+diff --git a/.superpowers/sdd/review-22bf6e8..fb07a85.diff b/.superpowers/sdd/review-22bf6e8..fb07a85.diff
+new file mode 100644
+index 0000000..bd6c424
+--- /dev/null
++++ b/.superpowers/sdd/review-22bf6e8..fb07a85.diff
+@@ -0,0 +1,48 @@
++# Review package: 22bf6e8..fb07a85
++
++## Commits
++fb07a85 feat: pass through upstream errors verbatim
++
++## Files changed
++ src/app/api/v1/chat/completions/route.ts | 14 +++++++++++---
++ 1 file changed, 11 insertions(+), 3 deletions(-)
++
++## Diff
++diff --git a/src/app/api/v1/chat/completions/route.ts b/src/app/api/v1/chat/completions/route.ts
++index 1277bd7..f1aae11 100644
++--- a/src/app/api/v1/chat/completions/route.ts
+++++ b/src/app/api/v1/chat/completions/route.ts
++@@ -155,22 +155,30 @@ export async function POST(request: NextRequest) {
++         prompt_tokens, completion_tokens,
++         status: 'success',
++         ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
++       });
++       if (relayKey.balance > 0) addUsedTokens(relayKey.id, prompt_tokens + completion_tokens);
++       updateChannelHealth(channel.id, 'healthy');
++ 
++       result.response.model = body.model || 'auto';
++       return NextResponse.json(result.response);
++     }
++-  } catch (err) {
+++  } catch (err: any) {
++     updateChannelHealth(channel.id, 'unhealthy');
++     createCallLog({
++       relay_key_id: relayKey.id, relay_key_name: relayKey.name,
++       model: modelName, channel_id: channel.id, channel_name: channel.name,
++       prompt_tokens: 0, completion_tokens: 0,
++-      status: 'fail', error_message: err instanceof Error ? err.message : 'Upstream error',
+++      status: 'fail', error_message: err.body || (err instanceof Error ? err.message : 'Upstream error'),
++       ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
++     });
++-    return NextResponse.json({ error: { message: `Upstream error: ${err instanceof Error ? err.message : ''}`, type: 'server_error' } }, { status: 502 });
+++
+++    let status = err.status || 502;
+++    let errorBody: any;
+++    try {
+++      errorBody = JSON.parse(err.body || '{}');
+++    } catch {
+++      errorBody = { error: { message: err.body || err.message || 'Upstream error', type: 'server_error' } };
+++    }
+++    return NextResponse.json(errorBody, { status });
++   }
++ }
+diff --git a/.superpowers/sdd/review-838a09c..af24466.diff b/.superpowers/sdd/review-838a09c..af24466.diff
+new file mode 100644
+index 0000000..a2f5617
+--- /dev/null
++++ b/.superpowers/sdd/review-838a09c..af24466.diff
+@@ -0,0 +1,43 @@
++# Review package: 838a09c..af24466
++
++## Commits
++af24466 feat: resolveModel() rejects original model_id when alias exists
++
++## Files changed
++ src/lib/channels.ts | 4 +++-
++ 1 file changed, 3 insertions(+), 1 deletion(-)
++
++## Diff
++diff --git a/src/lib/channels.ts b/src/lib/channels.ts
++index 9fd49d6..42c0d80 100644
++--- a/src/lib/channels.ts
+++++ b/src/lib/channels.ts
++@@ -108,25 +108,27 @@ export function resolveModel(modelName: string): { channelId: string; upstreamMo
++   const db = getDb();
++ 
++   // 1. Check aliases first
++   const alias = db.prepare(`
++     SELECT ma.*, cm.model_id, cm.channel_id FROM model_aliases ma
++     LEFT JOIN channel_models cm ON cm.id = ma.channel_model_id
++     WHERE ma.alias_name = ? AND ma.is_active = 1
++   `).get(modelName) as any;
++   if (alias) return { channelId: alias.channel_id, upstreamModelId: alias.model_id };
++ 
++-  // 2. Check direct model_id match (only if channel is active)
+++  // 2. Check direct model_id match (only if channel is active, NO alias exists)
++   const model = db.prepare(`
++     SELECT cm.*, c.is_active as ch_active FROM channel_models cm
++     LEFT JOIN channels c ON c.id = cm.channel_id
+++    LEFT JOIN model_aliases ma ON ma.channel_model_id = cm.id AND ma.is_active = 1
++     WHERE cm.model_id = ? AND cm.is_active = 1 AND c.is_active = 1
+++      AND ma.id IS NULL
++   `).get(modelName) as any;
++   if (model) return { channelId: model.channel_id, upstreamModelId: model.model_id };
++ 
++   return null;
++ }
++ 
++ export function getModelsForAuto(): { modelId: string; channel: Channel }[] {
++   const db = getDb();
++   const rows = db.prepare(`
++     SELECT cm.model_id, c.* FROM channel_models cm
+diff --git a/.superpowers/sdd/review-af24466..22bf6e8.diff b/.superpowers/sdd/review-af24466..22bf6e8.diff
+new file mode 100644
+index 0000000..3567454
+--- /dev/null
++++ b/.superpowers/sdd/review-af24466..22bf6e8.diff
+@@ -0,0 +1,72 @@
++# Review package: af24466..22bf6e8
++
++## Commits
++22bf6e8 feat: callUpstream() throws structured error with status + body
++
++## Files changed
++ src/lib/proxy.ts | 16 ++++++++++++++--
++ 1 file changed, 14 insertions(+), 2 deletions(-)
++
++## Diff
++diff --git a/src/lib/proxy.ts b/src/lib/proxy.ts
++index 721f1cb..efcf83d 100644
++--- a/src/lib/proxy.ts
+++++ b/src/lib/proxy.ts
++@@ -34,21 +34,27 @@ export async function callUpstream(
++   const url = getChatUrl(channel.base_url);
++   const body = buildUpstreamBody({ ...relayReq, stream: false });
++ 
++   const start = Date.now();
++   const res = await fetch(url, {
++     method: 'POST',
++     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
++     body: JSON.stringify(body),
++   });
++   const duration = Date.now() - start;
++-  if (!res.ok) throw new Error(`Upstream error ${res.status}: ${await res.text()}`);
+++  if (!res.ok) {
+++    const text = await res.text();
+++    const err: any = new Error(text);
+++    err.status = res.status;
+++    err.body = text;
+++    throw err;
+++  }
++ 
++   const data = await res.json() as any;
++   const usagePrompt = data.usage?.prompt_tokens ?? estimateTokens(JSON.stringify(relayReq.messages));
++   const usageCompletion = data.usage?.completion_tokens ?? estimateTokens(data.choices?.[0]?.message?.content || '');
++ 
++   return {
++     response: {
++       id: data.id || `chatcmpl-${Date.now()}`,
++       object: 'chat.completion',
++       created: data.created || Math.floor(Date.now() / 1000),
++@@ -72,21 +78,27 @@ export async function callUpstreamStreaming(
++   const url = getChatUrl(channel.base_url);
++   const body = buildUpstreamBody({ ...relayReq, stream: true });
++ 
++   const start = Date.now();
++   const res = await fetch(url, {
++     method: 'POST',
++     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
++     body: JSON.stringify(body),
++   });
++   const duration = Date.now() - start;
++-  if (!res.ok) throw new Error(`Upstream error ${res.status}: ${await res.text()}`);
+++  if (!res.ok) {
+++    const text = await res.text();
+++    const err: any = new Error(text);
+++    err.status = res.status;
+++    err.body = text;
+++    throw err;
+++  }
++   if (!res.body) throw new Error('No response body');
++ 
++   return { stream: res.body, duration };
++ }
++ 
++ export async function healthCheckChannel(channel: Channel): Promise<boolean> {
++   try {
++     const url = getChatUrl(channel.base_url);
++     const res = await fetch(url, {
++       method: 'POST',
+diff --git a/.superpowers/sdd/review-fb07a85..f0ec8da.diff b/.superpowers/sdd/review-fb07a85..f0ec8da.diff
+new file mode 100644
+index 0000000..3cb0fbe
+--- /dev/null
++++ b/.superpowers/sdd/review-fb07a85..f0ec8da.diff
+@@ -0,0 +1,70 @@
++# Review package: fb07a85..f0ec8da
++
++## Commits
++f0ec8da feat: filter out aliased model_ids in key management UI
++
++## Files changed
++ src/app/dashboard/keys/page.tsx | 35 +++++++++++++++++++++++++----------
++ 1 file changed, 25 insertions(+), 10 deletions(-)
++
++## Diff
++diff --git a/src/app/dashboard/keys/page.tsx b/src/app/dashboard/keys/page.tsx
++index d5a5f9d..bf896ac 100644
++--- a/src/app/dashboard/keys/page.tsx
+++++ b/src/app/dashboard/keys/page.tsx
++@@ -58,30 +58,45 @@ export default function KeysPage() {
++     if (res.ok) { const d: FullData = await res.json(); setKeys(d.keys); setChannels(d.channels || []); }
++     setLoading(false);
++   }, []);
++ 
++   useEffect(() => { fetchData(); }, [fetchData]);
++ 
++   const getModelsForChannels = useCallback(async (chIds: string[]): Promise<string[]> => {
++     const res = await apiFetch('/api/admin/channels?scope=models');
++     if (!res.ok) return [];
++     const d = await res.json();
++-    if (chIds.length === 0) {
++-      const models = (d.channelModels || []).map((m: any) => m.model_id);
++-      const aliases = (d.aliases || []).map((a: any) => a.alias_name);
++-      return [...new Set([...models, ...aliases])].sort();
++-    }
++-    const chModels = (d.channelModels || []).filter((m: any) => chIds.includes(m.channel_id));
++-    const models = chModels.map((m: any) => m.model_id);
++-    const cmIds = new Set(chModels.map((m: any) => m.id));
++-    const aliases = (d.aliases || []).filter((a: any) => cmIds.has(a.channel_model_id)).map((a: any) => a.alias_name);
++-    return [...new Set([...models, ...aliases])].sort();
+++
+++    // 如果未选择渠道，获取全部 channel_models
+++    const chModels = chIds.length === 0
+++      ? (d.channelModels || [])
+++      : (d.channelModels || []).filter((m: any) => chIds.includes(m.channel_id));
+++
+++    const chModelIds = new Set(chModels.map((m: any) => m.id));
+++    const aliases = (d.aliases || []).filter((a: any) => a.is_active);
+++
+++    // 哪些 channel_model 有别名
+++    const aliasedModelIds = new Set(
+++      aliases.filter((a: any) => chModelIds.has(a.channel_model_id)).map((a: any) => a.channel_model_id)
+++    );
+++
+++    // 别名作为选项
+++    const aliasOptions = aliases
+++      .filter((a: any) => chModelIds.has(a.channel_model_id))
+++      .map((a: any) => a.alias_name);
+++
+++    // 原始 model_id 中排除有别名的那部分
+++    const nativeOptions = chModels
+++      .filter((m: any) => !aliasedModelIds.has(m.id))
+++      .map((m: any) => m.model_id);
+++
+++    return [...aliasOptions, ...nativeOptions].sort();
++   }, []);
++ 
++   const loadCreateModels = useCallback(async (chIds: string[]) => {
++     if (chIds.length === 0) { setCreateModelOptions([]); return; }
++     setModelLoading(true);
++     const models = await getModelsForChannels(chIds);
++     setCreateModelOptions(models.map(m => ({ label: m, value: m })));
++     setNewAllowedModels(prev => prev.filter(m => models.includes(m)));
++     setModelLoading(false);
++   }, [getModelsForChannels]);
+diff --git a/package-lock.json b/package-lock.json
+index 78ebce8..76504bc 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -1,28 +1,27 @@
+ {
+   "name": "mortal-api",
+   "version": "0.1.0",
+   "lockfileVersion": 3,
+   "requires": true,
+   "packages": {
+     "": {
+       "name": "mortal-api",
+       "version": "0.1.0",
+-      "license": "ISC",
+       "dependencies": {
+         "bcryptjs": "^3.0.3",
+         "better-sqlite3": "^12.11.1",
+         "jsonwebtoken": "^9.0.3",
+         "nanoid": "^3.3.15",
+-        "next": "16.2.10",
+-        "react": "19.2.4",
+-        "react-dom": "19.2.4",
++        "next": "^16.2.10",
++        "react": "^19.2.4",
++        "react-dom": "^19.2.4",
+         "recharts": "^3.9.2",
+         "uuid": "^14.0.1"
+       },
+       "devDependencies": {
+         "@tailwindcss/postcss": "^4",
+         "@types/better-sqlite3": "^7.6.13",
+         "@types/node": "^20",
+         "@types/react": "^19",
+         "@types/react-dom": "^19",
+         "eslint": "^9",
+@@ -68,20 +67,21 @@
+       "engines": {
+         "node": ">=6.9.0"
+       }
+     },
+     "node_modules/@babel/core": {
+       "version": "7.29.7",
+       "resolved": "https://registry.npmjs.org/@babel/core/-/core-7.29.7.tgz",
+       "integrity": "sha512-RgHBCvtjbOK2gXSNBNIkNoEc9qoVEtau3hj8gEqKQuL3HZAibKarWFEI3Lfm6EYKkLalOh8eSrj9b+ch9H/VBA==",
+       "dev": true,
+       "license": "MIT",
++      "peer": true,
+       "dependencies": {
+         "@babel/code-frame": "^7.29.7",
+         "@babel/generator": "^7.29.7",
+         "@babel/helper-compilation-targets": "^7.29.7",
+         "@babel/helper-module-transforms": "^7.29.7",
+         "@babel/helpers": "^7.29.7",
+         "@babel/parser": "^7.29.7",
+         "@babel/template": "^7.29.7",
+         "@babel/traverse": "^7.29.7",
+         "@babel/types": "^7.29.7",
+@@ -277,42 +277,20 @@
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "@babel/helper-string-parser": "^7.29.7",
+         "@babel/helper-validator-identifier": "^7.29.7"
+       },
+       "engines": {
+         "node": ">=6.9.0"
+       }
+     },
+-    "node_modules/@emnapi/core": {
+-      "version": "1.10.0",
+-      "resolved": "https://registry.npmjs.org/@emnapi/core/-/core-1.10.0.tgz",
+-      "integrity": "sha512-yq6OkJ4p82CAfPl0u9mQebQHKPJkY7WrIuk205cTYnYe+k2Z8YBh11FrbRG/H6ihirqcacOgl2BIO8oyMQLeXw==",
+-      "dev": true,
+-      "license": "MIT",
+-      "optional": true,
+-      "dependencies": {
+-        "@emnapi/wasi-threads": "1.2.1",
+-        "tslib": "^2.4.0"
+-      }
+-    },
+-    "node_modules/@emnapi/runtime": {
+-      "version": "1.11.2",
+-      "resolved": "https://registry.npmjs.org/@emnapi/runtime/-/runtime-1.11.2.tgz",
+-      "integrity": "sha512-kyOl3X0DuTiT1h2ft8r2fYO8JYtU9a9Xis/zBSiGArNaagCOWx90N1k2wxp18czFDH+OgcWGb5ZP/XMt3dcyPA==",
+-      "license": "MIT",
+-      "optional": true,
+-      "dependencies": {
+-        "tslib": "^2.4.0"
+-      }
+-    },
+     "node_modules/@emnapi/wasi-threads": {
+       "version": "1.2.1",
+       "resolved": "https://registry.npmjs.org/@emnapi/wasi-threads/-/wasi-threads-1.2.1.tgz",
+       "integrity": "sha512-uTII7OYF+/Mes/MrcIOYp5yOtSMLBWSIoLPpcgwipoiKbli6k322tcoFsxoIIxPDqW01SQGAgko4EzZi2BNv2w==",
+       "dev": true,
+       "license": "MIT",
+       "optional": true,
+       "dependencies": {
+         "tslib": "^2.4.0"
+       }
+@@ -1693,20 +1671,21 @@
+       "dependencies": {
+         "undici-types": "~6.21.0"
+       }
+     },
+     "node_modules/@types/react": {
+       "version": "19.2.17",
+       "resolved": "https://registry.npmjs.org/@types/react/-/react-19.2.17.tgz",
+       "integrity": "sha512-MXfmqaVPEVgkBT/aY0aGCkRWWtByiYQXo3xdQ8r5RzuFrPiRn8Gar2tQdXSUQ2GKV3bkXckek89V8wQBY2Q/Aw==",
+       "devOptional": true,
+       "license": "MIT",
++      "peer": true,
+       "dependencies": {
+         "csstype": "^3.2.2"
+       }
+     },
+     "node_modules/@types/react-dom": {
+       "version": "19.2.3",
+       "resolved": "https://registry.npmjs.org/@types/react-dom/-/react-dom-19.2.3.tgz",
+       "integrity": "sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==",
+       "dev": true,
+       "license": "MIT",
+@@ -1758,20 +1737,21 @@
+       "engines": {
+         "node": ">= 4"
+       }
+     },
+     "node_modules/@typescript-eslint/parser": {
+       "version": "8.63.0",
+       "resolved": "https://registry.npmjs.org/@typescript-eslint/parser/-/parser-8.63.0.tgz",
+       "integrity": "sha512-gwh4gvvlaVDKKxyfxMG+Gnu1u9X0OQBwyGLkbwB65dIzBKnxeRiJlNFqlI3zwVhNXJIs6qV7mlFCn/BIajlVig==",
+       "dev": true,
+       "license": "MIT",
++      "peer": true,
+       "dependencies": {
+         "@typescript-eslint/scope-manager": "8.63.0",
+         "@typescript-eslint/types": "8.63.0",
+         "@typescript-eslint/typescript-estree": "8.63.0",
+         "@typescript-eslint/visitor-keys": "8.63.0",
+         "debug": "^4.4.3"
+       },
+       "engines": {
+         "node": "^18.18.0 || ^20.9.0 || >=21.1.0"
+       },
+@@ -2338,20 +2318,21 @@
+       "os": [
+         "win32"
+       ]
+     },
+     "node_modules/acorn": {
+       "version": "8.17.0",
+       "resolved": "https://registry.npmjs.org/acorn/-/acorn-8.17.0.tgz",
+       "integrity": "sha512-xRQbDb9BnwDafYNn6Vwl839DYVjqXYb1XVGtWAZ1kcDc6iwAL4hg3B1dZlRiuENFeO2H53gFG3in621AdERVAg==",
+       "dev": true,
+       "license": "MIT",
++      "peer": true,
+       "bin": {
+         "acorn": "bin/acorn"
+       },
+       "engines": {
+         "node": ">=0.4.0"
+       }
+     },
+     "node_modules/acorn-jsx": {
+       "version": "5.3.2",
+       "resolved": "https://registry.npmjs.org/acorn-jsx/-/acorn-jsx-5.3.2.tgz",
+@@ -2744,20 +2725,21 @@
+         {
+           "type": "tidelift",
+           "url": "https://tidelift.com/funding/github/npm/browserslist"
+         },
+         {
+           "type": "github",
+           "url": "https://github.com/sponsors/ai"
+         }
+       ],
+       "license": "MIT",
++      "peer": true,
+       "dependencies": {
+         "baseline-browser-mapping": "^2.10.42",
+         "caniuse-lite": "^1.0.30001800",
+         "electron-to-chromium": "^1.5.387",
+         "node-releases": "^2.0.50",
+         "update-browserslist-db": "^1.2.3"
+       },
+       "bin": {
+         "browserslist": "cli.js"
+       },
+@@ -3556,20 +3538,21 @@
+       "funding": {
+         "url": "https://github.com/sponsors/sindresorhus"
+       }
+     },
+     "node_modules/eslint": {
+       "version": "9.39.5",
+       "resolved": "https://registry.npmjs.org/eslint/-/eslint-9.39.5.tgz",
+       "integrity": "sha512-DgZS62aPLXKlnxILS/AYCoRvHaZeXceIzlXPkkGGzJWSow1aEk0lbTlxUSlyjC8jcaKxAdOnTDz+o1JFSBsyjw==",
+       "dev": true,
+       "license": "MIT",
++      "peer": true,
+       "dependencies": {
+         "@eslint-community/eslint-utils": "^4.8.0",
+         "@eslint-community/regexpp": "^4.12.1",
+         "@eslint/config-array": "^0.21.2",
+         "@eslint/config-helpers": "^0.4.2",
+         "@eslint/core": "^0.17.0",
+         "@eslint/eslintrc": "^3.3.6",
+         "@eslint/js": "9.39.5",
+         "@eslint/plugin-kit": "^0.4.1",
+         "@humanfs/node": "^0.16.6",
+@@ -3741,20 +3724,21 @@
+       "dependencies": {
+         "ms": "^2.1.1"
+       }
+     },
+     "node_modules/eslint-plugin-import": {
+       "version": "2.32.0",
+       "resolved": "https://registry.npmjs.org/eslint-plugin-import/-/eslint-plugin-import-2.32.0.tgz",
+       "integrity": "sha512-whOE1HFo/qJDyX4SnXzP4N6zOWn79WhnCUY/iDR0mPfQZO8wcYE4JClzI2oZrhBnnMUCBCHZhO6VQyoBU95mZA==",
+       "dev": true,
+       "license": "MIT",
++      "peer": true,
+       "dependencies": {
+         "@rtsao/scc": "^1.1.0",
+         "array-includes": "^3.1.9",
+         "array.prototype.findlastindex": "^1.2.6",
+         "array.prototype.flat": "^1.3.3",
+         "array.prototype.flatmap": "^1.3.3",
+         "debug": "^3.2.7",
+         "doctrine": "^2.1.0",
+         "eslint-import-resolver-node": "^0.3.9",
+         "eslint-module-utils": "^2.12.1",
+@@ -6250,48 +6234,51 @@
+       "license": "MIT",
+       "engines": {
+         "node": ">=0.10.0"
+       }
+     },
+     "node_modules/react": {
+       "version": "19.2.4",
+       "resolved": "https://registry.npmjs.org/react/-/react-19.2.4.tgz",
+       "integrity": "sha512-9nfp2hYpCwOjAN+8TZFGhtWEwgvWHXqESH8qT89AT/lWklpLON22Lc8pEtnpsZz7VmawabSU0gCjnj8aC0euHQ==",
+       "license": "MIT",
++      "peer": true,
+       "engines": {
+         "node": ">=0.10.0"
+       }
+     },
+     "node_modules/react-dom": {
+       "version": "19.2.4",
+       "resolved": "https://registry.npmjs.org/react-dom/-/react-dom-19.2.4.tgz",
+       "integrity": "sha512-AXJdLo8kgMbimY95O2aKQqsz2iWi9jMgKJhRBAxECE4IFxfcazB2LmzloIoibJI3C12IlY20+KFaLv+71bUJeQ==",
+       "license": "MIT",
++      "peer": true,
+       "dependencies": {
+         "scheduler": "^0.27.0"
+       },
+       "peerDependencies": {
+         "react": "^19.2.4"
+       }
+     },
+     "node_modules/react-is": {
+       "version": "19.2.7",
+       "resolved": "https://registry.npmjs.org/react-is/-/react-is-19.2.7.tgz",
+       "integrity": "sha512-kZFnouyVv7eP/Phmrlo9FK+zcAdriZJvzxXHF1Sl1P377WSGe2G/JxVolhTrB/jeV47lKImhNUsijjHAAbcl/A==",
+       "license": "MIT",
+       "peer": true
+     },
+     "node_modules/react-redux": {
+       "version": "9.3.0",
+       "resolved": "https://registry.npmjs.org/react-redux/-/react-redux-9.3.0.tgz",
+       "integrity": "sha512-KQopgqFo/p/fgmAs5qz6p5RWaNAzq40WAu7fJIXnQpYxFPbJYtsJPWvGeF2rOBaY/kEuV77AVsX8TsQzKm+A/g==",
+       "license": "MIT",
++      "peer": true,
+       "dependencies": {
+         "@types/use-sync-external-store": "^0.0.6",
+         "use-sync-external-store": "^1.4.0"
+       },
+       "peerDependencies": {
+         "@types/react": "^18.2.25 || ^19",
+         "react": "^18.0 || ^19",
+         "redux": "^5.0.0"
+       },
+       "peerDependenciesMeta": {
+@@ -6344,21 +6331,22 @@
+       "peerDependencies": {
+         "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0",
+         "react-dom": "^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0",
+         "react-is": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0"
+       }
+     },
+     "node_modules/redux": {
+       "version": "5.0.1",
+       "resolved": "https://registry.npmjs.org/redux/-/redux-5.0.1.tgz",
+       "integrity": "sha512-M9/ELqF6fy8FwmkpnF0S3YKOqMyoWJ4+CS5Efg2ct3oY9daQvd/Pc71FpGZsVsbl3Cpb+IIcjBDUnnyBdQbq4w==",
+-      "license": "MIT"
++      "license": "MIT",
++      "peer": true
+     },
+     "node_modules/redux-thunk": {
+       "version": "3.1.0",
+       "resolved": "https://registry.npmjs.org/redux-thunk/-/redux-thunk-3.1.0.tgz",
+       "integrity": "sha512-NW2r5T6ksUKXCabzhL9z+h206HQw/NJkcLm1GPImRQ8IzfXwRGqjVhKJGauHirT0DAuyy6hjdnMZaRoAcy0Klw==",
+       "license": "MIT",
+       "peerDependencies": {
+         "redux": "^5.0.0"
+       }
+     },
+@@ -7147,20 +7135,21 @@
+           "optional": true
+         }
+       }
+     },
+     "node_modules/tinyglobby/node_modules/picomatch": {
+       "version": "4.0.5",
+       "resolved": "https://registry.npmjs.org/picomatch/-/picomatch-4.0.5.tgz",
+       "integrity": "sha512-RvwwcruNjI1ncT5xRakeyS9Lf8lcItv34KD+aif+VH9kduAyfYBipGh12274xtenIPZ119/R9BdTBa8gAwSh0A==",
+       "dev": true,
+       "license": "MIT",
++      "peer": true,
+       "engines": {
+         "node": ">=12"
+       },
+       "funding": {
+         "url": "https://github.com/sponsors/jonschlinkert"
+       }
+     },
+     "node_modules/to-regex-range": {
+       "version": "5.0.1",
+       "resolved": "https://registry.npmjs.org/to-regex-range/-/to-regex-range-5.0.1.tgz",
+@@ -7321,20 +7310,21 @@
+       "funding": {
+         "url": "https://github.com/sponsors/ljharb"
+       }
+     },
+     "node_modules/typescript": {
+       "version": "5.9.3",
+       "resolved": "https://registry.npmjs.org/typescript/-/typescript-5.9.3.tgz",
+       "integrity": "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==",
+       "dev": true,
+       "license": "Apache-2.0",
++      "peer": true,
+       "bin": {
+         "tsc": "bin/tsc",
+         "tsserver": "bin/tsserver"
+       },
+       "engines": {
+         "node": ">=14.17"
+       }
+     },
+     "node_modules/typescript-eslint": {
+       "version": "8.63.0",
+@@ -7655,20 +7645,21 @@
+       "funding": {
+         "url": "https://github.com/sponsors/sindresorhus"
+       }
+     },
+     "node_modules/zod": {
+       "version": "4.4.3",
+       "resolved": "https://registry.npmjs.org/zod/-/zod-4.4.3.tgz",
+       "integrity": "sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==",
+       "dev": true,
+       "license": "MIT",
++      "peer": true,
+       "funding": {
+         "url": "https://github.com/sponsors/colinhacks"
+       }
+     },
+     "node_modules/zod-validation-error": {
+       "version": "4.0.2",
+       "resolved": "https://registry.npmjs.org/zod-validation-error/-/zod-validation-error-4.0.2.tgz",
+       "integrity": "sha512-Q6/nZLe6jxuU80qb/4uJ4t5v2VEZ44lzQjPDhYJNztRQ4wyWc6VF3D3Kb/fAuPetZQnhS3hnajCf9CsWesghLQ==",
+       "dev": true,
+       "license": "MIT",
+diff --git a/src/app/api/v1/chat/completions/route.ts b/src/app/api/v1/chat/completions/route.ts
+index 1277bd7..f1aae11 100644
+--- a/src/app/api/v1/chat/completions/route.ts
++++ b/src/app/api/v1/chat/completions/route.ts
+@@ -155,22 +155,30 @@ export async function POST(request: NextRequest) {
+         prompt_tokens, completion_tokens,
+         status: 'success',
+         ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+       });
+       if (relayKey.balance > 0) addUsedTokens(relayKey.id, prompt_tokens + completion_tokens);
+       updateChannelHealth(channel.id, 'healthy');
+ 
+       result.response.model = body.model || 'auto';
+       return NextResponse.json(result.response);
+     }
+-  } catch (err) {
++  } catch (err: any) {
+     updateChannelHealth(channel.id, 'unhealthy');
+     createCallLog({
+       relay_key_id: relayKey.id, relay_key_name: relayKey.name,
+       model: modelName, channel_id: channel.id, channel_name: channel.name,
+       prompt_tokens: 0, completion_tokens: 0,
+-      status: 'fail', error_message: err instanceof Error ? err.message : 'Upstream error',
++      status: 'fail', error_message: err.body || (err instanceof Error ? err.message : 'Upstream error'),
+       ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+     });
+-    return NextResponse.json({ error: { message: `Upstream error: ${err instanceof Error ? err.message : ''}`, type: 'server_error' } }, { status: 502 });
++
++    let status = err.status || 502;
++    let errorBody: any;
++    try {
++      errorBody = JSON.parse(err.body || '{}');
++    } catch {
++      errorBody = { error: { message: err.body || err.message || 'Upstream error', type: 'server_error' } };
++    }
++    return NextResponse.json(errorBody, { status });
+   }
+ }
+diff --git a/src/app/dashboard/channels/page.tsx b/src/app/dashboard/channels/page.tsx
+index 9bdf032..70010d5 100644
+--- a/src/app/dashboard/channels/page.tsx
++++ b/src/app/dashboard/channels/page.tsx
+@@ -317,41 +317,46 @@ export default function ChannelsPage() {
+                 </div>
+ 
+                 {/* Combined model + alias cards */}
+                 {models.length > 0 ? (
+                   <div className="grid sm:grid-cols-2 gap-2">
+                     {models.map(m => {
+                       const als = aliasesForModel(m.id);
+                       const alias = als.length > 0 ? als[0] : null;
+                       return (
+                         <div key={m.id} className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-3 group shadow-sm hover:border-indigo-200 transition-all">
+-                          {/* Left: model_id */}
+-                          <code className="text-sm font-semibold text-gray-800 font-mono flex-1 truncate">{m.model_id}</code>
+-                          {/* Arrow */}
+-                          <InlineIcon name="arrowRight" className="w-4 h-4 text-gray-300 shrink-0" />
+-                          {/* Right: alias (or add button) */}
+-                          {alias ? (
+-                            <div className="flex-1 flex items-center gap-1.5 min-w-0">
+-                              <span className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1 font-mono truncate flex-1">{alias.alias_name}</span>
+-                              <button onClick={() => deleteAlias(alias.id)} className="p-1 rounded text-red-200 hover:text-red-500 hover:bg-red-50 transition-all shrink-0"><InlineIcon name="x" className="w-3 h-3" /></button>
+-                            </div>
+-                          ) : (
+-                            <button onClick={() => { setAliasChannelModelId(m.id); setAliasName(''); setAliasModal(true); }}
+-                              className="flex-1 flex items-center justify-center gap-1 text-xs text-gray-400 border border-dashed border-gray-300 rounded-lg px-2.5 py-1 hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50 transition-all">
+-                              <InlineIcon name="plus" className="w-3 h-3" /> 别名</button>
+-                          )}
+-                          {/* Delete model */}
++                          {/* Left: primary display */}
++                          <div className="flex-1 min-w-0">
++                            {alias ? (
++                              <>
++                                <div className="flex items-center gap-1.5">
++                                  <code className="text-sm font-semibold text-amber-700 font-mono truncate">{alias.alias_name}</code>
++                                  <button onClick={() => deleteAlias(alias.id)} className="p-0.5 rounded text-red-200 hover:text-red-500 hover:bg-red-50 transition-all shrink-0"><InlineIcon name="x" className="w-3 h-3" /></button>
++                                </div>
++                                <div className="text-[10px] text-gray-400 mt-0.5 font-mono">
++                                  <span className="text-gray-300">model: </span>{m.model_id}
++                                </div>
++                              </>
++                            ) : (
++                              <>
++                                <code className="text-sm font-semibold text-gray-800 font-mono truncate block">{m.model_id}</code>
++                                <button onClick={() => { setAliasChannelModelId(m.id); setAliasName(''); setAliasModal(true); }}
++                                  className="mt-1 inline-flex items-center gap-1 text-[10px] text-gray-400 border border-dashed border-gray-300 rounded px-2 py-0.5 hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50 transition-all">
++                                  <InlineIcon name="plus" className="w-3 h-3" /> 别名</button>
++                              </>
++                            )}
++                          </div>
++                          {/* Right: delete model */}
+                           <button onClick={() => deleteModel(m.id)} className="p-1 rounded text-red-200 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all shrink-0"><InlineIcon name="x" className="w-3 h-3" /></button>
+                         </div>
+                       );
+                     })}
+-                    {/* Add new alias button at bottom */}
+                   </div>
+                 ) : (
+                   <div className="w-full py-6 text-center text-sm text-gray-400">
+                     <InlineIcon name="bot" className="w-8 h-8 mx-auto mb-2 text-gray-200" />
+                     暂无模型，点击"拉取"或"添加"
+                   </div>
+                 )}
+ 
+                 {/* Pulled models quick-add */}
+                 {pulled.length > 0 && (
+diff --git a/src/app/dashboard/keys/page.tsx b/src/app/dashboard/keys/page.tsx
+index d5a5f9d..bf896ac 100644
+--- a/src/app/dashboard/keys/page.tsx
++++ b/src/app/dashboard/keys/page.tsx
+@@ -58,30 +58,45 @@ export default function KeysPage() {
+     if (res.ok) { const d: FullData = await res.json(); setKeys(d.keys); setChannels(d.channels || []); }
+     setLoading(false);
+   }, []);
+ 
+   useEffect(() => { fetchData(); }, [fetchData]);
+ 
+   const getModelsForChannels = useCallback(async (chIds: string[]): Promise<string[]> => {
+     const res = await apiFetch('/api/admin/channels?scope=models');
+     if (!res.ok) return [];
+     const d = await res.json();
+-    if (chIds.length === 0) {
+-      const models = (d.channelModels || []).map((m: any) => m.model_id);
+-      const aliases = (d.aliases || []).map((a: any) => a.alias_name);
+-      return [...new Set([...models, ...aliases])].sort();
+-    }
+-    const chModels = (d.channelModels || []).filter((m: any) => chIds.includes(m.channel_id));
+-    const models = chModels.map((m: any) => m.model_id);
+-    const cmIds = new Set(chModels.map((m: any) => m.id));
+-    const aliases = (d.aliases || []).filter((a: any) => cmIds.has(a.channel_model_id)).map((a: any) => a.alias_name);
+-    return [...new Set([...models, ...aliases])].sort();
++
++    // 如果未选择渠道，获取全部 channel_models
++    const chModels = chIds.length === 0
++      ? (d.channelModels || [])
++      : (d.channelModels || []).filter((m: any) => chIds.includes(m.channel_id));
++
++    const chModelIds = new Set(chModels.map((m: any) => m.id));
++    const aliases = (d.aliases || []).filter((a: any) => a.is_active);
++
++    // 哪些 channel_model 有别名
++    const aliasedModelIds = new Set(
++      aliases.filter((a: any) => chModelIds.has(a.channel_model_id)).map((a: any) => a.channel_model_id)
++    );
++
++    // 别名作为选项
++    const aliasOptions = aliases
++      .filter((a: any) => chModelIds.has(a.channel_model_id))
++      .map((a: any) => a.alias_name);
++
++    // 原始 model_id 中排除有别名的那部分
++    const nativeOptions = chModels
++      .filter((m: any) => !aliasedModelIds.has(m.id))
++      .map((m: any) => m.model_id);
++
++    return [...aliasOptions, ...nativeOptions].sort();
+   }, []);
+ 
+   const loadCreateModels = useCallback(async (chIds: string[]) => {
+     if (chIds.length === 0) { setCreateModelOptions([]); return; }
+     setModelLoading(true);
+     const models = await getModelsForChannels(chIds);
+     setCreateModelOptions(models.map(m => ({ label: m, value: m })));
+     setNewAllowedModels(prev => prev.filter(m => models.includes(m)));
+     setModelLoading(false);
+   }, [getModelsForChannels]);
+diff --git a/src/lib/channels.ts b/src/lib/channels.ts
+index 9fd49d6..42c0d80 100644
+--- a/src/lib/channels.ts
++++ b/src/lib/channels.ts
+@@ -108,25 +108,27 @@ export function resolveModel(modelName: string): { channelId: string; upstreamMo
+   const db = getDb();
+ 
+   // 1. Check aliases first
+   const alias = db.prepare(`
+     SELECT ma.*, cm.model_id, cm.channel_id FROM model_aliases ma
+     LEFT JOIN channel_models cm ON cm.id = ma.channel_model_id
+     WHERE ma.alias_name = ? AND ma.is_active = 1
+   `).get(modelName) as any;
+   if (alias) return { channelId: alias.channel_id, upstreamModelId: alias.model_id };
+ 
+-  // 2. Check direct model_id match (only if channel is active)
++  // 2. Check direct model_id match (only if channel is active, NO alias exists)
+   const model = db.prepare(`
+     SELECT cm.*, c.is_active as ch_active FROM channel_models cm
+     LEFT JOIN channels c ON c.id = cm.channel_id
++    LEFT JOIN model_aliases ma ON ma.channel_model_id = cm.id AND ma.is_active = 1
+     WHERE cm.model_id = ? AND cm.is_active = 1 AND c.is_active = 1
++      AND ma.id IS NULL
+   `).get(modelName) as any;
+   if (model) return { channelId: model.channel_id, upstreamModelId: model.model_id };
+ 
+   return null;
+ }
+ 
+ export function getModelsForAuto(): { modelId: string; channel: Channel }[] {
+   const db = getDb();
+   const rows = db.prepare(`
+     SELECT cm.model_id, c.* FROM channel_models cm
+diff --git a/src/lib/proxy.ts b/src/lib/proxy.ts
+index 721f1cb..efcf83d 100644
+--- a/src/lib/proxy.ts
++++ b/src/lib/proxy.ts
+@@ -34,21 +34,27 @@ export async function callUpstream(
+   const url = getChatUrl(channel.base_url);
+   const body = buildUpstreamBody({ ...relayReq, stream: false });
+ 
+   const start = Date.now();
+   const res = await fetch(url, {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+     body: JSON.stringify(body),
+   });
+   const duration = Date.now() - start;
+-  if (!res.ok) throw new Error(`Upstream error ${res.status}: ${await res.text()}`);
++  if (!res.ok) {
++    const text = await res.text();
++    const err: any = new Error(text);
++    err.status = res.status;
++    err.body = text;
++    throw err;
++  }
+ 
+   const data = await res.json() as any;
+   const usagePrompt = data.usage?.prompt_tokens ?? estimateTokens(JSON.stringify(relayReq.messages));
+   const usageCompletion = data.usage?.completion_tokens ?? estimateTokens(data.choices?.[0]?.message?.content || '');
+ 
+   return {
+     response: {
+       id: data.id || `chatcmpl-${Date.now()}`,
+       object: 'chat.completion',
+       created: data.created || Math.floor(Date.now() / 1000),
+@@ -72,21 +78,27 @@ export async function callUpstreamStreaming(
+   const url = getChatUrl(channel.base_url);
+   const body = buildUpstreamBody({ ...relayReq, stream: true });
+ 
+   const start = Date.now();
+   const res = await fetch(url, {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+     body: JSON.stringify(body),
+   });
+   const duration = Date.now() - start;
+-  if (!res.ok) throw new Error(`Upstream error ${res.status}: ${await res.text()}`);
++  if (!res.ok) {
++    const text = await res.text();
++    const err: any = new Error(text);
++    err.status = res.status;
++    err.body = text;
++    throw err;
++  }
+   if (!res.body) throw new Error('No response body');
+ 
+   return { stream: res.body, duration };
+ }
+ 
+ export async function healthCheckChannel(channel: Channel): Promise<boolean> {
+   try {
+     const url = getChatUrl(channel.base_url);
+     const res = await fetch(url, {
+       method: 'POST',
