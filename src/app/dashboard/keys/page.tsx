@@ -65,16 +65,31 @@ export default function KeysPage() {
     const res = await apiFetch('/api/admin/channels?scope=models');
     if (!res.ok) return [];
     const d = await res.json();
-    if (chIds.length === 0) {
-      const models = (d.channelModels || []).map((m: any) => m.model_id);
-      const aliases = (d.aliases || []).map((a: any) => a.alias_name);
-      return [...new Set([...models, ...aliases])].sort();
-    }
-    const chModels = (d.channelModels || []).filter((m: any) => chIds.includes(m.channel_id));
-    const models = chModels.map((m: any) => m.model_id);
-    const cmIds = new Set(chModels.map((m: any) => m.id));
-    const aliases = (d.aliases || []).filter((a: any) => cmIds.has(a.channel_model_id)).map((a: any) => a.alias_name);
-    return [...new Set([...models, ...aliases])].sort();
+
+    // 如果未选择渠道，获取全部 channel_models
+    const chModels = chIds.length === 0
+      ? (d.channelModels || [])
+      : (d.channelModels || []).filter((m: any) => chIds.includes(m.channel_id));
+
+    const chModelIds = new Set(chModels.map((m: any) => m.id));
+    const aliases = (d.aliases || []).filter((a: any) => a.is_active);
+
+    // 哪些 channel_model 有别名
+    const aliasedModelIds = new Set(
+      aliases.filter((a: any) => chModelIds.has(a.channel_model_id)).map((a: any) => a.channel_model_id)
+    );
+
+    // 别名作为选项
+    const aliasOptions = aliases
+      .filter((a: any) => chModelIds.has(a.channel_model_id))
+      .map((a: any) => a.alias_name);
+
+    // 原始 model_id 中排除有别名的那部分
+    const nativeOptions = chModels
+      .filter((m: any) => !aliasedModelIds.has(m.id))
+      .map((m: any) => m.model_id);
+
+    return [...aliasOptions, ...nativeOptions].sort();
   }, []);
 
   const loadCreateModels = useCallback(async (chIds: string[]) => {
