@@ -162,15 +162,23 @@ export async function POST(request: NextRequest) {
       result.response.model = body.model || 'auto';
       return NextResponse.json(result.response);
     }
-  } catch (err) {
+  } catch (err: any) {
     updateChannelHealth(channel.id, 'unhealthy');
     createCallLog({
       relay_key_id: relayKey.id, relay_key_name: relayKey.name,
       model: modelName, channel_id: channel.id, channel_name: channel.name,
       prompt_tokens: 0, completion_tokens: 0,
-      status: 'fail', error_message: err instanceof Error ? err.message : 'Upstream error',
+      status: 'fail', error_message: err.body || (err instanceof Error ? err.message : 'Upstream error'),
       ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
     });
-    return NextResponse.json({ error: { message: `Upstream error: ${err instanceof Error ? err.message : ''}`, type: 'server_error' } }, { status: 502 });
+
+    let status = err.status || 502;
+    let errorBody: any;
+    try {
+      errorBody = JSON.parse(err.body || '{}');
+    } catch {
+      errorBody = { error: { message: err.body || err.message || 'Upstream error', type: 'server_error' } };
+    }
+    return NextResponse.json(errorBody, { status });
   }
 }
