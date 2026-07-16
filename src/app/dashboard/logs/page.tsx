@@ -34,7 +34,7 @@ export default function LogsPage() {
   const limit = 20;
 
   const fetchKeys = useCallback(async () => {
-    const res = await apiFetch('/api/admin/keys');
+    const res = await apiFetch('/admin/keys');
     if (res.ok) setKeys((await res.json()).keys || []);
   }, []);
 
@@ -46,7 +46,7 @@ export default function LogsPage() {
     if (modelFilter) params.set('model', modelFilter);
     if (startMonth) params.set('start_date', startMonth);
     if (endMonth) params.set('end_date', endMonth);
-    const res = await fetch(`/api/admin/logs?${params}`, { headers: { Authorization: `Bearer ${localStorage.getItem('admin_token')}` } });
+    const res = await fetch(`/admin/logs?${params}`, { headers: { Authorization: `Bearer ${localStorage.getItem('admin_token')}` } });
     if (res.ok) { const d = await res.json(); setLogs(d.logs); setTotal(d.total); }
     setLoading(false);
   }, [page, statusFilter, keyFilter, modelFilter, startMonth, endMonth]);
@@ -56,7 +56,7 @@ export default function LogsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('确定删除此条日志？')) return;
     setDeleting(id);
-    await fetch(`/api/admin/logs?id=${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${localStorage.getItem('admin_token')}` } });
+    await fetch(`/admin/logs?id=${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${localStorage.getItem('admin_token')}` } });
     setDeleting(null); fetchLogs();
   };
 
@@ -67,7 +67,7 @@ export default function LogsPage() {
     const params = new URLSearchParams();
     params.set('start_date', deleteDateFrom + ' 00:00:00');
     if (deleteDateTo) params.set('end_date', deleteDateTo + ' 23:59:59');
-    const res = await fetch(`/api/admin/logs?${params}`, { method: 'DELETE', headers: { Authorization: `Bearer ${localStorage.getItem('admin_token')}` } });
+    const res = await fetch(`/admin/logs?${params}`, { method: 'DELETE', headers: { Authorization: `Bearer ${localStorage.getItem('admin_token')}` } });
     if (res.ok) {
       const data = await res.json();
       setDeleteMsg(`已删除 ${data.deleted} 条日志`);

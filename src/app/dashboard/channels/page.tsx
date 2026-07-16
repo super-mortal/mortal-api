@@ -60,7 +60,7 @@ export default function ChannelsPage() {
   const [aliasName, setAliasName] = useState('');
 
   const fetchAll = useCallback(async () => {
-    const res = await apiFetch('/api/admin/channels?scope=models');
+    const res = await apiFetch('/admin/channels?scope=models');
     if (res.ok) { const d = await res.json(); setChannels(d.channels); setChannelModels(d.channelModels || []); setAliases(d.aliases || []); }
     setLoading(false);
   }, []);
@@ -81,17 +81,17 @@ export default function ChannelsPage() {
     const isEdit = !!editId;
     const body: Record<string, any> = isEdit ? { id: editId, ...chForm } : chForm;
     if (isEdit && !body.api_key) delete body.api_key;
-    const res = await apiFetch('/api/admin/channels', { method: isEdit ? 'PATCH' : 'POST', body: JSON.stringify(body) });
+    const res = await apiFetch('/admin/channels', { method: isEdit ? 'PATCH' : 'POST', body: JSON.stringify(body) });
     if (res.ok) { setChModal(false); fetchAll(); }
   };
 
   const deleteChannel = async (id: string) => {
     if (!confirm('确定删除此渠道？关联的模型和别名也会被删除。')) return;
-    await apiFetch(`/api/admin/channels?id=${id}`, { method: 'DELETE' });
+    await apiFetch(`/admin/channels?id=${id}`, { method: 'DELETE' });
     fetchAll();
   };
   const toggleChannel = async (id: string, active: number) => {
-    await apiFetch('/api/admin/channels', { method: 'PATCH', body: JSON.stringify({ id, is_active: active ? 0 : 1 }) });
+    await apiFetch('/admin/channels', { method: 'PATCH', body: JSON.stringify({ id, is_active: active ? 0 : 1 }) });
     fetchAll();
   };
   const doHealthCheck = async () => {
@@ -100,7 +100,7 @@ export default function ChannelsPage() {
     setCheckDone(null);
     setCheckLatency(null);
     try {
-      const res = await apiFetch('/api/admin/channels', { method: 'PUT', body: JSON.stringify({ id: checkChannel.id, model_id: checkSelectedModel, _action: 'check-model' }) });
+      const res = await apiFetch('/admin/channels', { method: 'PUT', body: JSON.stringify({ id: checkChannel.id, model_id: checkSelectedModel, _action: 'check-model' }) });
       const data = await res.json();
       setCheckDone(data.healthy ? 'ok' : 'fail');
       setCheckLatency(data.latency || null);
@@ -118,7 +118,7 @@ export default function ChannelsPage() {
   const doPullModels = async (id: string) => {
     setPullingId(id);
     try {
-      var res = await apiFetch('/api/admin/channels', { method: 'PUT', body: JSON.stringify({ id, _action: 'pull-models' }) });
+      var res = await apiFetch('/admin/channels', { method: 'PUT', body: JSON.stringify({ id, _action: 'pull-models' }) });
       if (res.ok) {
         var d = await res.json();
         var models = d.models || [];
@@ -136,20 +136,20 @@ export default function ChannelsPage() {
 
   const addModel = async () => {
     if (!newModelId) return;
-    const res = await apiFetch('/api/admin/channels', { method: 'POST', body: JSON.stringify({ _type: 'channel-model', channel_id: modelChannelId, model_id: newModelId }) });
+    const res = await apiFetch('/admin/channels', { method: 'POST', body: JSON.stringify({ _type: 'channel-model', channel_id: modelChannelId, model_id: newModelId }) });
     if (res.ok) { setModelModal(false); setNewModelId(''); fetchAll(); } else { alert('模型已存在或创建失败'); }
   };
   const deleteModel = async (id: string) => {
-    await apiFetch(`/api/admin/channels?id=${id}&type=channel-model`, { method: 'DELETE' });
+    await apiFetch(`/admin/channels?id=${id}&type=channel-model`, { method: 'DELETE' });
     fetchAll();
   };
   const addAlias = async () => {
     if (!aliasName) return;
-    const res = await apiFetch('/api/admin/channels', { method: 'POST', body: JSON.stringify({ _type: 'alias', alias_name: aliasName, channel_model_id: aliasChannelModelId }) });
+    const res = await apiFetch('/admin/channels', { method: 'POST', body: JSON.stringify({ _type: 'alias', alias_name: aliasName, channel_model_id: aliasChannelModelId }) });
     if (res.ok) { setAliasModal(false); setAliasName(''); fetchAll(); } else { alert('别名已存在或创建失败'); }
   };
   const deleteAlias = async (id: string) => {
-    await apiFetch(`/api/admin/channels?id=${id}&type=alias`, { method: 'DELETE' });
+    await apiFetch(`/admin/channels?id=${id}&type=alias`, { method: 'DELETE' });
     fetchAll();
   };
 
@@ -369,7 +369,7 @@ export default function ChannelsPage() {
                           <span key={m} className="text-xs bg-gray-200 text-gray-500 px-2.5 py-1 rounded-lg cursor-default">{m} ✓</span>
                         ) : (
                           <button key={m} onClick={() => {
-                            apiFetch('/api/admin/channels', { method: 'POST', body: JSON.stringify({ _type: 'channel-model', channel_id: ch.id, model_id: m }) }).then(() => fetchAll());
+                            apiFetch('/admin/channels', { method: 'POST', body: JSON.stringify({ _type: 'channel-model', channel_id: ch.id, model_id: m }) }).then(() => fetchAll());
                           }}
                             className="text-xs bg-white border border-gray-200 px-2.5 py-1 rounded-lg hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 transition-all">{m}</button>
                         );

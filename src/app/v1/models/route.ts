@@ -1,5 +1,5 @@
 // ============================================================
-// GET /api/v1/models — OpenAI-compatible models list
+// GET /v1/models — OpenAI-compatible models list
 // Respects key-level channel and model restrictions
 // ============================================================
 import { NextRequest, NextResponse } from 'next/server';

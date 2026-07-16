@@ -151,37 +151,59 @@ export function getModelsForAuto(): { modelId: string; channel: Channel }[] {
 // ── Pull models from endpoint ──
 
 export async function pullModelsFromEndpoint(baseUrl: string, apiKey: string): Promise<string[]> {
-  let url = `${baseUrl.replace(/\/+$/, '')}`;
-  // If base_url ends with /chat/completions, go up one level
-  if (url.endsWith('/chat/completions')) url = url.replace(/\/chat\/completions$/, '');
-  // Ensure /v1 prefix for the /models endpoint
-  if (!url.endsWith('/v1')) url = `${url}/v1`;
-  url = `${url}/models`;
+  // Construct the /models URL from the channel's base_url
+  function buildModelsUrl(base: string): string {
+    try {
+      const url = new URL(base.replace(/\/+$/, ''));
+      let path = url.pathname.replace(/\/+$/, '') || '/';
 
+      if (path.endsWith('/chat/completions')) {
+        // e.g. base_url ends with /chat/completions → replace with /models
+        path = path.replace(/\/chat\/completions$/, '/models');
+      } else if (path.endsWith('/v1')) {
+        // e.g. /v1 → /v1/models
+        path += '/models';
+      } else {
+        // Default: append /v1/models
+        path = path.replace(/\/?$/, '/v1/models');
+      }
+
+      url.pathname = path;
+      return url.toString();
+    } catch {
+      // Fallback for malformed URLs
+      let b = base.replace(/\/+$/, '');
+      if (b.endsWith('/chat/completions')) b = b.replace(/\/chat\/completions$/, '');
+      if (!b.endsWith('/v1')) b += '/v1';
+      return b + '/models';
+    }
+  }
+
+  const primaryUrl = buildModelsUrl(baseUrl);
   let errMsg = '';
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` }, signal: AbortSignal.timeout(15000) });
+
+  const res = await fetch(primaryUrl, { headers: { Authorization: `Bearer ${apiKey}` }, signal: AbortSignal.timeout(15000) });
   if (res.ok) {
     const data = await res.json() as any;
     return extractModels(data);
   }
-  errMsg = `Primary URL (${url}): HTTP ${res.status}`;
+  errMsg = `Primary URL (${primaryUrl}): HTTP ${res.status}`;
 
-  // Try without /v1 prefix (some providers use /models directly)
-  const altUrl = `${baseUrl.replace(/\/+$/, '')}/models`;
+  // Fallback: try /models without /v1 prefix
+  const fallbackBase = baseUrl.replace(/\/chat\/completions$/, '').replace(/\/+$/, '');
+  const fallbackUrl = `${fallbackBase}/models`;
   try {
-    const altRes = await fetch(altUrl, { headers: { Authorization: `Bearer ${apiKey}` }, signal: AbortSignal.timeout(10000) });
-    if (altRes.ok) {
-      const altData = await altRes.json() as any;
-      return extractModels(altData);
+    const fallbackRes = await fetch(fallbackUrl, { headers: { Authorization: `Bearer ${apiKey}` }, signal: AbortSignal.timeout(10000) });
+    if (fallbackRes.ok) {
+      const data = await fallbackRes.json() as any;
+      return extractModels(data);
     }
-    errMsg += `; Fallback (${altUrl}): HTTP ${altRes.status}`;
+    errMsg += `; Fallback (${fallbackUrl}): HTTP ${fallbackRes.status}`;
   } catch (e) {
     errMsg += `; Fallback error: ${e instanceof Error ? e.message : e}`;
   }
 
   throw new Error(errMsg);
-  const data = await res.json() as any;
-  return extractModels(data);
 }
 
 function extractModels(data: any): string[] {

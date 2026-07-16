@@ -35,7 +35,7 @@ export default function DashboardPage() {
   const [showCustom, setShowCustom] = useState(false);
 
   const fetchKeys = useCallback(async () => {
-    const res = await fetch('/api/admin/keys', { headers: { Authorization: `Bearer ${localStorage.getItem('admin_token')}` } });
+    const res = await fetch('/admin/keys', { headers: { Authorization: `Bearer ${localStorage.getItem('admin_token')}` } });
     if (res.ok) { const d = await res.json(); setKeys(d.keys || []); }
   }, []);
 
@@ -53,7 +53,7 @@ export default function DashboardPage() {
       if (endMonth) params.set('end_date', endMonth);
     }
     if (selectedKeyId) params.set('relay_key_id', selectedKeyId);
-    return `/api/admin/stats?${params}`;
+    return `/admin/stats?${params}`;
   }, [activeDate, startMonth, endMonth, selectedKeyId]);
 
   const fetchStats = useCallback(async () => {

@@ -29,7 +29,7 @@ export default function ModelsPage() {
   const [copied, setCopied] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
-    const res = await apiFetch('/api/admin/channels?scope=models');
+    const res = await apiFetch('/admin/channels?scope=models');
     if (res.ok) { const d = await res.json(); setChannels(d.channels); setChannelModels(d.channelModels || []); setAliases(d.aliases || []); }
     setLoading(false);
   }, []);

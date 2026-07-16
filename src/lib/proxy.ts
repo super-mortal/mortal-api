@@ -17,13 +17,30 @@ export function extractCachedInputTokens(usage: any): number {
 }
 
 export function getChatUrl(baseUrl: string): string {
-  let base = baseUrl.replace(/\/+$/, '');
-  // If base_url already contains /chat/completions, use as-is
-  if (base.endsWith('/chat/completions')) return base;
-  // If base_url ends with /v1, append /chat/completions
-  if (base.endsWith('/v1')) return `${base}/chat/completions`;
-  // Standard OpenAI-compatible path: append /v1/chat/completions
-  return `${base}/v1/chat/completions`;
+  try {
+    const url = new URL(baseUrl.replace(/\/+$/, ''));
+    let path = url.pathname.replace(/\/+$/, '') || '/';
+
+    // If base_url already contains the full path, use as-is
+    if (path.endsWith('/chat/completions')) return url.toString();
+
+    // If path ends with /v1, just append /chat/completions
+    if (path.endsWith('/v1')) {
+      path += '/chat/completions';
+    } else {
+      // Standard OpenAI-compatible path: append /v1/chat/completions
+      path = path.replace(/\/?$/, '/v1/chat/completions');
+    }
+
+    url.pathname = path;
+    return url.toString();
+  } catch {
+    // Fallback for malformed URLs — pure string-based approach
+    let base = baseUrl.replace(/\/+$/, '');
+    if (base.endsWith('/chat/completions')) return base;
+    if (base.endsWith('/v1')) return `${base}/chat/completions`;
+    return `${base}/v1/chat/completions`;
+  }
 }
 
 function buildUpstreamBody(relayReq: ChatCompletionRequest): any {

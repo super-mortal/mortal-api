@@ -22,7 +22,7 @@ export default function BackupPage() {
     setMessage(null);
     try {
       const token = localStorage.getItem('admin_token');
-      const res = await fetch('/api/admin/backup', { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch('/admin/backup', { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) throw new Error('Backup failed');
       const data = await res.json();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -54,7 +54,7 @@ export default function BackupPage() {
       const text = await restoreFile.text();
       const data = JSON.parse(text);
       const token = localStorage.getItem('admin_token');
-      const res = await fetch('/api/admin/backup', {
+      const res = await fetch('/admin/backup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(data),

@@ -1,5 +1,5 @@
 // ============================================================
-// POST /api/v1/chat/completions — Main proxy endpoint
+// POST /v1/chat/completions — Main proxy endpoint
 // ============================================================
 import { NextRequest, NextResponse } from 'next/server';
 import { getRelayKeyByKey, addUsedTokens, getAllowedChannelIds } from '@/lib/keys';

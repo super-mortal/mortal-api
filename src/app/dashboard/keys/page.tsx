@@ -54,7 +54,7 @@ export default function KeysPage() {
   const [modelLoading, setModelLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
-    const res = await apiFetch('/api/admin/keys?scope=full');
+    const res = await apiFetch('/admin/keys?scope=full');
     if (res.ok) { const d: FullData = await res.json(); setKeys(d.keys); setChannels(d.channels || []); }
     setLoading(false);
   }, []);
@@ -62,7 +62,7 @@ export default function KeysPage() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const getModelsForChannels = useCallback(async (chIds: string[]): Promise<string[]> => {
-    const res = await apiFetch('/api/admin/channels?scope=models');
+    const res = await apiFetch('/admin/channels?scope=models');
     if (!res.ok) return [];
     const d = await res.json();
 
@@ -135,7 +135,7 @@ export default function KeysPage() {
   };
 
   const handleCreate = async () => {
-    const res = await apiFetch('/api/admin/keys', {
+    const res = await apiFetch('/admin/keys', {
       method: 'POST',
       body: JSON.stringify({
         name: newName || 'New Key', balance: newBalance,
@@ -153,7 +153,7 @@ export default function KeysPage() {
   };
 
   const handleToggle = async (id: string, is_active: number) => {
-    await apiFetch('/api/admin/keys', { method: 'PATCH', body: JSON.stringify({ id, is_active: is_active ? 0 : 1 }) });
+    await apiFetch('/admin/keys', { method: 'PATCH', body: JSON.stringify({ id, is_active: is_active ? 0 : 1 }) });
     fetchData();
   };
 
@@ -166,13 +166,13 @@ export default function KeysPage() {
     };
     if (editExpiry === '') body.expires_at = null;
     else if (editExpiry !== (showEdit.expires_at || '').replace(' ', 'T').slice(0, 16)) body.expires_at = editExpiry;
-    await apiFetch('/api/admin/keys', { method: 'PATCH', body: JSON.stringify(body) });
+    await apiFetch('/admin/keys', { method: 'PATCH', body: JSON.stringify(body) });
     setShowEdit(null); fetchData();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('确定删除此 Key？')) return;
-    await apiFetch(`/api/admin/keys?id=${id}`, { method: 'DELETE' });
+    await apiFetch(`/admin/keys?id=${id}`, { method: 'DELETE' });
     fetchData();
   };
 
