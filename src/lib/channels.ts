@@ -111,7 +111,8 @@ export function resolveModel(modelName: string, allowedChannelIds?: string[]): {
     const alias = db.prepare(`
       SELECT ma.*, cm.model_id, cm.channel_id FROM model_aliases ma
       LEFT JOIN channel_models cm ON cm.id = ma.channel_model_id
-      WHERE ma.alias_name = ? AND ma.is_active = 1
+      LEFT JOIN channels c ON c.id = cm.channel_id
+      WHERE ma.alias_name = ? AND ma.is_active = 1 AND c.is_active = 1
         AND cm.channel_id IN (${placeholders})
     `).get(modelName, ...allowedChannelIds) as any;
     if (alias) return { channelId: alias.channel_id, upstreamModelId: alias.model_id };
@@ -121,7 +122,8 @@ export function resolveModel(modelName: string, allowedChannelIds?: string[]): {
   const alias = db.prepare(`
     SELECT ma.*, cm.model_id, cm.channel_id FROM model_aliases ma
     LEFT JOIN channel_models cm ON cm.id = ma.channel_model_id
-    WHERE ma.alias_name = ? AND ma.is_active = 1
+    LEFT JOIN channels c ON c.id = cm.channel_id
+    WHERE ma.alias_name = ? AND ma.is_active = 1 AND c.is_active = 1
   `).get(modelName) as any;
   if (alias) return { channelId: alias.channel_id, upstreamModelId: alias.model_id };
 
