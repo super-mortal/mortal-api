@@ -143,7 +143,13 @@ export function getModelsForAuto(): { modelId: string; channel: Channel }[] {
   const rows = db.prepare(`
     SELECT cm.model_id, c.* FROM channel_models cm
     LEFT JOIN channels c ON c.id = cm.channel_id
-    WHERE cm.is_active = 1 AND c.is_active = 1 AND c.health_status != 'unhealthy'
+    WHERE cm.is_active = 1 AND c.is_active = 1
+      AND c.health_status != 'unhealthy'
+      AND (
+        c.health_status != 'cooling_down'
+        OR c.last_health_check IS NULL
+        OR datetime(c.last_health_check, '+8 hours') < datetime('now')
+      )
   `).all() as any[];
   return rows.map(r => ({ modelId: r.model_id, channel: r as Channel }));
 }

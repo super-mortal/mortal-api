@@ -184,7 +184,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(result.response);
     }
   } catch (err: any) {
-    updateChannelHealth(channel.id, 'unhealthy');
+    // Rate limit (429) → cooling_down (auto-recover after 8h), other errors → unhealthy
+    const isRateLimit = err.status === 429;
+    updateChannelHealth(channel.id, isRateLimit ? 'cooling_down' : 'unhealthy');
     createCallLog({
       relay_key_id: relayKey.id, relay_key_name: relayKey.name,
       model: modelName, channel_id: channel.id, channel_name: channel.name,
