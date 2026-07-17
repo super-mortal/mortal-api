@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { Fragment, useEffect, useState, useCallback } from 'react';
 import { InlineIcon } from '@/lib/icon';
 import { Modal } from '@/lib/modal';
 import { toBeijingFull } from '@/lib/date';
@@ -8,7 +8,7 @@ import { apiFetch } from '@/lib/fetch-with-auth';
 
 interface CallLog {
   id: string; relay_key_name: string; relay_key_id: string; model: string; channel_name: string;
-  prompt_tokens: number; completion_tokens: number; total_tokens: number;
+  prompt_tokens: number; completion_tokens: number; cached_input_tokens: number; total_tokens: number;
   cost: number; status: string; error_message: string | null;
   ip: string; created_at: string;
 }
@@ -32,6 +32,10 @@ export default function LogsPage() {
   const [deleteDateTo, setDeleteDateTo] = useState('');
   const [deleteMsg, setDeleteMsg] = useState<string | null>(null);
   const limit = 20;
+  const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
+  const toggleExpand = (id: string) => {
+    setExpandedLogId(prev => prev === id ? null : id);
+  };
 
   const fetchKeys = useCallback(async () => {
     const res = await apiFetch('/admin/keys');
@@ -195,30 +199,73 @@ export default function LogsPage() {
                   <p className="text-sm text-gray-400">暂无调用记录</p>
                 </td></tr>
               ) : logs.map((log) => (
-                <tr key={log.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                  <td className="px-3 sm:px-4 py-3 text-[10px] sm:text-xs text-gray-500 whitespace-nowrap font-mono">{toBeijingFull(log.created_at)}</td>
-                  <td className="px-3 sm:px-4 py-3 text-gray-700 text-[10px] sm:text-xs hidden sm:table-cell truncate max-w-[100px]">{log.relay_key_name}</td>
-                  <td className="px-3 sm:px-4 py-3"><code className="text-[10px] sm:text-xs text-indigo-600 bg-indigo-50/80 px-1.5 py-0.5 rounded">{log.model}</code></td>
-                  <td className="px-3 sm:px-4 py-3 text-right text-[10px] sm:text-xs text-gray-500 hidden sm:table-cell truncate max-w-[80px]">{log.channel_name || '-'}</td>
-                  <td className="px-3 sm:px-4 py-3 text-right text-[10px] sm:text-xs text-gray-800 font-medium">{log.total_tokens.toLocaleString()}</td>
-                  <td className="px-3 sm:px-4 py-3 text-center hidden sm:table-cell">
-                    {log.status === 'success' ? (
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50/80 text-emerald-600 border border-emerald-200/50">
-                        <InlineIcon name="check" className="w-2.5 h-2.5 mr-0.5" />成功
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-red-50/80 text-red-500 border border-red-200/50 cursor-help" title={log.error_message || ''}>
-                        <InlineIcon name="x" className="w-2.5 h-2.5 mr-0.5" />失败
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-3 sm:px-4 py-3 text-center">
-                    <button onClick={() => handleDelete(log.id)} disabled={deleting === log.id}
-                      className="p-1.5 rounded text-red-300 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50" title="删除">
-                      {deleting === log.id ? <InlineIcon name="loaderCircle" className="w-3.5 h-3.5 animate-spin" /> : <InlineIcon name="trash2" className="w-3.5 h-3.5" />}
-                    </button>
-                  </td>
-                </tr>
+                <Fragment key={log.id}>
+                  <tr className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer"
+                    onClick={() => toggleExpand(log.id)}>
+                    <td className="px-3 sm:px-4 py-3 text-[10px] sm:text-xs text-gray-500 whitespace-nowrap font-mono">{toBeijingFull(log.created_at)}</td>
+                    <td className="px-3 sm:px-4 py-3 text-gray-700 text-[10px] sm:text-xs hidden sm:table-cell truncate max-w-[100px]">{log.relay_key_name}</td>
+                    <td className="px-3 sm:px-4 py-3"><code className="text-[10px] sm:text-xs text-indigo-600 bg-indigo-50/80 px-1.5 py-0.5 rounded">{log.model}</code></td>
+                    <td className="px-3 sm:px-4 py-3 text-right text-[10px] sm:text-xs text-gray-500 hidden sm:table-cell truncate max-w-[80px]">{log.channel_name || '-'}</td>
+                    <td className="px-3 sm:px-4 py-3 text-right text-[10px] sm:text-xs text-gray-800 font-medium">{log.total_tokens.toLocaleString()}</td>
+                    <td className="px-3 sm:px-4 py-3 text-center hidden sm:table-cell">
+                      {log.status === 'success' ? (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50/80 text-emerald-600 border border-emerald-200/50">
+                          <InlineIcon name="check" className="w-2.5 h-2.5 mr-0.5" />成功
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-red-50/80 text-red-500 border border-red-200/50 cursor-help" title={log.error_message || ''}>
+                          <InlineIcon name="x" className="w-2.5 h-2.5 mr-0.5" />失败
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 sm:px-4 py-3 text-center">
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(log.id); }} disabled={deleting === log.id}
+                        className="p-1.5 rounded text-red-300 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50" title="删除">
+                        {deleting === log.id ? <InlineIcon name="loaderCircle" className="w-3.5 h-3.5 animate-spin" /> : <InlineIcon name="trash2" className="w-3.5 h-3.5" />}
+                      </button>
+                    </td>
+                  </tr>
+                  {expandedLogId === log.id && (
+                    <tr key={`detail-${log.id}`} className="bg-gray-50/50 border-b border-gray-100">
+                      <td colSpan={7} className="px-4 sm:px-6 py-4">
+                        <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-3">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            <DetailField label="时间" value={toBeijingFull(log.created_at)} />
+                            <DetailField label="Key" value={log.relay_key_name} />
+                            <DetailField label="渠道" value={log.channel_name || '-'} />
+                            <DetailField label="模型" value={log.model} />
+                            <DetailField label="费用" value={log.cost ? log.cost.toFixed(6) : '0'} />
+                            <DetailField label="IP" value={log.ip || '-'} />
+                          </div>
+                          <div className="flex flex-wrap gap-4 text-xs">
+                            <TokenBadge label="输入" value={log.prompt_tokens} />
+                            <TokenBadge label="输出" value={log.completion_tokens} />
+                            {log.cached_input_tokens > 0 && (
+                              <TokenBadge label="缓存输入" value={log.cached_input_tokens} color="emerald" />
+                            )}
+                            <TokenBadge label="未缓存输入" value={Math.max(0, log.prompt_tokens - (log.cached_input_tokens || 0))} color="amber" />
+                            <TokenBadge label="总 Token" value={log.total_tokens} color="indigo" />
+                          </div>
+                          {log.status === 'fail' && log.error_message && (
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <InlineIcon name="triangleAlert" className="w-3.5 h-3.5 text-red-500" />
+                                <span className="text-xs font-medium text-red-600">错误信息</span>
+                              </div>
+                              <p className="text-xs text-red-600 break-all whitespace-pre-wrap leading-relaxed">{log.error_message}</p>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 text-[10px] text-gray-400">
+                            <InlineIcon name="clock" className="w-3 h-3" />
+                            <span>日志 ID: {log.id}</span>
+                            <span className="text-gray-200">|</span>
+                            <span>{log.channel_name || '-'}</span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -263,5 +310,30 @@ export default function LogsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function DetailField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <span className="text-[10px] text-gray-400 block">{label}</span>
+      <span className="text-xs text-gray-800 font-medium">{value}</span>
+    </div>
+  );
+}
+
+function TokenBadge({ label, value, color = 'gray' }: { label: string; value: number; color?: string }) {
+  const colorMap: Record<string, string> = {
+    gray: 'bg-gray-50 text-gray-600 border-gray-200',
+    emerald: 'bg-emerald-50 text-emerald-600 border-emerald-200',
+    amber: 'bg-amber-50 text-amber-600 border-amber-200',
+    indigo: 'bg-indigo-50 text-indigo-600 border-indigo-200',
+    purple: 'bg-purple-50 text-purple-600 border-purple-200',
+  };
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md border text-[10px] font-medium ${colorMap[color] || colorMap.gray}`}>
+      <span className="opacity-60">{label}:</span>
+      <span>{value.toLocaleString()}</span>
+    </span>
   );
 }
