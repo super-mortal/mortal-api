@@ -45,6 +45,495 @@ index 0000000..021982a
 +
 +### Verification
 +- Run `npx tsc --noEmit` and confirm no new errors
+diff --git a/docs/superpowers/plans/task-1-report.md b/docs/superpowers/plans/task-1-report.md
+new file mode 100644
+index 0000000..f2b8c62
+--- /dev/null
++++ b/docs/superpowers/plans/task-1-report.md
+@@ -0,0 +1,62 @@
++# Task 1: DB Schema — Beijing Time Defaults & Migration
++
++## What Was Implemented
++
++1. **Updated all `DEFAULT (datetime('now'))` to `DEFAULT (datetime('now', '+8 hours'))`** in the `initSchema()` function for the following columns:
++   - `relay_keys.created_at`
++   - `relay_keys.updated_at`
++   - `channels.created_at`
++   - `channel_models.created_at`
++   - `model_aliases.created_at`
++   - `model_aliases_migrated.created_at` (in the existing unique-constraint migration)
++   - `call_logs.created_at`
++
++2. **Added `_migrations` table** to the schema for idempotent migration tracking, with `applied_at` defaulting to Beijing time.
++
++3. **Added Beijing-time data migration** at the end of `initSchema()` that:
++   - Checks if the migration has already been applied via `_migrations` table.
++   - If not, adds 8 hours to all existing `created_at`/`updated_at` values across all affected tables.
++   - Inserts a record into `_migrations` to mark completion.
++
++## Testing
++
++- `npx tsc --noEmit` passes with zero errors.
++
++## Files Changed
++
++- `D:\project\mortal-api\src\lib\db.ts` — all modifications.
++
++## Self-Review Findings
++
++- The `model_aliases_migrated` CREATE TABLE inside the existing unique-constraint migration block was also updated to use Beijing time, ensuring consistency if that migration runs after this change.
++- The `_migrations` table is created with `CREATE TABLE IF NOT EXISTS`, so it won't fail on re-run.
++- The data migration checks if the `v2_timezone_beijing` migration already exists before executing, making it idempotent.
++- The commit also included five `docs/superpowers/plans/` brief files that were in the working tree (pre-existing); they were committed as part of `git add -A`.
++
++## Concerns
++
++None.
++
++## Fix: Explicit Beijing Timezone in INSERT/UPDATE Statements
++
++### Problem
++
++`CREATE TABLE IF NOT EXISTS` does not update existing tables' column DEFAULT values. So even though the schema now declares `DEFAULT (datetime('now', '+8 hours'))`, existing databases keep the old UTC default (`datetime('now')`). Every INSERT that omits `created_at` still gets UTC timestamps.
++
++### Solution
++
++Explicitly set `created_at` to `datetime('now', '+8 hours')` in every INSERT statement, and fix `datetime('now')` to `datetime('now', '+8 hours')` in all UPDATE statements.
++
++### Files Changed
++
++- `D:\project\mortal-api\src\lib\logs.ts` — `createCallLog()`: added `created_at` column with `datetime('now', '+8 hours')` in VALUES.
++- `D:\project\mortal-api\src\lib\keys.ts` — `createRelayKey()`: added `created_at` column with `datetime('now', '+8 hours')` in VALUES.
++- `D:\project\mortal-api\src\lib\keys.ts` — `updateRelayKey()`: changed `datetime('now')` to `datetime('now', '+8 hours')`.
++- `D:\project\mortal-api\src\lib\channels.ts` — `createChannel()`: added `created_at` column with `datetime('now', '+8 hours')` in VALUES.
++- `D:\project\mortal-api\src\lib\channels.ts` — `createChannelModel()`: added `created_at` column with `datetime('now', '+8 hours')` in VALUES.
++- `D:\project\mortal-api\src\lib\channels.ts` — `createModelAlias()`: added `created_at` column with `datetime('now', '+8 hours')` in VALUES.
++- `D:\project\mortal-api\src\lib\channels.ts` — `updateChannelHealth()`: changed `datetime('now')` to `datetime('now', '+8 hours')`.
++
++### Test Results
++
++- `npx tsc --noEmit` passes with zero errors.
+diff --git a/docs/superpowers/plans/task-1-review.diff b/docs/superpowers/plans/task-1-review.diff
+new file mode 100644
+index 0000000..496f6cd
+--- /dev/null
++++ b/docs/superpowers/plans/task-1-review.diff
+@@ -0,0 +1,415 @@
++diff --git a/docs/superpowers/plans/task-1-brief.md b/docs/superpowers/plans/task-1-brief.md
++new file mode 100644
++index 0000000..021982a
++--- /dev/null
+++++ b/docs/superpowers/plans/task-1-brief.md
++@@ -0,0 +1,41 @@
+++# Task 1: DB Schema — Beijing Time Defaults & Migration
+++
+++From the plan:
+++
+++**Files:**
+++- Modify: `src/lib/db.ts`
+++
+++### Changes Needed
+++
+++1. **Update all `DEFAULT (datetime('now'))` to `DEFAULT (datetime('now', '+8 hours'))`** in the `initSchema()` function. Affects:
+++   - `relay_keys.created_at` and `relay_keys.updated_at`
+++   - `channels.created_at`
+++   - `channel_models.created_at`
+++   - `model_aliases.created_at`
+++   - `call_logs.created_at`
+++
+++2. **Add `_migrations` table** to schema (for idempotent migration tracking):
+++   ```sql
+++   CREATE TABLE IF NOT EXISTS _migrations (
+++     name TEXT PRIMARY KEY,
+++     applied_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours'))
+++   );
+++   ```
+++
+++3. **Add Beijing-time data migration** at end of `initSchema()`:
+++   ```typescript
+++   const beijingMigrated = db.prepare("SELECT name FROM _migrations WHERE name = 'v2_timezone_beijing'").get();
+++   if (!beijingMigrated) {
+++     db.exec(`
+++       UPDATE relay_keys SET created_at = datetime(created_at, '+8 hours'), updated_at = datetime(updated_at, '+8 hours');
+++       UPDATE channels SET created_at = datetime(created_at, '+8 hours');
+++       UPDATE channel_models SET created_at = datetime(created_at, '+8 hours');
+++       UPDATE model_aliases SET created_at = datetime(created_at, '+8 hours');
+++       UPDATE call_logs SET created_at = datetime(created_at, '+8 hours');
+++       INSERT INTO _migrations (name) VALUES ('v2_timezone_beijing');
+++     `);
+++   }
+++   ```
+++
+++### Verification
+++- Run `npx tsc --noEmit` and confirm no new errors
++diff --git a/docs/superpowers/plans/task-2-brief.md b/docs/superpowers/plans/task-2-brief.md
++new file mode 100644
++index 0000000..481a6d2
++--- /dev/null
+++++ b/docs/superpowers/plans/task-2-brief.md
++@@ -0,0 +1,39 @@
+++# Task 2: Date Display Functions — Handle Beijing Time Input
+++
+++From the plan:
+++
+++**Files:**
+++- Modify: `src/lib/date.ts`
+++
+++### Changes Needed
+++
+++Replace both `toBeijing()` and `toBeijingFull()` to handle Beijing time input (instead of UTC input).
+++
+++Current code parses input as UTC and converts to Beijing. Since `created_at` now stores Beijing time, we need to append `+08:00` before parsing so JS doesn't double-convert.
+++
+++**Update `toBeijing()`:**
+++```typescript
+++export function toBeijing(beijingDate: string): string {
+++  const d = new Date(beijingDate.replace(' ', 'T') + '+08:00');
+++  return d.toLocaleString('zh-CN', {
+++    timeZone: 'Asia/Shanghai',
+++    year: 'numeric', month: '2-digit', day: '2-digit',
+++    hour: '2-digit', minute: '2-digit',
+++  });
+++}
+++```
+++
+++**Update `toBeijingFull()`:**
+++```typescript
+++export function toBeijingFull(beijingDate: string): string {
+++  const d = new Date(beijingDate.replace(' ', 'T') + '+08:00');
+++  return d.toLocaleString('zh-CN', {
+++    timeZone: 'Asia/Shanghai',
+++    year: 'numeric', month: '2-digit', day: '2-digit',
+++    hour: '2-digit', minute: '2-digit', second: '2-digit',
+++  });
+++}
+++```
+++
+++### Verification
+++- Run `npx tsc --noEmit` and confirm no new errors
++diff --git a/docs/superpowers/plans/task-3-brief.md b/docs/superpowers/plans/task-3-brief.md
++new file mode 100644
++index 0000000..0106090
++--- /dev/null
+++++ b/docs/superpowers/plans/task-3-brief.md
++@@ -0,0 +1,30 @@
+++# Task 3: SQL Queries — Align `datetime('now')` to Beijing Time
+++
+++From the plan:
+++
+++**Files:**
+++- Modify: `src/app/admin/stats/route.ts`
+++- Modify: `src/lib/logs.ts`
+++
+++### Changes Needed
+++
+++**In `stats/route.ts`** (1 change):
+++
+++Find:
+++```typescript
+++where.push("created_at >= datetime('now', ?)");
+++params.push(`-${days} days`);
+++```
+++
+++Change to:
+++```typescript
+++where.push("created_at >= datetime('now', '+8 hours', ?)");
+++params.push(`-${days} days`);
+++```
+++
+++**In `src/lib/logs.ts`** — `getStats()` function (4 changes):
+++
+++There are 4 occurrences of `datetime('now', ?)` in `getStats()` (at approx lines 116, 127, 138, 151). Change each to `datetime('now', '+8 hours', ?)`.
+++
+++### Verification
+++- Run `npx tsc --noEmit` and confirm no new errors
++diff --git a/docs/superpowers/plans/task-4-brief.md b/docs/superpowers/plans/task-4-brief.md
++new file mode 100644
++index 0000000..a073cd6
++--- /dev/null
+++++ b/docs/superpowers/plans/task-4-brief.md
++@@ -0,0 +1,37 @@
+++# Task 4: Dashboard Page — Default Today, Date Fix, Auto-Refresh
+++
+++From the plan:
+++
+++**Files:**
+++- Modify: `src/app/dashboard/page.tsx`
+++
+++### Changes Needed
+++
+++1. **Change default `activeDate`** from `'7d'` to `'today'`:
+++```typescript
+++const [activeDate, setActiveDate] = useState('today');
+++```
+++
+++2. **Fix `buildUrl()` today branch** — replace incorrect month-only query with proper date range:
+++```typescript
+++if (activeDate === 'today') {
+++  const now = new Date();
+++  const y = now.getFullYear();
+++  const m = String(now.getMonth() + 1).padStart(2, '0');
+++  const d = String(now.getDate()).padStart(2, '0');
+++  params.set('start_date', `${y}-${m}-${d} 00:00:00`);
+++  params.set('end_date', `${y}-${m}-${d} 23:59:59`);
+++}
+++```
+++
+++3. **Add 60s auto-refresh timer** for today mode:
+++```typescript
+++useEffect(() => {
+++  if (activeDate !== 'today') return;
+++  const timer = setInterval(() => { fetchStats(); }, 60000);
+++  return () => clearInterval(timer);
+++}, [activeDate, fetchStats]);
+++```
+++
+++### Verification
+++- Run `npx tsc --noEmit` and confirm no new errors
++diff --git a/docs/superpowers/plans/task-5-brief.md b/docs/superpowers/plans/task-5-brief.md
++new file mode 100644
++index 0000000..1f32471
++--- /dev/null
+++++ b/docs/superpowers/plans/task-5-brief.md
++@@ -0,0 +1,101 @@
+++# Task 5: Log Page — Inline Row Expand for Details
+++
+++From the plan:
+++
+++**Files:**
+++- Modify: `src/app/dashboard/logs/page.tsx`
+++
+++### Changes Needed
+++
+++1. **Add `expandedLogId` state** and toggle handler (after existing state declarations):
+++```typescript
+++const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
+++const toggleExpand = (id: string) => {
+++  setExpandedLogId(prev => prev === id ? null : id);
+++};
+++```
+++
+++2. **Add click handler to table rows** — change the `<tr>` className to add cursor-pointer and add `onClick`:
+++```tsx
+++<tr key={log.id}
+++  className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer"
+++  onClick={() => toggleExpand(log.id)}
+++>
+++```
+++
+++3. **Add expandable detail row** after each closing `</tr>`:
+++```tsx
+++{expandedLogId === log.id && (
+++  <tr key={`detail-${log.id}`} className="bg-gray-50/50 border-b border-gray-100">
+++    <td colSpan={7} className="px-4 sm:px-6 py-4">
+++      <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-3">
+++        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+++          <DetailField label="时间" value={toBeijingFull(log.created_at)} />
+++          <DetailField label="Key" value={log.relay_key_name} />
+++          <DetailField label="渠道" value={log.channel_name || '-'} />
+++          <DetailField label="模型" value={log.model} />
+++          <DetailField label="费用" value={log.cost ? log.cost.toFixed(6) : '0'} />
+++          <DetailField label="IP" value={log.ip || '-'} />
+++        </div>
+++        <div className="flex flex-wrap gap-4 text-xs">
+++          <TokenBadge label="输入" value={log.prompt_tokens} />
+++          <TokenBadge label="输出" value={log.completion_tokens} />
+++          {log.cached_input_tokens > 0 && (
+++            <TokenBadge label="缓存输入" value={log.cached_input_tokens} color="emerald" />
+++          )}
+++          <TokenBadge label="未缓存输入" value={Math.max(0, log.prompt_tokens - (log.cached_input_tokens || 0))} color="amber" />
+++          <TokenBadge label="总 Token" value={log.total_tokens} color="indigo" />
+++        </div>
+++        {log.status === 'fail' && log.error_message && (
+++          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+++            <div className="flex items-center gap-1.5 mb-1">
+++              <InlineIcon name="triangleAlert" className="w-3.5 h-3.5 text-red-500" />
+++              <span className="text-xs font-medium text-red-600">错误信息</span>
+++            </div>
+++            <p className="text-xs text-red-600 break-all whitespace-pre-wrap leading-relaxed">{log.error_message}</p>
+++          </div>
+++        )}
+++        <div className="flex items-center gap-2 text-[10px] text-gray-400">
+++          <InlineIcon name="clock" className="w-3 h-3" />
+++          <span>日志 ID: {log.id}</span>
+++          <span className="text-gray-200">|</span>
+++          <span>{log.channel_name || '-'}</span>
+++        </div>
+++      </div>
+++    </td>
+++  </tr>
+++)}
+++```
+++
+++4. **Add helper components** (place before the component return, or at bottom of file):
+++```tsx
+++function DetailField({ label, value }: { label: string; value: string }) {
+++  return (
+++    <div>
+++      <span className="text-[10px] text-gray-400 block">{label}</span>
+++      <span className="text-xs text-gray-800 font-medium">{value}</span>
+++    </div>
+++  );
+++}
+++
+++function TokenBadge({ label, value, color = 'gray' }: { label: string; value: number; color?: string }) {
+++  const colorMap: Record<string, string> = {
+++    gray: 'bg-gray-50 text-gray-600 border-gray-200',
+++    emerald: 'bg-emerald-50 text-emerald-600 border-emerald-200',
+++    amber: 'bg-amber-50 text-amber-600 border-amber-200',
+++    indigo: 'bg-indigo-50 text-indigo-600 border-indigo-200',
+++    purple: 'bg-purple-50 text-purple-600 border-purple-200',
+++  };
+++  return (
+++    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md border text-[10px] font-medium ${colorMap[color] || colorMap.gray}`}>
+++      <span className="opacity-60">{label}:</span>
+++      <span>{value.toLocaleString()}</span>
+++    </span>
+++  );
+++}
+++```
+++
+++**Important:** Also need to ensure `toBeijingFull` is imported from `@/lib/date` (it already is, line 6).
+++
+++### Verification
+++- Run `npx tsc --noEmit` and confirm no new errors
++diff --git a/src/lib/db.ts b/src/lib/db.ts
++index b36a5c0..8e71f4e 100644
++--- a/src/lib/db.ts
+++++ b/src/lib/db.ts
++@@ -28,104 +28,125 @@ function initSchema(db: Database.Database) {
++     CREATE TABLE IF NOT EXISTS relay_keys (
++       id TEXT PRIMARY KEY,
++       key TEXT UNIQUE NOT NULL,
++       name TEXT NOT NULL,
++       balance INTEGER NOT NULL DEFAULT 0,
++       used_tokens INTEGER NOT NULL DEFAULT 0,
++       is_active INTEGER NOT NULL DEFAULT 1,
++       expires_at TEXT,
++       allowed_models TEXT NOT NULL DEFAULT '',
++       allowed_channels TEXT NOT NULL DEFAULT '',
++-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
++-      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+++      created_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours')),
+++      updated_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours'))
++     );
++ 
++     CREATE TABLE IF NOT EXISTS channels (
++       id TEXT PRIMARY KEY,
++       name TEXT NOT NULL,
++       base_url TEXT NOT NULL,
++       api_key TEXT NOT NULL DEFAULT '',
++       priority INTEGER NOT NULL DEFAULT 0,
++       notes TEXT NOT NULL DEFAULT '',
++       is_active INTEGER NOT NULL DEFAULT 1,
++       health_status TEXT NOT NULL DEFAULT 'unknown',
++       last_health_check TEXT,
++-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+++      created_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours'))
++     );
++ 
++     CREATE TABLE IF NOT EXISTS channel_models (
++       id TEXT PRIMARY KEY,
++       channel_id TEXT NOT NULL,
++       model_id TEXT NOT NULL,
++       is_active INTEGER NOT NULL DEFAULT 1,
++-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+++      created_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours')),
++       FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE
++     );
++     CREATE INDEX IF NOT EXISTS idx_channel_models_channel ON channel_models(channel_id);
++     CREATE INDEX IF NOT EXISTS idx_channel_models_model ON channel_models(model_id);
++ 
++     CREATE TABLE IF NOT EXISTS model_aliases (
++       id TEXT PRIMARY KEY,
++       alias_name TEXT NOT NULL,
++       channel_model_id TEXT NOT NULL,
++       is_active INTEGER NOT NULL DEFAULT 1,
++-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+++      created_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours')),
++       FOREIGN KEY (channel_model_id) REFERENCES channel_models(id) ON DELETE CASCADE
++     );
++     CREATE INDEX IF NOT EXISTS idx_model_aliases_alias ON model_aliases(alias_name);
++ 
++     CREATE TABLE IF NOT EXISTS call_logs (
++       id TEXT PRIMARY KEY,
++       relay_key_id TEXT,
++       relay_key_name TEXT,
++       model TEXT NOT NULL,
++       channel_id TEXT,
++       channel_name TEXT,
++       prompt_tokens INTEGER NOT NULL DEFAULT 0,
++       completion_tokens INTEGER NOT NULL DEFAULT 0,
++       total_tokens INTEGER NOT NULL DEFAULT 0,
++       status TEXT NOT NULL DEFAULT 'success',
++       error_message TEXT,
++       ip TEXT,
++-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+++      created_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours'))
++     );
++     CREATE INDEX IF NOT EXISTS idx_call_logs_created_at ON call_logs(created_at);
++     CREATE INDEX IF NOT EXISTS idx_call_logs_relay_key_id ON call_logs(relay_key_id);
++     CREATE INDEX IF NOT EXISTS idx_call_logs_model ON call_logs(model);
++     CREATE INDEX IF NOT EXISTS idx_call_logs_status ON call_logs(status);
++   `);
++ 
+++  // _migrations table for idempotent migration tracking
+++  db.exec(`
+++    CREATE TABLE IF NOT EXISTS _migrations (
+++      name TEXT PRIMARY KEY,
+++      applied_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours'))
+++    );
+++  `);
+++
++   // Migration: add cost column to call_logs if missing
++   const cols = db.prepare("PRAGMA table_info('call_logs')").all() as { name: string }[];
++   if (!cols.find(c => c.name === 'cost')) {
++     db.exec("ALTER TABLE call_logs ADD COLUMN cost REAL");
++   }
++ 
++   // Migration: remove UNIQUE constraint from model_aliases.alias_name
++   const aliasIndexes = db.prepare("PRAGMA index_list('model_aliases')").all() as any[];
++   const hasUniqueOnAlias = aliasIndexes.some((idx: any) => idx.unique === 1 && idx.origin === 'u');
++   if (hasUniqueOnAlias) {
++     db.exec(`
++       CREATE TABLE model_aliases_migrated (
++         id TEXT PRIMARY KEY,
++         alias_name TEXT NOT NULL,
++         channel_model_id TEXT NOT NULL,
++         is_active INTEGER NOT NULL DEFAULT 1,
++-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+++        created_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours')),
++         FOREIGN KEY (channel_model_id) REFERENCES channel_models(id) ON DELETE CASCADE
++       );
++       INSERT INTO model_aliases_migrated SELECT * FROM model_aliases;
++       DROP TABLE model_aliases;
++       ALTER TABLE model_aliases_migrated RENAME TO model_aliases;
++       CREATE INDEX IF NOT EXISTS idx_model_aliases_alias ON model_aliases(alias_name);
++     `);
++   }
++ 
++   // Migration: add cached_input_tokens column to call_logs
++   if (!cols.find(c => c.name === 'cached_input_tokens')) {
++     db.exec("ALTER TABLE call_logs ADD COLUMN cached_input_tokens INTEGER NOT NULL DEFAULT 0");
++   }
+++
+++  // Migration: convert existing UTC timestamps to Beijing time (UTC+8)
+++  const beijingMigrated = db.prepare("SELECT name FROM _migrations WHERE name = 'v2_timezone_beijing'").get();
+++  if (!beijingMigrated) {
+++    db.exec(`
+++      UPDATE relay_keys SET created_at = datetime(created_at, '+8 hours'), updated_at = datetime(updated_at, '+8 hours');
+++      UPDATE channels SET created_at = datetime(created_at, '+8 hours');
+++      UPDATE channel_models SET created_at = datetime(created_at, '+8 hours');
+++      UPDATE model_aliases SET created_at = datetime(created_at, '+8 hours');
+++      UPDATE call_logs SET created_at = datetime(created_at, '+8 hours');
+++      INSERT INTO _migrations (name) VALUES ('v2_timezone_beijing');
+++    `);
+++  }
++ }
++ 
++ export function closeDb() {
++   if (db) { db.close(); db = null; }
++ }
 diff --git a/docs/superpowers/plans/task-2-brief.md b/docs/superpowers/plans/task-2-brief.md
 new file mode 100644
 index 0000000..481a6d2
@@ -276,6 +765,102 @@ index 0000000..1f32471
 +
 +### Verification
 +- Run `npx tsc --noEmit` and confirm no new errors
+diff --git a/src/lib/channels.ts b/src/lib/channels.ts
+index d7df84c..c8e5246 100644
+--- a/src/lib/channels.ts
++++ b/src/lib/channels.ts
+@@ -15,21 +15,21 @@ export function listChannels(): Channel[] {
+ 
+ export function getChannelById(id: string): Channel | undefined {
+   const db = getDb();
+   return db.prepare('SELECT * FROM channels WHERE id = ?').get(id) as Channel | undefined;
+ }
+ 
+ export function createChannel(data: { name: string; base_url: string; api_key?: string; priority?: number; notes?: string }): Channel {
+   const db = getDb();
+   const id = nanoid(16);
+   const encryptedKey = data.api_key ? encryptApiKey(data.api_key) : '';
+-  db.prepare(`INSERT INTO channels (id, name, base_url, api_key, priority, notes, is_active) VALUES (?, ?, ?, ?, ?, ?, 1)`)
++  db.prepare(`INSERT INTO channels (id, name, base_url, api_key, priority, notes, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, 1, datetime('now', '+8 hours'))`)
+     .run(id, data.name, data.base_url, encryptedKey, data.priority || 0, data.notes || '');
+   return getChannelById(id)!;
+ }
+ 
+ export function updateChannel(id: string, data: Partial<{ name: string; base_url: string; api_key: string; priority: number; notes: string; is_active: number }>): boolean {
+   const db = getDb();
+   const sets: string[] = [];
+   const params: any[] = [];
+   for (const f of ['name', 'base_url', 'priority', 'notes', 'is_active'] as const) {
+     if ((data as any)[f] !== undefined) { sets.push(`${f} = ?`); params.push((data as any)[f]); }
+@@ -38,21 +38,21 @@ export function updateChannel(id: string, data: Partial<{ name: string; base_url
+   if (sets.length === 0) return false;
+   params.push(id);
+   return db.prepare(`UPDATE channels SET ${sets.join(', ')} WHERE id = ?`).run(...params).changes > 0;
+ }
+ 
+ export function deleteChannel(id: string): boolean {
+   return getDb().prepare('DELETE FROM channels WHERE id = ?').run(id).changes > 0;
+ }
+ 
+ export function updateChannelHealth(id: string, status: string) {
+-  getDb().prepare("UPDATE channels SET health_status = ?, last_health_check = datetime('now') WHERE id = ?").run(status, id);
++  getDb().prepare("UPDATE channels SET health_status = ?, last_health_check = datetime('now', '+8 hours') WHERE id = ?").run(status, id);
+ }
+ 
+ export function resolveChannelApiKey(channel: Channel): string {
+   if (channel.api_key) return decryptApiKey(channel.api_key);
+   return '';
+ }
+ 
+ // ── Channel Models ──
+ 
+ export function listChannelModels(channelId?: string): ChannelModel[] {
+@@ -62,21 +62,21 @@ export function listChannelModels(channelId?: string): ChannelModel[] {
+     SELECT cm.*, c.name as channel_name FROM channel_models cm
+     LEFT JOIN channels c ON c.id = cm.channel_id ORDER BY cm.created_at DESC
+   `).all() as ChannelModel[];
+ }
+ 
+ export function createChannelModel(channelId: string, modelId: string): ChannelModel | null {
+   const db = getDb();
+   const existing = db.prepare('SELECT id FROM channel_models WHERE channel_id = ? AND model_id = ?').get(channelId, modelId);
+   if (existing) return null;
+   const id = nanoid(16);
+-  db.prepare('INSERT INTO channel_models (id, channel_id, model_id, is_active) VALUES (?, ?, ?, 1)').run(id, channelId, modelId);
++  db.prepare(`INSERT INTO channel_models (id, channel_id, model_id, is_active, created_at) VALUES (?, ?, ?, 1, datetime('now', '+8 hours'))`).run(id, channelId, modelId);
+   return db.prepare('SELECT * FROM channel_models WHERE id = ?').get(id) as ChannelModel;
+ }
+ 
+ export function deleteChannelModel(id: string): boolean {
+   return getDb().prepare('DELETE FROM channel_models WHERE id = ?').run(id).changes > 0;
+ }
+ 
+ // ── Model Aliases ──
+ 
+ export function listModelAliases(): ModelAlias[] {
+@@ -85,21 +85,21 @@ export function listModelAliases(): ModelAlias[] {
+     SELECT ma.*, cm.model_id, c.name as channel_name FROM model_aliases ma
+     LEFT JOIN channel_models cm ON cm.id = ma.channel_model_id
+     LEFT JOIN channels c ON c.id = cm.channel_id
+     ORDER BY ma.created_at DESC
+   `).all() as ModelAlias[];
+ }
+ 
+ export function createModelAlias(aliasName: string, channelModelId: string): ModelAlias | null {
+   const db = getDb();
+   const id = nanoid(16);
+-  db.prepare('INSERT INTO model_aliases (id, alias_name, channel_model_id, is_active) VALUES (?, ?, ?, 1)').run(id, aliasName, channelModelId);
++  db.prepare(`INSERT INTO model_aliases (id, alias_name, channel_model_id, is_active, created_at) VALUES (?, ?, ?, 1, datetime('now', '+8 hours'))`).run(id, aliasName, channelModelId);
+   return db.prepare('SELECT * FROM model_aliases WHERE id = ?').get(id) as ModelAlias;
+ }
+ 
+ export function deleteModelAlias(id: string): boolean {
+   return getDb().prepare('DELETE FROM model_aliases WHERE id = ?').run(id).changes > 0;
+ }
+ 
+ // ── Routing ──
+ 
+ export function resolveModel(modelName: string, allowedChannelIds?: string[]): { channelId: string; upstreamModelId: string } | null {
 diff --git a/src/lib/db.ts b/src/lib/db.ts
 index b36a5c0..8e71f4e 100644
 --- a/src/lib/db.ts
@@ -413,3 +998,84 @@ index b36a5c0..8e71f4e 100644
  export function closeDb() {
    if (db) { db.close(); db = null; }
  }
+diff --git a/src/lib/keys.ts b/src/lib/keys.ts
+index cb702b9..de2b838 100644
+--- a/src/lib/keys.ts
++++ b/src/lib/keys.ts
+@@ -4,22 +4,22 @@ import { nanoid } from 'nanoid';
+ 
+ export function generateRelayKey(): string {
+   return 'sk-mortal-' + nanoid(32);
+ }
+ 
+ export function createRelayKey(name: string, balance: number, expiresAt?: string | null, allowedModels?: string, allowedChannels?: string): RelayKey {
+   const db = getDb();
+   const id = nanoid(16);
+   const key = generateRelayKey();
+   db.prepare(`
+-    INSERT INTO relay_keys (id, key, name, balance, expires_at, allowed_models, allowed_channels, is_active)
+-    VALUES (?, ?, ?, ?, ?, ?, ?, 1)
++    INSERT INTO relay_keys (id, key, name, balance, expires_at, allowed_models, allowed_channels, is_active, created_at)
++    VALUES (?, ?, ?, ?, ?, ?, ?, 1, datetime('now', '+8 hours'))
+   `).run(id, key, name, balance, expiresAt || null, allowedModels || '', allowedChannels || '');
+   return getRelayKeyById(id)!;
+ }
+ 
+ export function getRelayKeyById(id: string): RelayKey | undefined {
+   const db = getDb();
+   return db.prepare('SELECT * FROM relay_keys WHERE id = ?').get(id) as RelayKey | undefined;
+ }
+ 
+ export function getRelayKeyByKey(key: string): RelayKey | undefined {
+@@ -39,21 +39,21 @@ export function updateRelayKey(
+   const db = getDb();
+   const sets: string[] = [];
+   const params: any[] = [];
+   if (data.name !== undefined) { sets.push('name = ?'); params.push(data.name); }
+   if (data.balance !== undefined) { sets.push('balance = ?'); params.push(data.balance); }
+   if (data.is_active !== undefined) { sets.push('is_active = ?'); params.push(data.is_active); }
+   if (data.expires_at !== undefined) { sets.push('expires_at = ?'); params.push(data.expires_at); }
+   if (data.allowed_models !== undefined) { sets.push('allowed_models = ?'); params.push(data.allowed_models); }
+   if (data.allowed_channels !== undefined) { sets.push('allowed_channels = ?'); params.push(data.allowed_channels); }
+   if (sets.length === 0) return false;
+-  sets.push("updated_at = datetime('now')");
++  sets.push("updated_at = datetime('now', '+8 hours')");
+   params.push(id);
+   const result = db.prepare(`UPDATE relay_keys SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+   return result.changes > 0;
+ }
+ 
+ export function deleteRelayKey(id: string): boolean {
+   const db = getDb();
+   const result = db.prepare('DELETE FROM relay_keys WHERE id = ?').run(id);
+   return result.changes > 0;
+ }
+diff --git a/src/lib/logs.ts b/src/lib/logs.ts
+index bb514aa..7af1c87 100644
+--- a/src/lib/logs.ts
++++ b/src/lib/logs.ts
+@@ -18,22 +18,22 @@ export function createCallLog(data: {
+   status: string;
+   error_message?: string | null;
+   ip?: string;
+ }): CallLog {
+   const db = getDb();
+   const id = nanoid(16);
+   const total = data.prompt_tokens + data.completion_tokens;
+   const cachedInput = data.cached_input_tokens || 0;
+   db.prepare(`
+     INSERT INTO call_logs (id, relay_key_id, relay_key_name, model, channel_id, channel_name,
+-      prompt_tokens, completion_tokens, cached_input_tokens, total_tokens, cost, status, error_message, ip)
+-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
++      prompt_tokens, completion_tokens, cached_input_tokens, total_tokens, cost, status, error_message, ip, created_at)
++    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+8 hours'))
+   `).run(
+     id,
+     data.relay_key_id,
+     data.relay_key_name,
+     data.model,
+     data.channel_id,
+     data.channel_name,
+     data.prompt_tokens,
+     data.completion_tokens,
+     cachedInput,

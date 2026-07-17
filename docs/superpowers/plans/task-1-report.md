@@ -60,3 +60,7 @@ Explicitly set `created_at` to `datetime('now', '+8 hours')` in every INSERT sta
 ### Test Results
 
 - `npx tsc --noEmit` passes with zero errors.
+
+## Additional Fix (cef554c)
+- Fixed `addUsedTokens()` in keys.ts: `updated_at = datetime('now', '+8 hours')`
+- Fixed `getModelsForAuto()` in channels.ts: `datetime(c.last_health_check, '+8 hours') < datetime('now', '+8 hours')`

@@ -29,7 +29,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [keys, setKeys] = useState<RelayKey[]>([]);
   const [selectedKeyId, setSelectedKeyId] = useState('');
-  const [activeDate, setActiveDate] = useState('7d');
+  const [activeDate, setActiveDate] = useState('today');
   const [startMonth, setStartMonth] = useState('');
   const [endMonth, setEndMonth] = useState('');
   const [showCustom, setShowCustom] = useState(false);
@@ -44,8 +44,12 @@ export default function DashboardPage() {
   const buildUrl = useCallback(() => {
     const params = new URLSearchParams();
     if (activeDate === 'today') {
-      const d = new Date();
-      params.set('start_date', d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'));
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      params.set('start_date', `${y}-${m}-${d} 00:00:00`);
+      params.set('end_date', `${y}-${m}-${d} 23:59:59`);
     } else if (activeDate === '7d') params.set('days', '7');
     else if (activeDate === '30d') params.set('days', '30');
     else if (activeDate === 'custom') {
@@ -68,6 +72,12 @@ export default function DashboardPage() {
   }, [buildUrl]);
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
+
+  useEffect(() => {
+    if (activeDate !== 'today') return;
+    const timer = setInterval(() => { fetchStats(); }, 60000);
+    return () => clearInterval(timer);
+  }, [activeDate, fetchStats]);
 
   if (!data) {
     return (
