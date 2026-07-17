@@ -26,11 +26,16 @@ export default function LogsPage() {
   const [modelFilter, setModelFilter] = useState('');
   const [startMonth, setStartMonth] = useState('');
   const [endMonth, setEndMonth] = useState('');
-  const [deleting, setDeleting] = useState<string | null>(null);
   const [showBatchDelete, setShowBatchDelete] = useState(false);
   const [deleteDateFrom, setDeleteDateFrom] = useState('');
   const [deleteDateTo, setDeleteDateTo] = useState('');
   const [deleteMsg, setDeleteMsg] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    type: 'single' | 'batch';
+    id?: string;
+    count?: number;
+  } | null>(null);
   const limit = 20;
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const toggleExpand = (id: string) => {
@@ -57,11 +62,24 @@ export default function LogsPage() {
 
   useEffect(() => { fetchLogs(); fetchKeys(); }, [fetchLogs, fetchKeys]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('确定删除此条日志？')) return;
-    setDeleting(id);
-    await fetch(`/admin/logs?id=${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${localStorage.getItem('admin_token')}` } });
-    setDeleting(null); fetchLogs();
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirm) return;
+    if (deleteConfirm.type === 'single') {
+      await fetch(`/admin/logs?id=${deleteConfirm.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${localStorage.getItem('admin_token')}` },
+      });
+    } else {
+      for (const id of selected) {
+        await fetch(`/admin/logs?id=${id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${localStorage.getItem('admin_token')}` },
+        });
+      }
+    }
+    setDeleteConfirm(null);
+    setSelected(new Set());
+    fetchLogs();
   };
 
   const handleBatchDeleteByDate = async () => {
@@ -141,6 +159,30 @@ export default function LogsPage() {
         </div>
       </Modal>
 
+      {/* Delete Confirmation Modal — replaces browser confirm() */}
+      <Modal open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)}
+        title="确认删除">
+        <div className="space-y-4">
+          <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-600 flex items-center gap-2">
+            <InlineIcon name="triangleAlert" className="w-5 h-5 shrink-0" />
+            {deleteConfirm?.type === 'batch'
+              ? `确定删除已选的 ${deleteConfirm.count} 条日志？`
+              : '确定删除此条日志？'}
+            <span className="font-medium"> 此操作不可撤销。</span>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={() => setDeleteConfirm(null)}
+              className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+              取消
+            </button>
+            <button onClick={handleConfirmDelete}
+              className="flex-1 px-4 py-2.5 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors flex items-center justify-center gap-2">
+              <InlineIcon name="trash2" className="w-4 h-4" /> 确认删除
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       {/* Filters */}
       <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 flex-wrap">
@@ -175,12 +217,43 @@ export default function LogsPage() {
         </div>
       </div>
 
+      {/* Action Bar — appears when rows are selected */}
+      {selected.size > 0 && (
+        <div className="flex items-center justify-between bg-indigo-50/50 border border-indigo-100 rounded-xl px-4 py-3 shadow-sm">
+          <span className="text-sm text-indigo-700 font-medium">
+            ☑ 已选 {selected.size} 条
+          </span>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setSelected(new Set())}
+              className="text-xs text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg border border-gray-200 bg-white transition-colors">
+              取消选择
+            </button>
+            <button onClick={() => setDeleteConfirm({ type: 'batch', count: selected.size })}
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-red-500 text-white text-xs font-medium hover:bg-red-600 transition-colors">
+              <InlineIcon name="trash2" className="w-3.5 h-3.5" /> 批量删除
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
+                <th className="w-10 px-2 py-3 text-center">
+                  <input type="checkbox"
+                    checked={logs.length > 0 && selected.size === logs.length}
+                    onChange={() => {
+                      if (selected.size === logs.length) {
+                        setSelected(new Set());
+                      } else {
+                        setSelected(new Set(logs.map(l => l.id)));
+                      }
+                    }}
+                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                </th>
                 <th className="text-left px-3 sm:px-4 py-3 font-medium text-gray-500 text-[10px] sm:text-xs">时间 (北京时间)</th>
                 <th className="text-left px-3 sm:px-4 py-3 font-medium text-gray-500 text-[10px] sm:text-xs hidden sm:table-cell">Key</th>
                 <th className="text-left px-3 sm:px-4 py-3 font-medium text-gray-500 text-[10px] sm:text-xs">模型</th>
@@ -192,16 +265,28 @@ export default function LogsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="px-4 py-16 text-center"><InlineIcon name="loaderCircle" className="w-5 h-5 animate-spin text-indigo-600 inline" /></td></tr>
+                <tr><td colSpan={8} className="px-4 py-16 text-center"><InlineIcon name="loaderCircle" className="w-5 h-5 animate-spin text-indigo-600 inline" /></td></tr>
               ) : logs.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-16 text-center">
+                <tr><td colSpan={8} className="px-4 py-16 text-center">
                   <div className="text-gray-300 text-3xl mb-2"><InlineIcon name="list" className="w-8 h-8 mx-auto" /></div>
                   <p className="text-sm text-gray-400">暂无调用记录</p>
                 </td></tr>
               ) : logs.map((log) => (
                 <Fragment key={log.id}>
-                  <tr className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer"
+                  <tr className={`border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer ${
+                    selected.has(log.id) ? 'bg-indigo-50/30 border-l-2 border-indigo-400' : ''
+                  }`}
                     onClick={() => toggleExpand(log.id)}>
+                    <td className="px-2 py-3 text-center" onClick={e => e.stopPropagation()}>
+                      <input type="checkbox"
+                        checked={selected.has(log.id)}
+                        onChange={() => {
+                          const next = new Set(selected);
+                          next.has(log.id) ? next.delete(log.id) : next.add(log.id);
+                          setSelected(next);
+                        }}
+                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                    </td>
                     <td className="px-3 sm:px-4 py-3 text-[10px] sm:text-xs text-gray-500 whitespace-nowrap font-mono">{toBeijingFull(log.created_at)}</td>
                     <td className="px-3 sm:px-4 py-3 text-gray-700 text-[10px] sm:text-xs hidden sm:table-cell truncate max-w-[100px]">{log.relay_key_name}</td>
                     <td className="px-3 sm:px-4 py-3"><code className="text-[10px] sm:text-xs text-indigo-600 bg-indigo-50/80 px-1.5 py-0.5 rounded">{log.model}</code></td>
@@ -219,15 +304,18 @@ export default function LogsPage() {
                       )}
                     </td>
                     <td className="px-3 sm:px-4 py-3 text-center">
-                      <button onClick={(e) => { e.stopPropagation(); handleDelete(log.id); }} disabled={deleting === log.id}
-                        className="p-1.5 rounded text-red-300 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50" title="删除">
-                        {deleting === log.id ? <InlineIcon name="loaderCircle" className="w-3.5 h-3.5 animate-spin" /> : <InlineIcon name="trash2" className="w-3.5 h-3.5" />}
+                      <button onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteConfirm({ type: 'single', id: log.id });
+                      }}
+                        className="p-1.5 rounded text-red-300 hover:text-red-500 hover:bg-red-50 transition-colors" title="删除">
+                        <InlineIcon name="trash2" className="w-3.5 h-3.5" />
                       </button>
                     </td>
                   </tr>
                   {expandedLogId === log.id && (
                     <tr key={`detail-${log.id}`} className="bg-gray-50/50 border-b border-gray-100">
-                      <td colSpan={7} className="px-4 sm:px-6 py-4">
+                      <td colSpan={8} className="px-4 sm:px-6 py-4">
                         <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-3">
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             <DetailField label="时间" value={toBeijingFull(log.created_at)} />
