@@ -25,8 +25,8 @@ export function createCallLog(data: {
   const cachedInput = data.cached_input_tokens || 0;
   db.prepare(`
     INSERT INTO call_logs (id, relay_key_id, relay_key_name, model, channel_id, channel_name,
-      prompt_tokens, completion_tokens, cached_input_tokens, total_tokens, cost, status, error_message, ip)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      prompt_tokens, completion_tokens, cached_input_tokens, total_tokens, cost, status, error_message, ip, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+8 hours'))
   `).run(
     id,
     data.relay_key_id,

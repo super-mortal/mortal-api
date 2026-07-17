@@ -22,7 +22,7 @@ export function createChannel(data: { name: string; base_url: string; api_key?: 
   const db = getDb();
   const id = nanoid(16);
   const encryptedKey = data.api_key ? encryptApiKey(data.api_key) : '';
-  db.prepare(`INSERT INTO channels (id, name, base_url, api_key, priority, notes, is_active) VALUES (?, ?, ?, ?, ?, ?, 1)`)
+  db.prepare(`INSERT INTO channels (id, name, base_url, api_key, priority, notes, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, 1, datetime('now', '+8 hours'))`)
     .run(id, data.name, data.base_url, encryptedKey, data.priority || 0, data.notes || '');
   return getChannelById(id)!;
 }
@@ -45,7 +45,7 @@ export function deleteChannel(id: string): boolean {
 }
 
 export function updateChannelHealth(id: string, status: string) {
-  getDb().prepare("UPDATE channels SET health_status = ?, last_health_check = datetime('now') WHERE id = ?").run(status, id);
+  getDb().prepare("UPDATE channels SET health_status = ?, last_health_check = datetime('now', '+8 hours') WHERE id = ?").run(status, id);
 }
 
 export function resolveChannelApiKey(channel: Channel): string {
@@ -69,7 +69,7 @@ export function createChannelModel(channelId: string, modelId: string): ChannelM
   const existing = db.prepare('SELECT id FROM channel_models WHERE channel_id = ? AND model_id = ?').get(channelId, modelId);
   if (existing) return null;
   const id = nanoid(16);
-  db.prepare('INSERT INTO channel_models (id, channel_id, model_id, is_active) VALUES (?, ?, ?, 1)').run(id, channelId, modelId);
+  db.prepare(`INSERT INTO channel_models (id, channel_id, model_id, is_active, created_at) VALUES (?, ?, ?, 1, datetime('now', '+8 hours'))`).run(id, channelId, modelId);
   return db.prepare('SELECT * FROM channel_models WHERE id = ?').get(id) as ChannelModel;
 }
 
@@ -92,7 +92,7 @@ export function listModelAliases(): ModelAlias[] {
 export function createModelAlias(aliasName: string, channelModelId: string): ModelAlias | null {
   const db = getDb();
   const id = nanoid(16);
-  db.prepare('INSERT INTO model_aliases (id, alias_name, channel_model_id, is_active) VALUES (?, ?, ?, 1)').run(id, aliasName, channelModelId);
+  db.prepare(`INSERT INTO model_aliases (id, alias_name, channel_model_id, is_active, created_at) VALUES (?, ?, ?, 1, datetime('now', '+8 hours'))`).run(id, aliasName, channelModelId);
   return db.prepare('SELECT * FROM model_aliases WHERE id = ?').get(id) as ModelAlias;
 }
 

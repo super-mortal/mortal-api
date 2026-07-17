@@ -11,8 +11,8 @@ export function createRelayKey(name: string, balance: number, expiresAt?: string
   const id = nanoid(16);
   const key = generateRelayKey();
   db.prepare(`
-    INSERT INTO relay_keys (id, key, name, balance, expires_at, allowed_models, allowed_channels, is_active)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+    INSERT INTO relay_keys (id, key, name, balance, expires_at, allowed_models, allowed_channels, is_active, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 1, datetime('now', '+8 hours'))
   `).run(id, key, name, balance, expiresAt || null, allowedModels || '', allowedChannels || '');
   return getRelayKeyById(id)!;
 }
@@ -46,7 +46,7 @@ export function updateRelayKey(
   if (data.allowed_models !== undefined) { sets.push('allowed_models = ?'); params.push(data.allowed_models); }
   if (data.allowed_channels !== undefined) { sets.push('allowed_channels = ?'); params.push(data.allowed_channels); }
   if (sets.length === 0) return false;
-  sets.push("updated_at = datetime('now')");
+  sets.push("updated_at = datetime('now', '+8 hours')");
   params.push(id);
   const result = db.prepare(`UPDATE relay_keys SET ${sets.join(', ')} WHERE id = ?`).run(...params);
   return result.changes > 0;
