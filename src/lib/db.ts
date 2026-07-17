@@ -138,11 +138,20 @@ function initSchema(db: Database.Database) {
   if (!beijingMigrated) {
     db.exec(`
       UPDATE relay_keys SET created_at = datetime(created_at, '+8 hours'), updated_at = datetime(updated_at, '+8 hours');
-      UPDATE channels SET created_at = datetime(created_at, '+8 hours');
+      UPDATE channels SET created_at = datetime(created_at, '+8 hours'), last_health_check = datetime(last_health_check, '+8 hours');
       UPDATE channel_models SET created_at = datetime(created_at, '+8 hours');
       UPDATE model_aliases SET created_at = datetime(created_at, '+8 hours');
       UPDATE call_logs SET created_at = datetime(created_at, '+8 hours');
       INSERT INTO _migrations (name) VALUES ('v2_timezone_beijing');
+    `);
+  }
+
+  // Migration: fix last_health_check for databases that ran v2_timezone_beijing before it included last_health_check
+  const lastHealthMigrated = db.prepare("SELECT name FROM _migrations WHERE name = 'v2_fix_last_health_check'").get();
+  if (!lastHealthMigrated) {
+    db.exec(`
+      UPDATE channels SET last_health_check = datetime(last_health_check, '+8 hours') WHERE last_health_check IS NOT NULL;
+      INSERT INTO _migrations (name) VALUES ('v2_fix_last_health_check');
     `);
   }
 }
