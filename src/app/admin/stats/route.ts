@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     where.push('created_at >= ?');
     params.push(normalizeDate(startDate));
   } else if (days > 0) {
-    where.push("created_at >= datetime('now', ?)");
+    where.push("created_at >= datetime('now', '+8 hours', ?)");
     params.push(`-${days} days`);
   }
 

@@ -113,7 +113,7 @@ export function getStats(days: number = 7) {
       COALESCE(SUM(total_tokens), 0) as total_tokens,
       COALESCE(SUM(cost), 0) as total_cost
     FROM call_logs
-    WHERE created_at >= datetime('now', ?)
+    WHERE created_at >= datetime('now', '+8 hours', ?)
   `).get(`-${days} days`) as any;
 
   const dailyStats = db.prepare(`
@@ -123,7 +123,7 @@ export function getStats(days: number = 7) {
       COALESCE(SUM(total_tokens), 0) as tokens,
       COALESCE(SUM(cost), 0) as cost
     FROM call_logs
-    WHERE created_at >= datetime('now', ?)
+    WHERE created_at >= datetime('now', '+8 hours', ?)
     GROUP BY date(created_at)
     ORDER BY date ASC
   `).all(`-${days} days`);
@@ -134,7 +134,7 @@ export function getStats(days: number = 7) {
       COUNT(*) as calls,
       COALESCE(SUM(total_tokens), 0) as tokens
     FROM call_logs
-    WHERE created_at >= datetime('now', ?)
+    WHERE created_at >= datetime('now', '+8 hours', ?)
     GROUP BY model
     ORDER BY calls DESC
   `).all(`-${days} days`);
@@ -148,7 +148,7 @@ export function getStats(days: number = 7) {
         COUNT(*) as calls,
         COALESCE(SUM(total_tokens), 0) as tokens
       FROM call_logs
-      WHERE created_at >= datetime('now', '-1 day')
+      WHERE created_at >= datetime('now', '+8 hours', '-1 day')
       GROUP BY hour
       ORDER BY hour ASC
     `).all() as any[];
