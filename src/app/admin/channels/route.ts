@@ -115,6 +115,12 @@ export async function PUT(request: NextRequest) {
           signal: AbortSignal.timeout(10000),
         });
         var latency = Date.now() - start;
+
+        // ✅ 检测成功 → 恢复健康
+        if (res.ok) {
+          updateChannelHealth(channel.id, 'healthy');
+        }
+
         return NextResponse.json({ healthy: res.ok, status: res.status, latency: latency + 'ms' });
       } catch {
         return NextResponse.json({ healthy: false, latency: '超时' }, { status: 200 });
