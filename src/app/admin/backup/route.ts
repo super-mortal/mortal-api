@@ -72,9 +72,19 @@ export async function POST(request: NextRequest) {
       }
 
       // Restore call_logs
-      const insertLog = db.prepare('INSERT INTO call_logs (id, relay_key_id, relay_key_name, model, channel_id, channel_name, prompt_tokens, completion_tokens, total_tokens, cost, status, error_message, ip, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+      const insertLog = db.prepare(`INSERT INTO call_logs (
+        id, relay_key_id, relay_key_name, model, channel_id, channel_name,
+        prompt_tokens, completion_tokens, cached_input_tokens, total_tokens,
+        cost, status, error_message, ip, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
       for (const l of data.call_logs || []) {
-        insertLog.run(l.id, l.relay_key_id, l.relay_key_name, l.model, l.channel_id, l.channel_name, l.prompt_tokens, l.completion_tokens, l.total_tokens, l.cost || 0, l.status, l.error_message, l.ip, l.created_at);
+        insertLog.run(
+          l.id, l.relay_key_id, l.relay_key_name, l.model,
+          l.channel_id, l.channel_name,
+          l.prompt_tokens, l.completion_tokens,
+          l.cached_input_tokens || 0, l.total_tokens,
+          l.cost || 0, l.status, l.error_message, l.ip, l.created_at
+        );
       }
     });
 
