@@ -35,8 +35,8 @@ function initSchema(db: Database.Database) {
       expires_at TEXT,
       allowed_models TEXT NOT NULL DEFAULT '',
       allowed_channels TEXT NOT NULL DEFAULT '',
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours'))
     );
 
     CREATE TABLE IF NOT EXISTS channels (
@@ -49,7 +49,7 @@ function initSchema(db: Database.Database) {
       is_active INTEGER NOT NULL DEFAULT 1,
       health_status TEXT NOT NULL DEFAULT 'unknown',
       last_health_check TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours'))
     );
 
     CREATE TABLE IF NOT EXISTS channel_models (
@@ -57,7 +57,7 @@ function initSchema(db: Database.Database) {
       channel_id TEXT NOT NULL,
       model_id TEXT NOT NULL,
       is_active INTEGER NOT NULL DEFAULT 1,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours')),
       FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE
     );
     CREATE INDEX IF NOT EXISTS idx_channel_models_channel ON channel_models(channel_id);
@@ -68,7 +68,7 @@ function initSchema(db: Database.Database) {
       alias_name TEXT NOT NULL,
       channel_model_id TEXT NOT NULL,
       is_active INTEGER NOT NULL DEFAULT 1,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours')),
       FOREIGN KEY (channel_model_id) REFERENCES channel_models(id) ON DELETE CASCADE
     );
     CREATE INDEX IF NOT EXISTS idx_model_aliases_alias ON model_aliases(alias_name);
@@ -86,12 +86,20 @@ function initSchema(db: Database.Database) {
       status TEXT NOT NULL DEFAULT 'success',
       error_message TEXT,
       ip TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours'))
     );
     CREATE INDEX IF NOT EXISTS idx_call_logs_created_at ON call_logs(created_at);
     CREATE INDEX IF NOT EXISTS idx_call_logs_relay_key_id ON call_logs(relay_key_id);
     CREATE INDEX IF NOT EXISTS idx_call_logs_model ON call_logs(model);
     CREATE INDEX IF NOT EXISTS idx_call_logs_status ON call_logs(status);
+  `);
+
+  // _migrations table for idempotent migration tracking
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS _migrations (
+      name TEXT PRIMARY KEY,
+      applied_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours'))
+    );
   `);
 
   // Migration: add cost column to call_logs if missing
@@ -110,7 +118,7 @@ function initSchema(db: Database.Database) {
         alias_name TEXT NOT NULL,
         channel_model_id TEXT NOT NULL,
         is_active INTEGER NOT NULL DEFAULT 1,
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        created_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours')),
         FOREIGN KEY (channel_model_id) REFERENCES channel_models(id) ON DELETE CASCADE
       );
       INSERT INTO model_aliases_migrated SELECT * FROM model_aliases;
@@ -123,6 +131,19 @@ function initSchema(db: Database.Database) {
   // Migration: add cached_input_tokens column to call_logs
   if (!cols.find(c => c.name === 'cached_input_tokens')) {
     db.exec("ALTER TABLE call_logs ADD COLUMN cached_input_tokens INTEGER NOT NULL DEFAULT 0");
+  }
+
+  // Migration: convert existing UTC timestamps to Beijing time (UTC+8)
+  const beijingMigrated = db.prepare("SELECT name FROM _migrations WHERE name = 'v2_timezone_beijing'").get();
+  if (!beijingMigrated) {
+    db.exec(`
+      UPDATE relay_keys SET created_at = datetime(created_at, '+8 hours'), updated_at = datetime(updated_at, '+8 hours');
+      UPDATE channels SET created_at = datetime(created_at, '+8 hours');
+      UPDATE channel_models SET created_at = datetime(created_at, '+8 hours');
+      UPDATE model_aliases SET created_at = datetime(created_at, '+8 hours');
+      UPDATE call_logs SET created_at = datetime(created_at, '+8 hours');
+      INSERT INTO _migrations (name) VALUES ('v2_timezone_beijing');
+    `);
   }
 }
 
