@@ -1,7 +1,7 @@
 'use client';
 
-export function toBeijing(utc: string): string {
-  const d = new Date(utc);
+export function toBeijing(beijingDate: string): string {
+  const d = new Date(beijingDate.replace(' ', 'T') + '+08:00');
   return d.toLocaleString('zh-CN', {
     timeZone: 'Asia/Shanghai',
     year: 'numeric', month: '2-digit', day: '2-digit',
@@ -9,8 +9,8 @@ export function toBeijing(utc: string): string {
   });
 }
 
-export function toBeijingFull(utc: string): string {
-  const d = new Date(utc);
+export function toBeijingFull(beijingDate: string): string {
+  const d = new Date(beijingDate.replace(' ', 'T') + '+08:00');
   return d.toLocaleString('zh-CN', {
     timeZone: 'Asia/Shanghai',
     year: 'numeric', month: '2-digit', day: '2-digit',
