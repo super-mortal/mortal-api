@@ -122,6 +122,8 @@ export default function DashboardPage() {
               className={'px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ' + (activeDate === '7d' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50')}>7 天</button>
             <button onClick={function() { setActiveDate('30d'); setShowCustom(false); }}
               className={'px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ' + (activeDate === '30d' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50')}>30 天</button>
+            <button onClick={function() { setActiveDate('all'); setShowCustom(false); }}
+              className={'px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ' + (activeDate === 'all' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50')}>全部</button>
             <button onClick={function() { setActiveDate('custom'); setShowCustom(true); }}
               className={'px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ' + (activeDate === 'custom' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50')}>
               <InlineIcon name="calendar" className="w-3 h-3 inline mr-1" />自定义</button>
