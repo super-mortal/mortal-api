@@ -114,6 +114,13 @@ export function resolveModel(modelName: string, allowedChannelIds?: string[]): {
       LEFT JOIN channels c ON c.id = cm.channel_id
       WHERE ma.alias_name = ? AND ma.is_active = 1 AND c.is_active = 1
         AND cm.channel_id IN (${placeholders})
+      ORDER BY
+        CASE c.health_status
+          WHEN 'healthy' THEN 1
+          WHEN 'unknown' THEN 2
+          WHEN 'cooling_down' THEN 3
+          ELSE 4
+        END ASC
     `).get(modelName, ...allowedChannelIds) as any;
     if (alias) return { channelId: alias.channel_id, upstreamModelId: alias.model_id };
   }
@@ -124,7 +131,14 @@ export function resolveModel(modelName: string, allowedChannelIds?: string[]): {
     LEFT JOIN channel_models cm ON cm.id = ma.channel_model_id
     LEFT JOIN channels c ON c.id = cm.channel_id
     WHERE ma.alias_name = ? AND ma.is_active = 1 AND c.is_active = 1
-  `).get(modelName) as any;
+      ORDER BY
+        CASE c.health_status
+          WHEN 'healthy' THEN 1
+          WHEN 'unknown' THEN 2
+          WHEN 'cooling_down' THEN 3
+          ELSE 4
+        END ASC
+    `).get(modelName) as any;
   if (alias) return { channelId: alias.channel_id, upstreamModelId: alias.model_id };
 
   // 3. Check direct model_id match (only if channel is active, NO alias exists)
@@ -150,7 +164,7 @@ export function getModelsForAuto(): { modelId: string; channel: Channel }[] {
       AND (
         c.health_status != 'cooling_down'
         OR c.last_health_check IS NULL
-        OR c.last_health_check < datetime('now', '+8 hours')
+        OR c.last_health_check < datetime('now', '+8 hours', '-6 hours')
       )
   `).all() as any[];
   return rows.map(r => ({ modelId: r.model_id, channel: r as Channel }));

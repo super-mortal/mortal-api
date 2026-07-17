@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(result.response);
     }
   } catch (err: any) {
-    // Rate limit (429) → cooling_down (auto-recover after 8h), other errors → unhealthy
+    // Rate limit (429) → cooling_down (auto-recover after 6h), other errors → unhealthy
     const isRateLimit = err.status === 429;
     updateChannelHealth(channel.id, isRateLimit ? 'cooling_down' : 'unhealthy');
     createCallLog({
