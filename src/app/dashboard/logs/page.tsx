@@ -30,6 +30,7 @@ export default function LogsPage() {
   const [deleteDateFrom, setDeleteDateFrom] = useState('');
   const [deleteDateTo, setDeleteDateTo] = useState('');
   const [deleteMsg, setDeleteMsg] = useState<string | null>(null);
+  const [deletingInProgress, setDeletingInProgress] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState<{
     type: 'single' | 'batch';
@@ -69,16 +70,33 @@ export default function LogsPage() {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${localStorage.getItem('admin_token')}` },
       });
-    } else {
-      for (const id of selected) {
-        await fetch(`/admin/logs?id=${id}`, {
+      setDeleteConfirm(null);
+      setSelected(new Set());
+      fetchLogs();
+      return;
+    }
+    const errors: string[] = [];
+    setDeletingInProgress(true);
+    setDeleteMsg(`正在删除 ${selected.size} 条日志...`);
+    for (const id of selected) {
+      try {
+        const res = await fetch(`/admin/logs?id=${id}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${localStorage.getItem('admin_token')}` },
         });
-      }
+        if (!res.ok) errors.push(id);
+      } catch { errors.push(id); }
     }
     setDeleteConfirm(null);
     setSelected(new Set());
+    setDeletingInProgress(false);
+    if (errors.length > 0) {
+      setDeleteMsg(`删除完成，但 ${errors.length} 条删除失败`);
+      setTimeout(() => setDeleteMsg(null), 5000);
+    } else {
+      setDeleteMsg(`已删除 ${selected.size - errors.length} 条日志`);
+      setTimeout(() => setDeleteMsg(null), 3000);
+    }
     fetchLogs();
   };
 
@@ -160,7 +178,7 @@ export default function LogsPage() {
       </Modal>
 
       {/* Delete Confirmation Modal — replaces browser confirm() */}
-      <Modal open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)}
+      <Modal open={!!deleteConfirm} onClose={() => { if (!deletingInProgress) setDeleteConfirm(null); }}
         title="确认删除">
         <div className="space-y-4">
           <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-600 flex items-center gap-2">
@@ -170,16 +188,23 @@ export default function LogsPage() {
               : '确定删除此条日志？'}
             <span className="font-medium"> 此操作不可撤销。</span>
           </div>
-          <div className="flex gap-3">
-            <button onClick={() => setDeleteConfirm(null)}
-              className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
-              取消
-            </button>
-            <button onClick={handleConfirmDelete}
-              className="flex-1 px-4 py-2.5 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors flex items-center justify-center gap-2">
-              <InlineIcon name="trash2" className="w-4 h-4" /> 确认删除
-            </button>
-          </div>
+          {deletingInProgress ? (
+            <div className="flex flex-col items-center gap-3 py-4">
+              <InlineIcon name="loaderCircle" className="w-6 h-6 animate-spin text-indigo-600" />
+              <span className="text-sm text-gray-500">正在删除...</span>
+            </div>
+          ) : (
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteConfirm(null)}
+                className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                取消
+              </button>
+              <button onClick={handleConfirmDelete}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors flex items-center justify-center gap-2">
+                <InlineIcon name="trash2" className="w-4 h-4" /> 确认删除
+              </button>
+            </div>
+          )}
         </div>
       </Modal>
 
