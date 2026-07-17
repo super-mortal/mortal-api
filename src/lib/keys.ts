@@ -73,7 +73,7 @@ export function checkRelayKeyQuota(key: string, estimatedTokens: number): { vali
 
 export function addUsedTokens(keyId: string, tokens: number) {
   const db = getDb();
-  db.prepare("UPDATE relay_keys SET used_tokens = used_tokens + ?, updated_at = datetime('now') WHERE id = ?")
+  db.prepare("UPDATE relay_keys SET used_tokens = used_tokens + ?, updated_at = datetime('now', '+8 hours') WHERE id = ?")
     .run(tokens, keyId);
 }
 

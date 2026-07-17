@@ -150,7 +150,7 @@ export function getModelsForAuto(): { modelId: string; channel: Channel }[] {
       AND (
         c.health_status != 'cooling_down'
         OR c.last_health_check IS NULL
-        OR datetime(c.last_health_check, '+8 hours') < datetime('now')
+        OR datetime(c.last_health_check, '+8 hours') < datetime('now', '+8 hours')
       )
   `).all() as any[];
   return rows.map(r => ({ modelId: r.model_id, channel: r as Channel }));
