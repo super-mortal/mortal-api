@@ -5,6 +5,9 @@ import { InlineIcon } from '@/lib/icon';
 import { Modal } from '@/lib/modal';
 import { apiFetch } from '@/lib/fetch-with-auth';
 import { ComboBox } from '@/lib/combobox';
+import { Switch } from '@/lib/switch';
+import { ConfirmDialog } from '@/lib/confirm-dialog';
+import { Popover } from '@/lib/popover';
 
 interface RelayKey {
   id: string; key: string; name: string; balance: number;
@@ -42,6 +45,9 @@ export default function KeysPage() {
   const [editAllowedModels, setEditAllowedModels] = useState<string[]>([]);
   const [editExpiry, setEditExpiry] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string } | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [newKeyValue, setNewKeyValue] = useState<string | null>(null);
 
   // Channel picker modal for create
   const [chPickerOpen, setChPickerOpen] = useState(false);
@@ -171,8 +177,8 @@ export default function KeysPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('确定删除此 Key？')) return;
     await apiFetch(`/admin/keys?id=${id}`, { method: 'DELETE' });
+    setDeleteConfirm(null);
     fetchData();
   };
 
@@ -360,6 +366,45 @@ export default function KeysPage() {
                 </div>
               )}
             </div>
+            <div className="border-t border-gray-100 pt-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-500">API Key</p>
+                  <code className="text-[10px] text-gray-400 font-mono mt-0.5 block">
+                    {showEdit.key.slice(0, 20)}...
+                  </code>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!confirm('刷新 Key 后旧 Key 将立即失效，确定继续？')) return;
+                    setRefreshing(true);
+                    const res = await apiFetch('/admin/keys', {
+                      method: 'PATCH',
+                      body: JSON.stringify({ id: showEdit.id, refresh_key: true }),
+                    });
+                    const data = await res.json();
+                    setRefreshing(false);
+                    if (data.new_key) {
+                      setNewKeyValue(data.new_key);
+                      fetchData();
+                    }
+                  }}
+                  disabled={refreshing}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-200 text-xs text-amber-700 bg-amber-50 hover:bg-amber-100 disabled:opacity-50 transition-colors"
+                >
+                  <InlineIcon name="refreshCw" className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+                  刷新 API Key
+                </button>
+              </div>
+              {newKeyValue && (
+                <div className="mt-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  <p className="text-[10px] text-amber-700 font-medium">新 API Key（请立即保存）</p>
+                  <code className="text-xs text-amber-800 font-mono break-all">{newKeyValue}</code>
+                  <button onClick={() => { navigator.clipboard.writeText(newKeyValue); }}
+                    className="mt-1 text-[10px] text-indigo-600 underline">复制</button>
+                </div>
+              )}
+            </div>
             <div className="flex gap-2 pt-1">
               <button onClick={handleEditSave}
                 className="flex-1 px-4 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors">保存</button>
@@ -407,14 +452,15 @@ export default function KeysPage() {
                 <th className="text-center px-3 sm:px-4 py-3 font-medium text-gray-500 text-xs">状态</th>
                 <th className="text-left px-3 sm:px-4 py-3 font-medium text-gray-500 text-xs hidden md:table-cell">模型限制</th>
                 <th className="text-left px-3 sm:px-4 py-3 font-medium text-gray-500 text-xs hidden lg:table-cell">创建时间</th>
+                <th className="text-left px-3 sm:px-4 py-3 font-medium text-gray-500 text-xs hidden lg:table-cell">到期时间</th>
                 <th className="text-right px-3 sm:px-4 py-3 font-medium text-gray-500 text-xs">操作</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} className="px-4 py-12 text-center"><InlineIcon name="loaderCircle" className="w-5 h-5 animate-spin text-indigo-600 inline" /></td></tr>
+                <tr><td colSpan={9} className="px-4 py-12 text-center"><InlineIcon name="loaderCircle" className="w-5 h-5 animate-spin text-indigo-600 inline" /></td></tr>
               ) : keys.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400">暂无 Key</td></tr>
+                <tr><td colSpan={9} className="px-4 py-12 text-center text-sm text-gray-400">暂无 Key</td></tr>
               ) : keys.map((k) => {
                 const expired = isExpired(k);
                 const modelsList = k.allowed_models ? k.allowed_models.split(',').filter(Boolean) : [];
@@ -437,16 +483,40 @@ export default function KeysPage() {
                   </td>
                   <td className="px-3 sm:px-4 py-3 hidden md:table-cell">
                     {modelsList.length > 0 ? (
-                      <div className="flex flex-wrap gap-0.5 max-w-[120px]">
-                        {modelsList.slice(0, 2).map(m => (
-                          <span key={m} className="text-[9px] px-1 py-0.5 rounded bg-gray-100 text-gray-600 font-mono truncate max-w-[60px]">{m}</span>
-                        ))}
-                        {modelsList.length > 2 && <span className="text-[9px] text-gray-400">+{modelsList.length - 2}</span>}
-                      </div>
-                    ) : <span className="text-[10px] text-gray-400">全部</span>}
+                      <Popover
+                        trigger={
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-medium cursor-pointer hover:bg-gray-200 transition-colors">
+                            <InlineIcon name="bot" className="w-3 h-3" />
+                            {modelsList.length} 个模型
+                            <InlineIcon name="chevronDown" className="w-2.5 h-2.5" />
+                          </span>
+                        }
+                      >
+                        <div className="space-y-1 min-w-[140px]">
+                          <p className="text-[10px] text-gray-400 font-medium mb-1.5">限制模型</p>
+                          {modelsList.map(m => (
+                            <div key={m} className="flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                              <code className="text-[11px] text-gray-700 font-mono">{m}</code>
+                            </div>
+                          ))}
+                        </div>
+                      </Popover>
+                    ) : (
+                      <span className="text-[10px] text-gray-400">全部</span>
+                    )}
                   </td>
                   <td className="px-3 sm:px-4 py-3 text-left text-[10px] text-gray-500 hidden lg:table-cell whitespace-nowrap">
                     {toBeijing(k.created_at)}
+                  </td>
+                  <td className="px-3 sm:px-4 py-3 text-left text-[10px] whitespace-nowrap hidden lg:table-cell">
+                    {k.expires_at ? (
+                      <span className={expired ? 'text-red-500 font-medium' : 'text-gray-500'}>
+                        {k.expires_at.slice(0, 10)}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300">—</span>
+                    )}
                   </td>
                   <td className="px-3 sm:px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
@@ -466,11 +536,12 @@ export default function KeysPage() {
                         className="p-1.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100" title="编辑">
                         <InlineIcon name="pencil" className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => handleToggle(k.id, k.is_active)}
-                        className="p-1.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100">
-                        <InlineIcon name={k.is_active ? 'toggleLeft' : 'toggleRight'} className="w-3.5 h-3.5" />
-                      </button>
-                      <button onClick={() => handleDelete(k.id)}
+                      <Switch
+                        checked={!!k.is_active}
+                        onChange={() => handleToggle(k.id, k.is_active)}
+                        size="sm"
+                      />
+                      <button onClick={() => setDeleteConfirm({ id: k.id })}
                         className="p-1.5 rounded text-red-300 hover:text-red-500 hover:bg-red-50">
                         <InlineIcon name="trash2" className="w-3.5 h-3.5" />
                       </button>
@@ -483,6 +554,16 @@ export default function KeysPage() {
           </table>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={() => handleDelete(deleteConfirm!.id)}
+        title="确认删除"
+        message="确定删除此 Key？此操作不可撤销。"
+        confirmText="确认删除"
+        variant="danger"
+      />
     </div>
   );
 }
