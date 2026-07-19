@@ -5,6 +5,8 @@ import { InlineIcon } from '@/lib/icon';
 import { Modal } from '@/lib/modal';
 import { ComboBox } from '@/lib/combobox';
 import { apiFetch } from '@/lib/fetch-with-auth';
+import { Switch } from '@/lib/switch';
+import { ConfirmDialog } from '@/lib/confirm-dialog';
 
 interface Channel {
   id: string; name: string; base_url: string; api_key: string;
@@ -58,6 +60,8 @@ export default function ChannelsPage() {
   const [aliasModal, setAliasModal] = useState(false);
   const [aliasChannelModelId, setAliasChannelModelId] = useState('');
   const [aliasName, setAliasName] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string } | null>(null);
+  const [modelErrModal, setModelErrModal] = useState(false);
 
   const fetchAll = useCallback(async () => {
     const res = await apiFetch('/admin/channels?scope=models');
@@ -85,10 +89,14 @@ export default function ChannelsPage() {
     if (res.ok) { setChModal(false); fetchAll(); }
   };
 
-  const deleteChannel = async (id: string) => {
-    if (!confirm('确定删除此渠道？关联的模型和别名也会被删除。')) return;
-    await apiFetch(`/admin/channels?id=${id}`, { method: 'DELETE' });
+  const handleDeleteChannel = async () => {
+    if (!deleteConfirm) return;
+    await apiFetch(`/admin/channels?id=${deleteConfirm.id}`, { method: 'DELETE' });
+    setDeleteConfirm(null);
     fetchAll();
+  };
+  const deleteChannel = async (id: string) => {
+    setDeleteConfirm({ id });
   };
   const toggleChannel = async (id: string, active: number) => {
     await apiFetch('/admin/channels', { method: 'PATCH', body: JSON.stringify({ id, is_active: active ? 0 : 1 }) });
@@ -137,7 +145,7 @@ export default function ChannelsPage() {
   const addModel = async () => {
     if (!newModelId) return;
     const res = await apiFetch('/admin/channels', { method: 'POST', body: JSON.stringify({ _type: 'channel-model', channel_id: modelChannelId, model_id: newModelId }) });
-    if (res.ok) { setModelModal(false); setNewModelId(''); fetchAll(); } else { alert('模型已存在或创建失败'); }
+    if (res.ok) { setModelModal(false); setNewModelId(''); fetchAll(); } else { setModelErrModal(true); }
   };
   const deleteModel = async (id: string) => {
     await apiFetch(`/admin/channels?id=${id}&type=channel-model`, { method: 'DELETE' });
@@ -284,10 +292,10 @@ export default function ChannelsPage() {
                       className="p-2 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all border border-transparent hover:border-emerald-200"><InlineIcon name="activity" className="w-4 h-4" /></button>
                     <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">连通检测</span>
                   </span>
-                  <span className="group relative">
-                    <button onClick={() => toggleChannel(ch.id, ch.is_active)} className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all border border-transparent hover:border-gray-200"><InlineIcon name={ch.is_active ? 'toggleLeft' : 'toggleRight'} className="w-4 h-4" /></button>
-                    <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">{ch.is_active ? '停用' : '启用'}</span>
-                  </span>
+                  <Switch
+                    checked={!!ch.is_active}
+                    onChange={() => toggleChannel(ch.id, ch.is_active)}
+                  />
                   <span className="group relative">
                     <button onClick={() => deleteChannel(ch.id)} className="p-2 rounded-lg text-red-300 hover:text-red-500 hover:bg-red-50 transition-all border border-transparent hover:border-red-200"><InlineIcon name="trash2" className="w-4 h-4" /></button>
                     <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">删除</span>
@@ -385,6 +393,25 @@ export default function ChannelsPage() {
       {channels.length === 0 && (
         <div className="text-center py-16 text-gray-400"><InlineIcon name="plug" className="w-10 h-10 mx-auto mb-3 text-gray-200" /><p>暂无渠道</p></div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={handleDeleteChannel}
+        title="确认删除"
+        message="确定删除此渠道？关联的模型和别名也会被删除。此操作不可撤销。"
+        confirmText="确认删除"
+        variant="danger"
+      />
+      <ConfirmDialog
+        open={modelErrModal}
+        onClose={() => setModelErrModal(false)}
+        onConfirm={() => setModelErrModal(false)}
+        title="提示"
+        message="模型已存在或创建失败。"
+        confirmText="知道了"
+        variant="info"
+      />
     </div>
   );
 }
