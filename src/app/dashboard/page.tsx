@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { InlineIcon } from '@/lib/icon';
 import { toBeijing } from '@/lib/date';
+import { DateRangePicker } from '@/lib/date-range-picker';
+import { SelectFilter } from '@/lib/select-filter';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   AreaChart, Area, PieChart, Pie, Cell,
@@ -53,8 +55,8 @@ export default function DashboardPage() {
     } else if (activeDate === '7d') params.set('days', '7');
     else if (activeDate === '30d') params.set('days', '30');
     else if (activeDate === 'custom') {
-      if (startMonth) params.set('start_date', startMonth);
-      if (endMonth) params.set('end_date', endMonth);
+      if (startMonth) params.set('start_date', startMonth + ' 00:00:00');
+      if (endMonth) params.set('end_date', endMonth + ' 23:59:59');
     }
     if (selectedKeyId) params.set('relay_key_id', selectedKeyId);
     return `/admin/stats?${params}`;
@@ -129,20 +131,25 @@ export default function DashboardPage() {
               <InlineIcon name="calendar" className="w-3 h-3 inline mr-1" />自定义</button>
           </div>
           {showCustom && (
-            <div className="flex items-center gap-1.5 bg-white rounded-lg border border-gray-200 px-3 py-1.5">
-              <InlineIcon name="clock" className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-              <input type="datetime-local" value={startMonth} onChange={function(e) { setStartMonth(e.target.value); }}
-                className="text-xs border-0 bg-transparent focus:outline-none focus:ring-0 p-0 text-gray-700" style={{width: '9rem'}} />
-              <span className="text-gray-300 shrink-0">—</span>
-              <input type="datetime-local" value={endMonth} onChange={function(e) { setEndMonth(e.target.value); }}
-                className="text-xs border-0 bg-transparent focus:outline-none focus:ring-0 p-0 text-gray-700" style={{width: '9rem'}} />
-            </div>
+            <DateRangePicker
+              startDate={startMonth}
+              endDate={endMonth}
+              onStartChange={setStartMonth}
+              onEndChange={setEndMonth}
+              onConfirm={() => { setShowCustom(false); fetchStats(); }}
+              onCancel={() => setShowCustom(false)}
+            />
           )}
-          <select value={selectedKeyId} onChange={e => setSelectedKeyId(e.target.value)}
-            className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 max-w-[160px]">
-            <option value="">全部 Key</option>
-            {keys.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
-          </select>
+          <SelectFilter
+            options={[
+              { label: '全部 Key', value: '' },
+              ...keys.map(k => ({ label: k.name, value: k.id })),
+            ]}
+            value={selectedKeyId}
+            onChange={setSelectedKeyId}
+            placeholder="全部 Key"
+            className="max-w-[160px]"
+          />
         </div>
       </div>
 
