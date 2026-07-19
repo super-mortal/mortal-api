@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-middleware';
-import { listRelayKeys, createRelayKey, updateRelayKey, deleteRelayKey } from '@/lib/keys';
+import { listRelayKeys, createRelayKey, updateRelayKey, deleteRelayKey, refreshRelayKey, getRelayKeyById } from '@/lib/keys';
 import { getDb } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
@@ -45,7 +45,14 @@ export async function PATCH(request: NextRequest) {
       allowed_models: body.allowed_models,
       allowed_channels: body.allowed_channels,
     });
-    return NextResponse.json({ success: updated });
+
+    let newKeyValue: string | null = null;
+    if (body.refresh_key) {
+      newKeyValue = refreshRelayKey(body.id);
+    }
+
+    const key = body.refresh_key ? getRelayKeyById(body.id) : undefined;
+    return NextResponse.json({ success: updated, new_key: newKeyValue, key });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }

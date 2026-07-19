@@ -52,6 +52,13 @@ export function updateRelayKey(
   return result.changes > 0;
 }
 
+export function refreshRelayKey(id: string): string | null {
+  const db = getDb();
+  const newKey = generateRelayKey();
+  const result = db.prepare("UPDATE relay_keys SET key = ?, updated_at = datetime('now', '+8 hours') WHERE id = ?").run(newKey, id);
+  return result.changes > 0 ? newKey : null;
+}
+
 export function deleteRelayKey(id: string): boolean {
   const db = getDb();
   const result = db.prepare('DELETE FROM relay_keys WHERE id = ?').run(id);
