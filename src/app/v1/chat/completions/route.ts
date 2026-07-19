@@ -46,7 +46,6 @@ export async function POST(request: NextRequest) {
   let upstreamModelId = modelName;
 
   // 3. Resolve model → channel
-  let channel: any = null;
 
   if (modelName === 'auto') {
     const all = getModelsForAuto();
@@ -59,149 +58,308 @@ export async function POST(request: NextRequest) {
     }
     if (!filtered.length) return NextResponse.json({ error: { message: 'No available channels for this API key', type: 'server_error' } }, { status: 503 });
     const picked = filtered[Math.floor(Math.random() * filtered.length)];
-    channel = picked.channel;
+    const autoChannel = picked.channel;
     upstreamModelId = picked.modelId;
-  } else {
-    const resolved = resolveModel(modelName, keyAllowedChannels.length > 0 ? keyAllowedChannels : undefined);
-    if (!resolved) return NextResponse.json({ error: { message: `Model "${modelName}" not found`, type: 'invalid_request_error' } }, { status: 404 });
 
-    // Check channel restriction
-    if (hasChannelRestriction && !keyAllowedChannels.includes(resolved.channelId)) {
-      return NextResponse.json({ error: { message: `Model "${modelName}" not allowed for this API key`, type: 'invalid_request_error' } }, { status: 403 });
-    }
-    // Check model restriction
-    if (hasModelRestriction && !keyAllowedModels.includes(modelName)) {
-      return NextResponse.json({ error: { message: `Model "${modelName}" not allowed for this API key`, type: 'invalid_request_error' } }, { status: 403 });
+    if (!autoChannel || !autoChannel.is_active) return NextResponse.json({ error: { message: 'Channel unavailable', type: 'server_error' } }, { status: 503 });
+
+    const autoChannelApiKey = resolveChannelApiKey(autoChannel);
+    if (!autoChannelApiKey) {
+      updateChannelHealth(autoChannel.id, 'unhealthy');
+      return NextResponse.json({ error: { message: `No API key for ${autoChannel.name}`, type: 'server_error' } }, { status: 502 });
     }
 
-    channel = getChannelById(resolved.channelId);
-    upstreamModelId = resolved.upstreamModelId;
-  }
+    // 4. Build upstream request body
+    const upstreamBody = {
+      model: upstreamModelId,
+      messages: body.messages,
+      stream: isStream,
+      temperature: body.temperature,
+      top_p: body.top_p,
+      max_tokens: body.max_tokens,
+      stop: body.stop,
+      presence_penalty: body.presence_penalty,
+      frequency_penalty: body.frequency_penalty,
+      tools: body.tools,
+      tool_choice: body.tool_choice,
+      response_format: body.response_format,
+      seed: body.seed,
+    };
 
-  if (!channel || !channel.is_active) return NextResponse.json({ error: { message: 'Channel unavailable', type: 'server_error' } }, { status: 503 });
+    try {
+      if (isStream) {
+        const result = await callUpstreamStreaming(autoChannel, upstreamBody, autoChannelApiKey);
 
-  const channelApiKey = resolveChannelApiKey(channel);
-  if (!channelApiKey) {
-    updateChannelHealth(channel.id, 'unhealthy');
-    return NextResponse.json({ error: { message: `No API key for ${channel.name}`, type: 'server_error' } }, { status: 502 });
-  }
+        const recordingStream = new TransformStream<Uint8Array, Uint8Array>();
+        const writer = recordingStream.writable.getWriter();
+        const reader = result.stream.getReader();
+        let totalCompletionTokens = 0;
+        let cachedInputTokens = 0;
 
-  // 4. Build upstream request body
-  const upstreamBody = {
-    model: upstreamModelId,
-    messages: body.messages,
-    stream: isStream,
-    temperature: body.temperature,
-    top_p: body.top_p,
-    max_tokens: body.max_tokens,
-    stop: body.stop,
-    presence_penalty: body.presence_penalty,
-    frequency_penalty: body.frequency_penalty,
-    tools: body.tools,
-    tool_choice: body.tool_choice,
-    response_format: body.response_format,
-    seed: body.seed,
-  };
-
-  try {
-    if (isStream) {
-      const result = await callUpstreamStreaming(channel, upstreamBody, channelApiKey);
-
-      const recordingStream = new TransformStream<Uint8Array, Uint8Array>();
-      const writer = recordingStream.writable.getWriter();
-      const reader = result.stream.getReader();
-      let totalCompletionTokens = 0;
-      let cachedInputTokens = 0;
-
-      (async () => {
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) {
-              createCallLog({
-                relay_key_id: relayKey.id, relay_key_name: relayKey.name,
-                model: modelName, channel_id: channel.id, channel_name: channel.name,
-                prompt_tokens: body.messages ? Math.ceil(JSON.stringify(body.messages).length / 2) : 0,
-                completion_tokens: totalCompletionTokens,
-                cached_input_tokens: cachedInputTokens,
-                status: 'success',
-                ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-              });
-              if (relayKey.balance > 0) addUsedTokens(relayKey.id, totalCompletionTokens);
-              updateChannelHealth(channel.id, 'healthy');
-              await writer.close();
-              return;
+        (async () => {
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) {
+                createCallLog({
+                  relay_key_id: relayKey.id, relay_key_name: relayKey.name,
+                  model: modelName, channel_id: autoChannel.id, channel_name: autoChannel.name,
+                  prompt_tokens: body.messages ? Math.ceil(JSON.stringify(body.messages).length / 2) : 0,
+                  completion_tokens: totalCompletionTokens,
+                  cached_input_tokens: cachedInputTokens,
+                  status: 'success',
+                  ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+                });
+                if (relayKey.balance > 0) addUsedTokens(relayKey.id, totalCompletionTokens);
+                updateChannelHealth(autoChannel.id, 'healthy');
+                await writer.close();
+                return;
+              }
+              const text = new TextDecoder().decode(value);
+              for (const line of text.split('\n').filter((l: string) => l.startsWith('data: '))) {
+                const data = line.slice(6).trim();
+                if (data === '[DONE]') continue;
+                try {
+                  const parsed = JSON.parse(data);
+                  if (parsed.usage) {
+                    if (parsed.usage.completion_tokens) totalCompletionTokens = parsed.usage.completion_tokens;
+                    const cacheTokens = extractCachedInputTokens(parsed.usage);
+                    if (cacheTokens > 0) cachedInputTokens = cacheTokens;
+                  } else {
+                    for (const choice of parsed.choices || []) { if (choice.delta?.content) totalCompletionTokens += Math.ceil(choice.delta.content.length / 2); }
+                  }
+                } catch {}
+              }
+              await writer.write(value);
             }
-            const text = new TextDecoder().decode(value);
-            for (const line of text.split('\n').filter((l: string) => l.startsWith('data: '))) {
-              const data = line.slice(6).trim();
-              if (data === '[DONE]') continue;
-              try {
-                const parsed = JSON.parse(data);
-                if (parsed.usage) {
-                  if (parsed.usage.completion_tokens) totalCompletionTokens = parsed.usage.completion_tokens;
-                  const cacheTokens = extractCachedInputTokens(parsed.usage);
-                  if (cacheTokens > 0) cachedInputTokens = cacheTokens;
-                } else {
-                  for (const choice of parsed.choices || []) { if (choice.delta?.content) totalCompletionTokens += Math.ceil(choice.delta.content.length / 2); }
-                }
-              } catch {}
-            }
-            await writer.write(value);
+          } catch (err) {
+            createCallLog({
+              relay_key_id: relayKey.id, relay_key_name: relayKey.name,
+              model: modelName, channel_id: autoChannel.id, channel_name: autoChannel.name,
+              prompt_tokens: 0, completion_tokens: totalCompletionTokens,
+              cached_input_tokens: cachedInputTokens,
+              status: 'fail', error_message: err instanceof Error ? err.message : 'Stream error',
+              ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+            });
+            await writer.close();
           }
-        } catch (err) {
-          createCallLog({
-            relay_key_id: relayKey.id, relay_key_name: relayKey.name,
-            model: modelName, channel_id: channel.id, channel_name: channel.name,
-            prompt_tokens: 0, completion_tokens: totalCompletionTokens,
-            cached_input_tokens: cachedInputTokens,
-            status: 'fail', error_message: err instanceof Error ? err.message : 'Stream error',
-            ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-          });
-          await writer.close();
-        }
-      })();
+        })();
 
-      return new Response(recordingStream.readable, {
-        headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' },
-      });
-    } else {
-      const result = await callUpstream(channel, upstreamBody, channelApiKey);
-      const { prompt_tokens, completion_tokens, total_tokens } = result.response.usage;
+        return new Response(recordingStream.readable, {
+          headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' },
+        });
+      } else {
+        const result = await callUpstream(autoChannel, upstreamBody, autoChannelApiKey);
+        const { prompt_tokens, completion_tokens, total_tokens } = result.response.usage;
 
+        createCallLog({
+          relay_key_id: relayKey.id, relay_key_name: relayKey.name,
+          model: modelName, channel_id: autoChannel.id, channel_name: autoChannel.name,
+          prompt_tokens, completion_tokens,
+          cached_input_tokens: result.cachedInputTokens,
+          status: 'success',
+          ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+        });
+        if (relayKey.balance > 0) addUsedTokens(relayKey.id, prompt_tokens + completion_tokens);
+        updateChannelHealth(autoChannel.id, 'healthy');
+
+        result.response.model = body.model || 'auto';
+        return NextResponse.json(result.response);
+      }
+    } catch (err: any) {
+      const isRateLimit = err.status === 429;
+      updateChannelHealth(autoChannel.id, isRateLimit ? 'cooling_down' : 'unhealthy');
       createCallLog({
         relay_key_id: relayKey.id, relay_key_name: relayKey.name,
-        model: modelName, channel_id: channel.id, channel_name: channel.name,
-        prompt_tokens, completion_tokens,
-        cached_input_tokens: result.cachedInputTokens,
-        status: 'success',
+        model: modelName, channel_id: autoChannel.id, channel_name: autoChannel.name,
+        prompt_tokens: 0, completion_tokens: 0,
+        status: 'fail', error_message: err.body || (err instanceof Error ? err.message : 'Upstream error'),
         ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
       });
-      if (relayKey.balance > 0) addUsedTokens(relayKey.id, prompt_tokens + completion_tokens);
-      updateChannelHealth(channel.id, 'healthy');
 
-      result.response.model = body.model || 'auto';
-      return NextResponse.json(result.response);
+      const status = err.status || 502;
+      let errorBody: any;
+      try {
+        errorBody = JSON.parse(err.body || '{}');
+      } catch {
+        errorBody = { error: { message: err.body || err.message || 'Upstream error', type: 'server_error' } };
+      }
+      return NextResponse.json(errorBody, { status });
     }
-  } catch (err: any) {
-    // Rate limit (429) → cooling_down (auto-recover after 6h), other errors → unhealthy
-    const isRateLimit = err.status === 429;
-    updateChannelHealth(channel.id, isRateLimit ? 'cooling_down' : 'unhealthy');
-    createCallLog({
-      relay_key_id: relayKey.id, relay_key_name: relayKey.name,
-      model: modelName, channel_id: channel.id, channel_name: channel.name,
-      prompt_tokens: 0, completion_tokens: 0,
-      status: 'fail', error_message: err.body || (err instanceof Error ? err.message : 'Upstream error'),
-      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-    });
-
-    const status = err.status || 502;
-    let errorBody: any;
-    try {
-      errorBody = JSON.parse(err.body || '{}');
-    } catch {
-      errorBody = { error: { message: err.body || err.message || 'Upstream error', type: 'server_error' } };
-    }
-    return NextResponse.json(errorBody, { status });
   }
+
+  // ── Specific model with retry + failover ──
+  // Try same channel up to 3 times, then failover to next available channel.
+  // Failed channels are marked cooling_down (auto-recover after 6h) and excluded.
+  let excludedChannelIds: string[] = [];
+  let channel: any = null;
+  let channelApiKey: string = '';
+  let lastError: any = null;
+  let retriesOnCurrentChannel = 0;
+  const maxRetries = 3;
+
+  for (let attempt = 0; attempt < 9; attempt++) {
+    // ── Select next available channel (first time or after failover) ──
+    if (channel === null) {
+      const resolved = resolveModel(
+        modelName,
+        keyAllowedChannels.length > 0 ? keyAllowedChannels : undefined,
+        excludedChannelIds.length > 0 ? excludedChannelIds : undefined,
+      );
+      if (!resolved) break;
+
+      // Check channel restriction
+      if (hasChannelRestriction && !keyAllowedChannels.includes(resolved.channelId)) break;
+      // Check model restriction
+      if (hasModelRestriction && !keyAllowedModels.includes(modelName)) break;
+
+      channel = getChannelById(resolved.channelId);
+      if (!channel || !channel.is_active) {
+        excludedChannelIds.push(resolved.channelId);
+        channel = null;
+        continue;
+      }
+
+      channelApiKey = resolveChannelApiKey(channel);
+      if (!channelApiKey) {
+        updateChannelHealth(channel.id, 'unhealthy');
+        excludedChannelIds.push(channel.id);
+        channel = null;
+        continue;
+      }
+
+      upstreamModelId = resolved.upstreamModelId;
+      retriesOnCurrentChannel = 0;
+    }
+
+    // ── Build upstream request body ──
+    const upstreamBody = {
+      model: upstreamModelId,
+      messages: body.messages,
+      stream: isStream,
+      temperature: body.temperature,
+      top_p: body.top_p,
+      max_tokens: body.max_tokens,
+      stop: body.stop,
+      presence_penalty: body.presence_penalty,
+      frequency_penalty: body.frequency_penalty,
+      tools: body.tools,
+      tool_choice: body.tool_choice,
+      response_format: body.response_format,
+      seed: body.seed,
+    };
+
+    try {
+      if (isStream) {
+        const result = await callUpstreamStreaming(channel, upstreamBody, channelApiKey);
+
+        const recordingStream = new TransformStream<Uint8Array, Uint8Array>();
+        const writer = recordingStream.writable.getWriter();
+        const reader = result.stream.getReader();
+        let totalCompletionTokens = 0;
+        let cachedInputTokens = 0;
+
+        (async () => {
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) {
+                createCallLog({
+                  relay_key_id: relayKey.id, relay_key_name: relayKey.name,
+                  model: modelName, channel_id: channel.id, channel_name: channel.name,
+                  prompt_tokens: body.messages ? Math.ceil(JSON.stringify(body.messages).length / 2) : 0,
+                  completion_tokens: totalCompletionTokens,
+                  cached_input_tokens: cachedInputTokens,
+                  status: 'success',
+                  ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+                });
+                if (relayKey.balance > 0) addUsedTokens(relayKey.id, totalCompletionTokens);
+                updateChannelHealth(channel.id, 'healthy');
+                await writer.close();
+                return;
+              }
+              const text = new TextDecoder().decode(value);
+              for (const line of text.split('\n').filter((l: string) => l.startsWith('data: '))) {
+                const data = line.slice(6).trim();
+                if (data === '[DONE]') continue;
+                try {
+                  const parsed = JSON.parse(data);
+                  if (parsed.usage) {
+                    if (parsed.usage.completion_tokens) totalCompletionTokens = parsed.usage.completion_tokens;
+                    const cacheTokens = extractCachedInputTokens(parsed.usage);
+                    if (cacheTokens > 0) cachedInputTokens = cacheTokens;
+                  } else {
+                    for (const choice of parsed.choices || []) { if (choice.delta?.content) totalCompletionTokens += Math.ceil(choice.delta.content.length / 2); }
+                  }
+                } catch {}
+              }
+              await writer.write(value);
+            }
+          } catch (err) {
+            createCallLog({
+              relay_key_id: relayKey.id, relay_key_name: relayKey.name,
+              model: modelName, channel_id: channel.id, channel_name: channel.name,
+              prompt_tokens: 0, completion_tokens: totalCompletionTokens,
+              cached_input_tokens: cachedInputTokens,
+              status: 'fail', error_message: err instanceof Error ? err.message : 'Stream error',
+              ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+            });
+            await writer.close();
+          }
+        })();
+
+        return new Response(recordingStream.readable, {
+          headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' },
+        });
+      } else {
+        const result = await callUpstream(channel, upstreamBody, channelApiKey);
+        const { prompt_tokens, completion_tokens, total_tokens } = result.response.usage;
+
+        createCallLog({
+          relay_key_id: relayKey.id, relay_key_name: relayKey.name,
+          model: modelName, channel_id: channel.id, channel_name: channel.name,
+          prompt_tokens, completion_tokens,
+          cached_input_tokens: result.cachedInputTokens,
+          status: 'success',
+          ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+        });
+        if (relayKey.balance > 0) addUsedTokens(relayKey.id, prompt_tokens + completion_tokens);
+        updateChannelHealth(channel.id, 'healthy');
+
+        result.response.model = body.model || 'auto';
+        return NextResponse.json(result.response);
+      }
+    } catch (err: any) {
+      lastError = err;
+      retriesOnCurrentChannel++;
+
+      if (retriesOnCurrentChannel >= maxRetries) {
+        // Exhausted retries on this channel → mark cooling_down (auto-recover 6h)
+        updateChannelHealth(channel.id, 'cooling_down');
+        excludedChannelIds.push(channel.id);
+        channel = null; // trigger failover to next channel
+      }
+    }
+  }
+
+  // ── All attempts exhausted ──
+  if (channel && lastError) {
+    updateChannelHealth(channel.id, lastError.status === 429 ? 'cooling_down' : 'unhealthy');
+  }
+  createCallLog({
+    relay_key_id: relayKey.id, relay_key_name: relayKey.name,
+    model: modelName, channel_id: channel?.id || '', channel_name: channel?.name || 'unknown',
+    prompt_tokens: 0, completion_tokens: 0,
+    status: 'fail', error_message: lastError?.body || (lastError instanceof Error ? lastError.message : 'Upstream error'),
+    ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+  });
+
+  const status = lastError?.status || 502;
+  let errorBody: any;
+  try {
+    errorBody = JSON.parse(lastError?.body || '{}');
+  } catch {
+    errorBody = { error: { message: lastError?.body || lastError?.message || 'Upstream error', type: 'server_error' } };
+  }
+  return NextResponse.json(errorBody, { status });
 }

@@ -102,8 +102,21 @@ export function deleteModelAlias(id: string): boolean {
 
 // ── Routing ──
 
-export function resolveModel(modelName: string, allowedChannelIds?: string[]): { channelId: string; upstreamModelId: string } | null {
+export function resolveModel(
+  modelName: string,
+  allowedChannelIds?: string[],
+  excludeChannelIds?: string[],
+): { channelId: string; upstreamModelId: string } | null {
   const db = getDb();
+
+  // Build exclude clause
+  let excludeClause = '';
+  let excludeParams: string[] = [];
+  if (excludeChannelIds && excludeChannelIds.length > 0) {
+    const placeholders = excludeChannelIds.map(() => '?').join(',');
+    excludeClause = ` AND c.id NOT IN (${placeholders})`;
+    excludeParams = excludeChannelIds;
+  }
 
   // 1. Check aliases — prioritized by allowed channels if provided
   if (allowedChannelIds && allowedChannelIds.length > 0) {
@@ -113,7 +126,7 @@ export function resolveModel(modelName: string, allowedChannelIds?: string[]): {
       LEFT JOIN channel_models cm ON cm.id = ma.channel_model_id
       LEFT JOIN channels c ON c.id = cm.channel_id
       WHERE ma.alias_name = ? AND ma.is_active = 1 AND c.is_active = 1
-        AND cm.channel_id IN (${placeholders})
+        AND cm.channel_id IN (${placeholders})${excludeClause}
       ORDER BY
         CASE c.health_status
           WHEN 'healthy' THEN 1
@@ -121,7 +134,7 @@ export function resolveModel(modelName: string, allowedChannelIds?: string[]): {
           WHEN 'cooling_down' THEN 3
           ELSE 4
         END ASC
-    `).get(modelName, ...allowedChannelIds) as any;
+    `).get(modelName, ...allowedChannelIds, ...excludeParams) as any;
     if (alias) return { channelId: alias.channel_id, upstreamModelId: alias.model_id };
   }
 
@@ -130,7 +143,7 @@ export function resolveModel(modelName: string, allowedChannelIds?: string[]): {
     SELECT ma.*, cm.model_id, cm.channel_id FROM model_aliases ma
     LEFT JOIN channel_models cm ON cm.id = ma.channel_model_id
     LEFT JOIN channels c ON c.id = cm.channel_id
-    WHERE ma.alias_name = ? AND ma.is_active = 1 AND c.is_active = 1
+    WHERE ma.alias_name = ? AND ma.is_active = 1 AND c.is_active = 1${excludeClause}
       ORDER BY
         CASE c.health_status
           WHEN 'healthy' THEN 1
@@ -138,7 +151,7 @@ export function resolveModel(modelName: string, allowedChannelIds?: string[]): {
           WHEN 'cooling_down' THEN 3
           ELSE 4
         END ASC
-    `).get(modelName) as any;
+    `).get(modelName, ...excludeParams) as any;
   if (alias) return { channelId: alias.channel_id, upstreamModelId: alias.model_id };
 
   // 3. Check direct model_id match (only if channel is active, NO alias exists)
@@ -147,8 +160,8 @@ export function resolveModel(modelName: string, allowedChannelIds?: string[]): {
     LEFT JOIN channels c ON c.id = cm.channel_id
     LEFT JOIN model_aliases ma ON ma.channel_model_id = cm.id AND ma.is_active = 1
     WHERE cm.model_id = ? AND cm.is_active = 1 AND c.is_active = 1
-      AND ma.id IS NULL
-  `).get(modelName) as any;
+      AND ma.id IS NULL${excludeClause}
+  `).get(modelName, ...excludeParams) as any;
   if (model) return { channelId: model.channel_id, upstreamModelId: model.model_id };
 
   return null;
