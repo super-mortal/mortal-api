@@ -46,8 +46,8 @@ export default function KeysPage() {
   const [editExpiry, setEditExpiry] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string } | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const [newKeyValue, setNewKeyValue] = useState<string | null>(null);
+  const [refreshConfirm, setRefreshConfirm] = useState<{ id: string; name: string } | null>(null);
+  const [refreshResult, setRefreshResult] = useState<{ name: string; newKey: string } | null>(null);
 
   // Channel picker modal for create
   const [chPickerOpen, setChPickerOpen] = useState(false);
@@ -182,6 +182,25 @@ export default function KeysPage() {
     fetchData();
   };
 
+  const handleRefreshKey = async (id: string) => {
+    setRefreshConfirm(null);
+    try {
+      const res = await apiFetch('/admin/keys', {
+        method: 'PATCH',
+        body: JSON.stringify({ id, refresh_key: true }),
+      });
+      const key = keys.find(k => k.id === id);
+      const data = await res.json();
+      if (data.new_key) {
+        setRefreshResult({ name: key?.name || 'Key', newKey: data.new_key });
+        setTimeout(() => setRefreshResult(null), 5000);
+        fetchData();
+      }
+    } catch {
+      // refresh failed silently
+    }
+  };
+
   const copyKey = (key: string, id: string) => {
     navigator.clipboard.writeText(key);
     setCopiedId(id);
@@ -200,6 +219,24 @@ export default function KeysPage() {
           <InlineIcon name="plus" className="w-4 h-4" /> 创建 Key
         </button>
       </div>
+
+      {refreshResult && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3 animate-in fade-in">
+          <InlineIcon name="check" className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+          <div className="text-xs text-amber-800">
+            <p className="font-medium mb-1">Key「{refreshResult.name}」已刷新</p>
+            <code className="block bg-white border border-amber-300 rounded px-2 py-1 font-mono text-[11px] break-all mb-1.5">{refreshResult.newKey}</code>
+            <button onClick={() => { navigator.clipboard.writeText(refreshResult.newKey); }}
+              className="text-indigo-600 hover:text-indigo-700 underline underline-offset-2">
+              复制新 Key
+            </button>
+          </div>
+          <button onClick={() => setRefreshResult(null)}
+            className="ml-auto text-amber-400 hover:text-amber-600 shrink-0">
+            <InlineIcon name="x" className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Create Modal */}
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="创建 API Key">
@@ -366,50 +403,6 @@ export default function KeysPage() {
                 </div>
               )}
             </div>
-            <div className="border-t border-gray-100 pt-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-gray-500">API Key</p>
-                  <code className="text-[10px] text-gray-400 font-mono mt-0.5 block">
-                    {showEdit.key.slice(0, 20)}...
-                  </code>
-                </div>
-                <button
-                  onClick={async () => {
-                    if (!confirm('刷新 Key 后旧 Key 将立即失效，确定继续？')) return;
-                    try {
-                      setRefreshing(true);
-                      const res = await apiFetch('/admin/keys', {
-                        method: 'PATCH',
-                        body: JSON.stringify({ id: showEdit.id, refresh_key: true }),
-                      });
-                      const data = await res.json();
-                      if (data.new_key) {
-                        setNewKeyValue(data.new_key);
-                        fetchData();
-                      }
-                    } catch {
-                      // refresh failed silently
-                    } finally {
-                      setRefreshing(false);
-                    }
-                  }}
-                  disabled={refreshing}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-200 text-xs text-amber-700 bg-amber-50 hover:bg-amber-100 disabled:opacity-50 transition-colors"
-                >
-                  <InlineIcon name="refreshCw" className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-                  刷新 API Key
-                </button>
-              </div>
-              {newKeyValue && (
-                <div className="mt-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                  <p className="text-[10px] text-amber-700 font-medium">新 API Key（请立即保存）</p>
-                  <code className="text-xs text-amber-800 font-mono break-all">{newKeyValue}</code>
-                  <button onClick={() => { navigator.clipboard.writeText(newKeyValue); }}
-                    className="mt-1 text-[10px] text-indigo-600 underline">复制</button>
-                </div>
-              )}
-            </div>
             <div className="flex gap-2 pt-1">
               <button onClick={handleEditSave}
                 className="flex-1 px-4 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors">保存</button>
@@ -450,15 +443,15 @@ export default function KeysPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50">
-                <th className="text-left px-3 sm:px-4 py-3 font-medium text-gray-500 text-xs">名称</th>
-                <th className="text-left px-3 sm:px-4 py-3 font-medium text-gray-500 text-xs">API Key</th>
-                <th className="text-right px-3 sm:px-4 py-3 font-medium text-gray-500 text-xs hidden sm:table-cell">已用</th>
-                <th className="text-right px-3 sm:px-4 py-3 font-medium text-gray-500 text-xs hidden sm:table-cell">额度</th>
-                <th className="text-center px-3 sm:px-4 py-3 font-medium text-gray-500 text-xs">状态</th>
-                <th className="text-left px-3 sm:px-4 py-3 font-medium text-gray-500 text-xs hidden md:table-cell">模型限制</th>
-                <th className="text-left px-3 sm:px-4 py-3 font-medium text-gray-500 text-xs hidden lg:table-cell">创建时间</th>
-                <th className="text-left px-3 sm:px-4 py-3 font-medium text-gray-500 text-xs hidden lg:table-cell">到期时间</th>
-                <th className="text-right px-3 sm:px-4 py-3 font-medium text-gray-500 text-xs">操作</th>
+                <th className="text-left px-2.5 sm:px-3 py-2.5 font-medium text-gray-500 text-[11px]">名称</th>
+                <th className="text-left px-2.5 sm:px-3 py-2.5 font-medium text-gray-500 text-[11px]">API Key</th>
+                <th className="text-right px-2.5 sm:px-3 py-2.5 font-medium text-gray-500 text-[11px] hidden sm:table-cell">已用</th>
+                <th className="text-right px-2.5 sm:px-3 py-2.5 font-medium text-gray-500 text-[11px] hidden sm:table-cell">额度</th>
+                <th className="text-center px-2.5 sm:px-3 py-2.5 font-medium text-gray-500 text-[11px]">状态</th>
+                <th className="text-left px-2.5 sm:px-3 py-2.5 font-medium text-gray-500 text-[11px] hidden md:table-cell">模型限制</th>
+                <th className="text-left px-2.5 sm:px-3 py-2.5 font-medium text-gray-500 text-[11px] hidden lg:table-cell">创建时间</th>
+                <th className="text-left px-2.5 sm:px-3 py-2.5 font-medium text-gray-500 text-[11px] hidden lg:table-cell">到期时间</th>
+                <th className="text-right px-2.5 sm:px-3 py-2.5 font-medium text-gray-500 text-[11px]">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -471,22 +464,22 @@ export default function KeysPage() {
                 const modelsList = k.allowed_models ? k.allowed_models.split(',').filter(Boolean) : [];
                 return (
                 <tr key={k.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                  <td className="px-3 sm:px-4 py-3 text-gray-900 font-medium text-xs sm:text-sm">{k.name}</td>
-                  <td className="px-3 sm:px-4 py-3">
+                  <td className="px-2.5 sm:px-3 py-2.5 text-gray-900 font-medium text-[11px] sm:text-xs">{k.name}</td>
+                  <td className="px-2.5 sm:px-3 py-2.5">
                     <code className="font-mono text-[10px] sm:text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded truncate max-w-[120px] sm:max-w-none inline-block">
                       {k.key.slice(0, 16)}...
                     </code>
                   </td>
-                  <td className="px-3 sm:px-4 py-3 text-right text-gray-700 text-xs sm:text-sm hidden sm:table-cell">{k.used_tokens.toLocaleString()}</td>
-                  <td className="px-3 sm:px-4 py-3 text-right text-gray-700 text-xs sm:text-sm hidden sm:table-cell">{k.balance > 0 ? k.balance.toLocaleString() : '∞'}</td>
-                  <td className="px-3 sm:px-4 py-3 text-center">
+                  <td className="px-2.5 sm:px-3 py-2.5 text-right text-gray-700 text-[11px] sm:text-xs hidden sm:table-cell">{k.used_tokens.toLocaleString()}</td>
+                  <td className="px-2.5 sm:px-3 py-2.5 text-right text-gray-700 text-[11px] sm:text-xs hidden sm:table-cell">{k.balance > 0 ? k.balance.toLocaleString() : '∞'}</td>
+                  <td className="px-2.5 sm:px-3 py-2.5 text-center">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium gap-1 ${
                       expired ? 'bg-red-50 text-red-600' :
                       k.is_active ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-500'}`}>
                       {expired ? <><InlineIcon name="clock" className="w-3 h-3" /> 过期</> : (k.is_active ? '启用' : '禁用')}
                     </span>
                   </td>
-                  <td className="px-3 sm:px-4 py-3 hidden md:table-cell">
+                  <td className="px-2.5 sm:px-3 py-2.5 hidden md:table-cell">
                     {modelsList.length > 0 ? (
                       <Popover
                         trigger={
@@ -511,10 +504,10 @@ export default function KeysPage() {
                       <span className="text-[10px] text-gray-400">全部</span>
                     )}
                   </td>
-                  <td className="px-3 sm:px-4 py-3 text-left text-[10px] text-gray-500 hidden lg:table-cell whitespace-nowrap">
+                  <td className="px-2.5 sm:px-3 py-2.5 text-left text-[10px] text-gray-500 hidden lg:table-cell whitespace-nowrap">
                     {toBeijing(k.created_at)}
                   </td>
-                  <td className="px-3 sm:px-4 py-3 text-left text-[10px] whitespace-nowrap hidden lg:table-cell">
+                  <td className="px-2.5 sm:px-3 py-2.5 text-left text-[10px] whitespace-nowrap hidden lg:table-cell">
                     {k.expires_at ? (
                       <span className={expired ? 'text-red-500 font-medium' : 'text-gray-500'}>
                         {k.expires_at.slice(0, 10)}
@@ -523,11 +516,18 @@ export default function KeysPage() {
                       <span className="text-gray-300">—</span>
                     )}
                   </td>
-                  <td className="px-3 sm:px-4 py-3 text-right">
+                  <td className="px-2.5 sm:px-3 py-2.5 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <button onClick={() => copyKey(k.key, k.id)}
                         className="p-1.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100" title="复制">
                         {copiedId === k.id ? <InlineIcon name="check" className="w-3.5 h-3.5 text-emerald-500" /> : <InlineIcon name="copy" className="w-3.5 h-3.5" />}
+                      </button>
+                      <button
+                        onClick={() => setRefreshConfirm({ id: k.id, name: k.name })}
+                        className="p-1.5 rounded text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                        title="刷新 Key"
+                      >
+                        <InlineIcon name="refreshCw" className="w-3.5 h-3.5" />
                       </button>
                       <button onClick={() => {
                         setShowEdit(k);
@@ -559,6 +559,16 @@ export default function KeysPage() {
           </table>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!refreshConfirm}
+        onClose={() => setRefreshConfirm(null)}
+        onConfirm={() => handleRefreshKey(refreshConfirm!.id)}
+        title="确认刷新 Key"
+        message={`刷新 Key「${refreshConfirm?.name}」后旧 Key 将立即失效，确定继续？`}
+        confirmText="确认刷新"
+        variant="info"
+      />
 
       <ConfirmDialog
         open={!!deleteConfirm}
