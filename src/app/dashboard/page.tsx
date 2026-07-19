@@ -195,7 +195,7 @@ export default function DashboardPage() {
           {data.dailyStats.length > 0 ? (
             <div className="h-52 sm:h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.dailyStats}>
+                <BarChart data={data.dailyStats} maxBarSize={36}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                   <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(v) => v.slice(5)} axisLine={{ stroke: '#e2e8f0' }} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={36} />
@@ -253,7 +253,7 @@ export default function DashboardPage() {
           {data.dailyStats.length > 0 ? (
             <div className="h-44 sm:h-48">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.dailyStats}>
+                <BarChart data={data.dailyStats} maxBarSize={36}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                   <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={(v) => v.slice(5)} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={26} />
