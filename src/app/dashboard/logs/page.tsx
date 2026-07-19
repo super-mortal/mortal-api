@@ -66,6 +66,7 @@ export default function LogsPage() {
   const handleFilterPreset = useCallback((preset: 'today' | '7d' | '30d') => {
     setActiveDate(preset);
     setPage(0);
+    setSelected(new Set());
     const now = new Date();
     const fmt = (d: Date) => {
       const y = d.getFullYear();

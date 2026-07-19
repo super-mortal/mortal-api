@@ -196,8 +196,11 @@ export default function KeysPage() {
         setTimeout(() => setRefreshResult(null), 5000);
         fetchData();
       }
-    } catch {
-      // refresh failed silently
+    } catch (err) {
+      console.error('Key refresh failed:', err);
+      const failedKey = keys.find(k => k.id === id);
+      setRefreshResult({ name: failedKey?.name || 'Key', newKey: '⚠️ 刷新失败，请重试' });
+      setTimeout(() => setRefreshResult(null), 5000);
     }
   };
 
@@ -524,7 +527,7 @@ export default function KeysPage() {
                       </button>
                       <button
                         onClick={() => setRefreshConfirm({ id: k.id, name: k.name })}
-                        className="p-1.5 rounded text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                        className="p-1.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
                         title="刷新 Key"
                       >
                         <InlineIcon name="refreshCw" className="w-3.5 h-3.5" />
