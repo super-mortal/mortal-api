@@ -377,16 +377,21 @@ export default function KeysPage() {
                 <button
                   onClick={async () => {
                     if (!confirm('刷新 Key 后旧 Key 将立即失效，确定继续？')) return;
-                    setRefreshing(true);
-                    const res = await apiFetch('/admin/keys', {
-                      method: 'PATCH',
-                      body: JSON.stringify({ id: showEdit.id, refresh_key: true }),
-                    });
-                    const data = await res.json();
-                    setRefreshing(false);
-                    if (data.new_key) {
-                      setNewKeyValue(data.new_key);
-                      fetchData();
+                    try {
+                      setRefreshing(true);
+                      const res = await apiFetch('/admin/keys', {
+                        method: 'PATCH',
+                        body: JSON.stringify({ id: showEdit.id, refresh_key: true }),
+                      });
+                      const data = await res.json();
+                      if (data.new_key) {
+                        setNewKeyValue(data.new_key);
+                        fetchData();
+                      }
+                    } catch {
+                      // refresh failed silently
+                    } finally {
+                      setRefreshing(false);
                     }
                   }}
                   disabled={refreshing}
