@@ -27,6 +27,7 @@ export default function LogsPage() {
   const [modelFilter, setModelFilter] = useState('');
   const [startMonth, setStartMonth] = useState('');
   const [endMonth, setEndMonth] = useState('');
+  const [activeDate, setActiveDate] = useState<'today' | '7d' | '30d' | 'custom'>('custom');
   const [showBatchDelete, setShowBatchDelete] = useState(false);
   const [deleteDateFrom, setDeleteDateFrom] = useState('');
   const [deleteDateTo, setDeleteDateTo] = useState('');
@@ -61,6 +62,39 @@ export default function LogsPage() {
     if (res.ok) { const d = await res.json(); setLogs(d.logs); setTotal(d.total); }
     setLoading(false);
   }, [page, statusFilter, keyFilter, modelFilter, startMonth, endMonth]);
+
+  const handleFilterPreset = useCallback((preset: 'today' | '7d' | '30d') => {
+    setActiveDate(preset);
+    setPage(0);
+    const now = new Date();
+    const fmt = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}T00:00`;
+    };
+    const fmtEnd = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}T23:59`;
+    };
+
+    if (preset === 'today') {
+      setStartMonth(fmt(now));
+      setEndMonth(fmtEnd(now));
+    } else if (preset === '7d') {
+      const past = new Date(now);
+      past.setDate(past.getDate() - 6);
+      setStartMonth(fmt(past));
+      setEndMonth(fmtEnd(now));
+    } else if (preset === '30d') {
+      const past = new Date(now);
+      past.setDate(past.getDate() - 29);
+      setStartMonth(fmt(past));
+      setEndMonth(fmtEnd(now));
+    }
+  }, []);
 
   useEffect(() => { fetchLogs(); fetchKeys(); }, [fetchLogs, fetchKeys]);
 
@@ -212,14 +246,29 @@ export default function LogsPage() {
       {/* Filters */}
       <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 flex-wrap">
-          <div className="flex items-center gap-1.5 bg-white rounded-lg border border-gray-200 px-3 py-1.5">
-            <InlineIcon name="clock" className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-            <input type="datetime-local" value={startMonth} onChange={function(e) { setStartMonth(e.target.value); setPage(0); }}
-              className="text-xs border-0 bg-transparent focus:outline-none focus:ring-0 p-0 text-gray-700" style={{width: '9rem'}} />
-            <span className="text-gray-300 shrink-0">—</span>
-            <input type="datetime-local" value={endMonth} onChange={function(e) { setEndMonth(e.target.value); setPage(0); }}
-              className="text-xs border-0 bg-transparent focus:outline-none focus:ring-0 p-0 text-gray-700" style={{width: '9rem'}} />
+          {/* 快捷筛选按钮组 */}
+          <div className="flex items-center gap-1 bg-white rounded-lg border border-gray-200 p-1">
+            <button onClick={() => handleFilterPreset('today')}
+              className={'px-3 py-1.5 rounded-md text-xs font-medium transition-all ' + (activeDate === 'today' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50')}>今日</button>
+            <button onClick={() => handleFilterPreset('7d')}
+              className={'px-3 py-1.5 rounded-md text-xs font-medium transition-all ' + (activeDate === '7d' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50')}>7 天</button>
+            <button onClick={() => handleFilterPreset('30d')}
+              className={'px-3 py-1.5 rounded-md text-xs font-medium transition-all ' + (activeDate === '30d' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50')}>30 天</button>
+            <button onClick={() => { setActiveDate('custom'); setPage(0); }}
+              className={'px-3 py-1.5 rounded-md text-xs font-medium transition-all ' + (activeDate === 'custom' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50')}>
+              <InlineIcon name="calendar" className="w-3 h-3 inline mr-1" />自定义</button>
           </div>
+          {/* 自定义日期输入框 — 仅 activeDate === 'custom' 时显示 */}
+          {activeDate === 'custom' && (
+            <div className="flex items-center gap-1.5 bg-white rounded-lg border border-gray-200 px-3 py-1.5">
+              <InlineIcon name="clock" className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+              <input type="datetime-local" value={startMonth} onChange={function(e) { setStartMonth(e.target.value); setPage(0); }}
+                className="text-xs border-0 bg-transparent focus:outline-none focus:ring-0 p-0 text-gray-700" style={{width: '9rem'}} />
+              <span className="text-gray-300 shrink-0">—</span>
+              <input type="datetime-local" value={endMonth} onChange={function(e) { setEndMonth(e.target.value); setPage(0); }}
+                className="text-xs border-0 bg-transparent focus:outline-none focus:ring-0 p-0 text-gray-700" style={{width: '9rem'}} />
+            </div>
+          )}
           <div className="flex items-center gap-2 flex-wrap">
             <SelectFilter
               options={[
@@ -244,7 +293,7 @@ export default function LogsPage() {
               placeholder="模型名"
               className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 w-24" />
             {(startMonth || statusFilter || keyFilter || modelFilter) && (
-              <button onClick={() => { setStartMonth(''); setEndMonth(''); setStatusFilter(''); setKeyFilter(''); setModelFilter(''); setPage(0); }}
+              <button onClick={() => { setStartMonth(''); setEndMonth(''); setStatusFilter(''); setKeyFilter(''); setModelFilter(''); setActiveDate('custom'); setPage(0); }}
                 className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 whitespace-nowrap">清除</button>
             )}
           </div>
