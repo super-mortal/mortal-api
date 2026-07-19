@@ -5,6 +5,7 @@ import { InlineIcon } from '@/lib/icon';
 import { Modal } from '@/lib/modal';
 import { toBeijingFull } from '@/lib/date';
 import { apiFetch } from '@/lib/fetch-with-auth';
+import { SelectFilter } from '@/lib/select-filter';
 
 interface CallLog {
   id: string; relay_key_name: string; relay_key_id: string; model: string; channel_name: string;
@@ -220,17 +221,25 @@ export default function LogsPage() {
               className="text-xs border-0 bg-transparent focus:outline-none focus:ring-0 p-0 text-gray-700" style={{width: '9rem'}} />
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
-              className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
-              <option value="">全部状态</option>
-              <option value="success">成功</option>
-              <option value="fail">失败</option>
-            </select>
-            <select value={keyFilter} onChange={(e) => { setKeyFilter(e.target.value); setPage(0); }}
-              className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 max-w-[120px]">
-              <option value="">全部 Key</option>
-              {keys.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
-            </select>
+            <SelectFilter
+              options={[
+                { label: '全部状态', value: '' },
+                { label: '成功', value: 'success', color: 'green' },
+                { label: '失败', value: 'fail', color: 'red' },
+              ]}
+              value={statusFilter}
+              onChange={(v) => { setStatusFilter(v); setPage(0); }}
+              placeholder="全部状态"
+            />
+            <SelectFilter
+              options={[
+                { label: '全部 Key', value: '' },
+                ...keys.map(k => ({ label: k.name, value: k.id })),
+              ]}
+              value={keyFilter}
+              onChange={(v) => { setKeyFilter(v); setPage(0); }}
+              placeholder="全部 Key"
+            />
             <input type="text" value={modelFilter} onChange={(e) => { setModelFilter(e.target.value); setPage(0); }}
               placeholder="模型名"
               className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 w-24" />
