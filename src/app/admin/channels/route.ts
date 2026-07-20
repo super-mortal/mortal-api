@@ -18,10 +18,11 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const scope = searchParams.get('scope');
 
-  const healthSummary = getChannelHealthSummary(listChannels().map(c => c.id));
+  const allChannels = listChannels();
+  const healthSummary = getChannelHealthSummary(allChannels.map(c => c.id));
 
   if (scope === 'models') {
-    const channels = listChannels().map(c => ({ ...c, api_key: '' }));
+    const channels = allChannels.map(c => ({ ...c, api_key: '' }));
     const channelModels = listChannelModels();
     const aliases = listModelAliases();
     const channelsWithHealth = channels.map(c => ({
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ channels: channelsWithHealth, channelModels, aliases });
   }
 
-  const channels = listChannels().map(c => ({ ...c, api_key: c.api_key ? '[ENCRYPTED]' : '' }));
+  const channels = allChannels.map(c => ({ ...c, api_key: c.api_key ? '[ENCRYPTED]' : '' }));
   const channelsWithHealth = channels.map(c => ({
     ...c,
     recent_checks: healthSummary[c.id]?.recent_checks || [],

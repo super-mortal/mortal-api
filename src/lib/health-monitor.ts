@@ -16,11 +16,11 @@ export function startHealthMonitor(): void {
   (globalThis as any)[GLOBAL_KEY] = { started: true, timer: null };
 
   // Run one round immediately on startup
-  runHealthCheck().catch(() => {});
+  runHealthCheck().catch(e => console.error('Health monitor round failed:', e));
 
   // Schedule recurring rounds
   (globalThis as any)[GLOBAL_KEY].timer = setInterval(() => {
-    runHealthCheck().catch(() => {});
+    runHealthCheck().catch(e => console.error('Health monitor round failed:', e));
   }, INTERVAL_MS);
 }
 
@@ -29,10 +29,26 @@ export async function runHealthCheck(): Promise<void> {
   for (const ch of channels) {
     try {
       await probeChannel(ch);
-    } catch {
+    } catch (e) {
+      console.error('Probe failed for channel', ch.id, ':', e);
       // Individual channel probe failure shouldn't stop others
     }
   }
+}
+
+async function handleProbeResponse(
+  chId: string, res: Response, latency: number
+): Promise<{ ok: boolean; kind: string | null; latency_ms: number; error: string | null }> {
+  if (res.ok) {
+    recordChannelSuccess(chId);
+    insertHealthCheck(chId, 1, null, latency, null);
+    return { ok: true, kind: null, latency_ms: latency, error: null };
+  }
+  const kind = res.status === 429 ? 'quota' : 'failure';
+  recordChannelFailure(chId, kind);
+  const errText = await res.text().catch(() => `HTTP ${res.status}`);
+  insertHealthCheck(chId, 0, kind, latency, errText.slice(0, 300));
+  return { ok: false, kind, latency_ms: latency, error: errText.slice(0, 300) };
 }
 
 export async function probeChannel(ch: {
@@ -62,16 +78,7 @@ export async function probeChannel(ch: {
         signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
       });
       const latency = Date.now() - start;
-      if (res.ok) {
-        recordChannelSuccess(ch.id);
-        insertHealthCheck(ch.id, 1, null, latency, null);
-        return { ok: true, kind: null, latency_ms: latency, error: null };
-      }
-      const kind = res.status === 429 ? 'quota' : 'failure';
-      recordChannelFailure(ch.id, kind);
-      const errText = await res.text().catch(() => `HTTP ${res.status}`);
-      insertHealthCheck(ch.id, 0, kind, latency, errText.slice(0, 300));
-      return { ok: false, kind, latency_ms: latency, error: errText.slice(0, 300) };
+      return handleProbeResponse(ch.id, res, latency);
     }
 
     const res = await fetch(url, {
@@ -81,18 +88,7 @@ export async function probeChannel(ch: {
       signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
     });
     const latency = Date.now() - start;
-
-    if (res.ok) {
-      recordChannelSuccess(ch.id);
-      insertHealthCheck(ch.id, 1, null, latency, null);
-      return { ok: true, kind: null, latency_ms: latency, error: null };
-    }
-
-    const kind = res.status === 429 ? 'quota' : 'failure';
-    recordChannelFailure(ch.id, kind);
-    const errText = await res.text().catch(() => `HTTP ${res.status}`);
-    insertHealthCheck(ch.id, 0, kind, latency, errText.slice(0, 300));
-    return { ok: false, kind, latency_ms: latency, error: errText.slice(0, 300) };
+    return handleProbeResponse(ch.id, res, latency);
   } catch (e: any) {
     const latency = Date.now() - start;
     const error = e?.message || e?.code || 'Probe failed';

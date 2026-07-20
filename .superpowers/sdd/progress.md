@@ -39,3 +39,9 @@ Final whole-branch review (95e9167..3d14eff): READY TO MERGE, 0 Critical/Importa
   6 deferred Minors triaged acceptable: [a] masked-400 [b] unbounded-IN [c] msg-count [d] non-string-ids [e] error.message-slice [f] checkError-reset(not a bug)
   Note: bulk-delete clears selection before outcome known (pre-existing UX nit)
 Task 1: complete (commits 21fcf63..bb45a8c, review clean)
+Task 2: complete (commits bb45a8c..8546928, review clean after fix)
+Task 3: complete (commits 8546928..50ee45c, review clean)
+Task 4: complete (commits 50ee45c..360d10b, review clean)
+  Minor (deferred to final review): [1] as any cast resolveChannelApiKey line; [2] duplicated probe logic; [3] missing console.error on probe catch
+Task 5: complete (commits 360d10b..8482373, review clean)
+--- All 5 tasks complete ---

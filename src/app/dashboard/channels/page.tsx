@@ -284,11 +284,9 @@ export default function ChannelsPage() {
                     <span>· 模型: {models.length} 个</span>
                   </div>
                 </div>
-                {ch.recent_checks && ch.recent_checks.length > 0 && (
                   <div className="mt-2 md:mt-0 md:mx-3 md:flex-1 hidden md:block">
-                    <HealthBar recent_checks={ch.recent_checks} uptime_pct={ch.uptime_pct ?? 100} avg_latency_ms={ch.avg_latency_ms ?? 0} />
+                    <HealthBar recent_checks={ch.recent_checks || []} uptime_pct={ch.uptime_pct ?? 100} avg_latency_ms={ch.avg_latency_ms ?? 0} />
                   </div>
-                )}
                 <div className="flex items-center gap-0.5 shrink-0">
                   <span className="group relative">
                     <button onClick={() => { setChForm({ name: ch.name, base_url: ch.base_url, api_key: '', priority: ch.priority, notes: ch.notes }); setEditId(ch.id); setChModal(true); }}
