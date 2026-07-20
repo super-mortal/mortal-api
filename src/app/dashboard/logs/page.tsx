@@ -7,6 +7,7 @@ import { toBeijingFull } from '@/lib/date';
 import { apiFetch } from '@/lib/fetch-with-auth';
 import { SelectFilter } from '@/lib/select-filter';
 import { TableEmpty, StatusBadge } from '@/lib/ui';
+import { DateTimePicker, DatePicker } from '@/lib/date-picker';
 
 function todayStart(): string {
   const now = new Date();
@@ -215,13 +216,11 @@ export default function LogsPage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1.5">开始日期</label>
-              <input type="date" value={deleteDateFrom} onChange={(e) => setDeleteDateFrom(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" />
+              <DatePicker value={deleteDateFrom} onChange={setDeleteDateFrom} className="w-full" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1.5">结束日期</label>
-              <input type="date" value={deleteDateTo} onChange={(e) => setDeleteDateTo(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" />
+              <DatePicker value={deleteDateTo} onChange={setDeleteDateTo} className="w-full" />
             </div>
           </div>
           <button onClick={handleBatchDeleteByDate} disabled={!deleteDateFrom}
@@ -279,13 +278,8 @@ export default function LogsPage() {
           </div>
           {/* 自定义日期输入框 — 仅 activeDate === 'custom' 时显示 */}
           {activeDate === 'custom' && (
-            <div className="flex items-center gap-1.5 bg-white rounded-lg border border-gray-200 px-3 py-1.5">
-              <InlineIcon name="clock" className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-              <input type="datetime-local" value={startMonth} onChange={function(e) { setStartMonth(e.target.value); setPage(0); }}
-                className="text-xs border-0 bg-transparent focus:outline-none focus:ring-0 p-0 text-gray-700" style={{width: '9rem'}} />
-              <span className="text-gray-300 shrink-0">—</span>
-              <input type="datetime-local" value={endMonth} onChange={function(e) { setEndMonth(e.target.value); setPage(0); }}
-                className="text-xs border-0 bg-transparent focus:outline-none focus:ring-0 p-0 text-gray-700" style={{width: '9rem'}} />
+            <div className="flex items-center gap-1.5 px-1">
+              <DateTimePicker value={startMonth} onChange={(v) => { setStartMonth(v); setPage(0); }} />
             </div>
           )}
           <div className="flex items-center gap-2 flex-wrap">

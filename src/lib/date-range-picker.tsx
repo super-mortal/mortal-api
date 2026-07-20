@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { InlineIcon } from './icon';
+import { DatePicker } from './date-picker';
 
 interface DateRangePickerProps {
   startDate: string;
@@ -68,20 +69,18 @@ export function DateRangePicker({
           <div className="space-y-3">
             <div>
               <label className="block text-[10px] text-gray-500 mb-1">开始日期</label>
-              <input
-                type="date"
+              <DatePicker
                 value={localStart}
-                onChange={(e) => setLocalStart(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                onChange={(d) => setLocalStart(d)}
+                className="w-full"
               />
             </div>
             <div>
               <label className="block text-[10px] text-gray-500 mb-1">结束日期</label>
-              <input
-                type="date"
+              <DatePicker
                 value={localEnd}
-                onChange={(e) => setLocalEnd(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                onChange={(d) => setLocalEnd(d)}
+                className="w-full"
               />
             </div>
             <div className="flex gap-2 pt-1">
