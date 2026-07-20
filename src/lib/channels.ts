@@ -212,7 +212,7 @@ export function resolveModel(
       SELECT ma.*, cm.model_id, cm.channel_id FROM model_aliases ma
       LEFT JOIN channel_models cm ON cm.id = ma.channel_model_id
       LEFT JOIN channels c ON c.id = cm.channel_id
-      WHERE ma.alias_name = ? AND ma.is_active = 1 AND c.is_active = 1
+      WHERE ma.alias_name = ? AND ma.is_active = 1 AND ${AVAILABLE_CHANNEL_SQL}
         AND cm.channel_id IN (${placeholders})${excludeClause}
       ORDER BY
         CASE c.health_status
@@ -230,7 +230,7 @@ export function resolveModel(
     SELECT ma.*, cm.model_id, cm.channel_id FROM model_aliases ma
     LEFT JOIN channel_models cm ON cm.id = ma.channel_model_id
     LEFT JOIN channels c ON c.id = cm.channel_id
-    WHERE ma.alias_name = ? AND ma.is_active = 1 AND c.is_active = 1${excludeClause}
+    WHERE ma.alias_name = ? AND ma.is_active = 1 AND ${AVAILABLE_CHANNEL_SQL}${excludeClause}
       ORDER BY
         CASE c.health_status
           WHEN 'healthy' THEN 1
@@ -246,7 +246,7 @@ export function resolveModel(
     SELECT cm.*, c.is_active as ch_active FROM channel_models cm
     LEFT JOIN channels c ON c.id = cm.channel_id
     LEFT JOIN model_aliases ma ON ma.channel_model_id = cm.id AND ma.is_active = 1
-    WHERE cm.model_id = ? AND cm.is_active = 1 AND c.is_active = 1
+    WHERE cm.model_id = ? AND cm.is_active = 1 AND ${AVAILABLE_CHANNEL_SQL}
       AND ma.id IS NULL${excludeClause}
   `).get(modelName, ...excludeParams) as any;
   if (model) return { channelId: model.channel_id, upstreamModelId: model.model_id };
@@ -259,13 +259,7 @@ export function getModelsForAuto(): { modelId: string; channel: Channel }[] {
   const rows = db.prepare(`
     SELECT cm.model_id, c.* FROM channel_models cm
     LEFT JOIN channels c ON c.id = cm.channel_id
-    WHERE cm.is_active = 1 AND c.is_active = 1
-      AND c.health_status != 'unhealthy'
-      AND (
-        c.health_status != 'cooling_down'
-        OR c.last_health_check IS NULL
-        OR c.last_health_check < datetime('now', '+8 hours', '-6 hours')
-      )
+    WHERE cm.is_active = 1 AND ${AVAILABLE_CHANNEL_SQL}
   `).all() as any[];
   return rows.map(r => ({ modelId: r.model_id, channel: r as Channel }));
 }

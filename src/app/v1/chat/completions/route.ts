@@ -6,9 +6,10 @@ import { getRelayKeyByKey, addUsedTokens, getAllowedChannelIds } from '@/lib/key
 import {
   resolveModel,
   getModelsForAuto,
-  updateChannelHealth,
   resolveChannelApiKey,
   getChannelById,
+  recordChannelSuccess,
+  recordChannelFailure,
 } from '@/lib/channels';
 import { callUpstream, callUpstreamStreaming, extractCachedInputTokens } from '@/lib/proxy';
 import { createCallLog } from '@/lib/logs';
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     const autoChannelApiKey = resolveChannelApiKey(autoChannel);
     if (!autoChannelApiKey) {
-      updateChannelHealth(autoChannel.id, 'unhealthy');
+      recordChannelFailure(autoChannel.id, 'failure');
       return NextResponse.json({ error: { message: `No API key for ${autoChannel.name}`, type: 'server_error' } }, { status: 502 });
     }
 
@@ -111,7 +112,7 @@ export async function POST(request: NextRequest) {
                   ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
                 });
                 if (relayKey.balance > 0) addUsedTokens(relayKey.id, totalCompletionTokens);
-                updateChannelHealth(autoChannel.id, 'healthy');
+                recordChannelSuccess(autoChannel.id);
                 await writer.close();
                 return;
               }
@@ -161,14 +162,18 @@ export async function POST(request: NextRequest) {
           ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
         });
         if (relayKey.balance > 0) addUsedTokens(relayKey.id, prompt_tokens + completion_tokens);
-        updateChannelHealth(autoChannel.id, 'healthy');
+        recordChannelSuccess(autoChannel.id);
 
         result.response.model = body.model || 'auto';
         return NextResponse.json(result.response);
       }
     } catch (err: any) {
       const isRateLimit = err.status === 429;
-      updateChannelHealth(autoChannel.id, isRateLimit ? 'cooling_down' : 'unhealthy');
+      if (isRateLimit) {
+        recordChannelFailure(autoChannel.id, 'quota');
+      } else {
+        recordChannelFailure(autoChannel.id, 'failure');
+      }
       createCallLog({
         relay_key_id: relayKey.id, relay_key_name: relayKey.name,
         model: modelName, channel_id: autoChannel.id, channel_name: autoChannel.name,
@@ -222,7 +227,7 @@ export async function POST(request: NextRequest) {
 
       channelApiKey = resolveChannelApiKey(channel);
       if (!channelApiKey) {
-        updateChannelHealth(channel.id, 'unhealthy');
+        recordChannelFailure(channel.id, 'failure');
         excludedChannelIds.push(channel.id);
         channel = null;
         continue;
@@ -274,7 +279,7 @@ export async function POST(request: NextRequest) {
                   ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
                 });
                 if (relayKey.balance > 0) addUsedTokens(relayKey.id, totalCompletionTokens);
-                updateChannelHealth(channel.id, 'healthy');
+                recordChannelSuccess(channel.id);
                 await writer.close();
                 return;
               }
@@ -324,7 +329,7 @@ export async function POST(request: NextRequest) {
           ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
         });
         if (relayKey.balance > 0) addUsedTokens(relayKey.id, prompt_tokens + completion_tokens);
-        updateChannelHealth(channel.id, 'healthy');
+        recordChannelSuccess(channel.id);
 
         result.response.model = body.model || 'auto';
         return NextResponse.json(result.response);
@@ -335,7 +340,7 @@ export async function POST(request: NextRequest) {
 
       if (retriesOnCurrentChannel >= maxRetries) {
         // Exhausted retries on this channel → mark cooling_down (auto-recover 6h)
-        updateChannelHealth(channel.id, 'cooling_down');
+        recordChannelFailure(channel.id, 'quota');
         excludedChannelIds.push(channel.id);
         channel = null; // trigger failover to next channel
       }
@@ -344,7 +349,7 @@ export async function POST(request: NextRequest) {
 
   // ── All attempts exhausted ──
   if (channel && lastError) {
-    updateChannelHealth(channel.id, lastError.status === 429 ? 'cooling_down' : 'unhealthy');
+    recordChannelFailure(channel.id, lastError?.status === 429 ? 'quota' : 'failure');
   }
   createCallLog({
     relay_key_id: relayKey.id, relay_key_name: relayKey.name,
