@@ -152,7 +152,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         {statCards.map((c) => (
           <div key={c.label} className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4 hover:shadow-sm transition-shadow">
             <div className={`text-lg sm:text-xl font-semibold ${c.color} truncate`}>{c.value}</div>
@@ -173,58 +173,64 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
-        <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-1">每日调用趋势</h3>
-          <p className="text-xs text-gray-400 mb-4">按日期统计的调用次数</p>
-          {data.dailyStats.length > 0 ? (
-            <div className="h-52 sm:h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data.dailyStats}>
-                  <defs><linearGradient id="colorCalls" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                  </linearGradient></defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(v) => v.slice(5)} axisLine={{ stroke: '#e2e8f0' }} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={36} />
-                  <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }} />
-                  <Area type="monotone" dataKey="calls" stroke="#6366f1" strokeWidth={2} fill="url(#colorCalls)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <div className="h-52 sm:h-64 flex items-center justify-center text-sm text-gray-400">暂无数据</div>
-          )}
-        </div>
-        <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-1">每日 Token 消耗</h3>
-          <p className="text-xs text-gray-400 mb-4">输出 / 缓存输入 / 未缓存输入</p>
-          {data.dailyStats.length > 0 ? (
-            <div className="h-52 sm:h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.dailyStats} maxBarSize={36}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(v) => v.slice(5)} axisLine={{ stroke: '#e2e8f0' }} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={36} />
-                  <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }} />
-                  <Bar dataKey="uncached_tokens" name="未缓存输入" fill="#f59e0b" stackId="a" />
-                  <Bar dataKey="cached_tokens" name="缓存输入" fill="#22c55e" stackId="a" />
-                  <Bar dataKey="completion_tokens" name="输出" fill="#8b5cf6" stackId="a" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-              <div className="flex items-center gap-3 sm:gap-4 mt-3 text-[10px] sm:text-xs text-gray-500">
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#f59e0b]" /> 未缓存输入</span>
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#22c55e]" /> 缓存输入</span>
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#8b5cf6]" /> 输出</span>
-              </div>
-            </div>
-          ) : (
-            <div className="h-52 sm:h-64 flex items-center justify-center text-sm text-gray-400">暂无数据</div>
-          )}
-        </div>
+      {/* Row 1: Daily Call Trends — full width */}
+      <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
+        <h3 className="text-sm font-semibold text-gray-900 mb-1">每日调用趋势</h3>
+        <p className="text-xs text-gray-400 mb-4">按日期统计的调用次数</p>
+        {data.dailyStats.length > 0 ? (
+          <div className="h-52 sm:h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={data.dailyStats}>
+                <defs><linearGradient id="colorCalls" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                </linearGradient></defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(v) => v.slice(5)} axisLine={{ stroke: '#e2e8f0' }} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={36} />
+                <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }} />
+                <Area type="monotone" dataKey="calls" stroke="#6366f1" strokeWidth={2} fill="url(#colorCalls)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div className="h-52 sm:h-64 flex items-center justify-center text-sm text-gray-400">暂无数据</div>
+        )}
       </div>
 
+      {/* Row 2: Daily Token Consumption — full width + horizontal scroll */}
+      <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
+        <h3 className="text-sm font-semibold text-gray-900 mb-1">每日 Token 消耗</h3>
+        <p className="text-xs text-gray-400 mb-4">输出 / 缓存输入 / 未缓存输入</p>
+        {data.dailyStats.length > 0 ? (
+          <div className="h-52 sm:h-64">
+            <div className="overflow-x-auto w-full">
+              <div style={{ minWidth: Math.max(data.dailyStats.length * 40 + 80, 400) }}>
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={data.dailyStats} maxBarSize={36}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(v) => v.slice(5)} axisLine={{ stroke: '#e2e8f0' }} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={36} />
+                    <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }} />
+                    <Bar dataKey="uncached_tokens" name="未缓存输入" fill="#f59e0b" stackId="a" />
+                    <Bar dataKey="cached_tokens" name="缓存输入" fill="#22c55e" stackId="a" />
+                    <Bar dataKey="completion_tokens" name="输出" fill="#8b5cf6" stackId="a" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 sm:gap-4 mt-3 text-[10px] sm:text-xs text-gray-500">
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#f59e0b]" /> 未缓存输入</span>
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#22c55e]" /> 缓存输入</span>
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#8b5cf6]" /> 输出</span>
+            </div>
+          </div>
+        ) : (
+          <div className="h-52 sm:h-64 flex items-center justify-center text-sm text-gray-400">暂无数据</div>
+        )}
+      </div>
+
+      {/* Row 3: Cost Trends — full width */}
       <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
         <h3 className="text-sm font-semibold text-gray-900 mb-1">近 7 天消费趋势</h3>
         <p className="text-xs text-gray-400 mb-4">按日期统计的消费金额</p>
@@ -249,7 +255,8 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      {/* Row 4: Model Distribution + Success Rate — 2 cols */}
+      <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
         <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
           <h3 className="text-sm font-semibold text-gray-900 mb-1">模型调用分布</h3>
           <p className="text-xs text-gray-400 mb-4">各模型调用占比</p>
@@ -329,6 +336,39 @@ export default function DashboardPage() {
               <span className="flex items-center gap-1"><InlineIcon name="check" className="w-3 h-3 text-emerald-500" /> {data.stats.success_calls}</span>
               <span className="flex items-center gap-1"><InlineIcon name="x" className="w-3 h-3 text-red-400" /> {data.stats.fail_calls}</span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Row 5: Token Composition + Model Cost Ranking — 2 cols */}
+      <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
+        <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
+          <h3 className="text-sm font-semibold text-gray-900 mb-1">Token 构成</h3>
+          <p className="text-xs text-gray-400 mb-4">输出 / 缓存输入 / 未缓存输入</p>
+          {data.dailyStats.length > 0 ? (
+            <div className="h-44 sm:h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data.dailyStats} maxBarSize={36}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={(v) => v.slice(5)} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={26} />
+                  <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }} />
+                  <Bar dataKey="uncached_tokens" name="未缓存输入" fill="#f59e0b" stackId="a" />
+                  <Bar dataKey="cached_tokens" name="缓存输入" fill="#22c55e" stackId="a" />
+                  <Bar dataKey="completion_tokens" name="输出" fill="#a78bfa" stackId="a" radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-44 sm:h-48 flex items-center justify-center text-sm text-gray-400">暂无数据</div>
+          )}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 sm:mt-3 text-[10px] sm:text-xs text-gray-500">
+            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#f59e0b]" /> 未缓存</span>
+            <span className="font-mono text-gray-700">{data.stats.total_uncached_input_tokens.toLocaleString()}</span>
+            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#22c55e]" /> 缓存</span>
+            <span className="font-mono text-gray-700">{data.stats.total_cached_input_tokens.toLocaleString()}</span>
+            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#a78bfa]" /> 输出</span>
+            <span className="font-mono text-gray-700">{data.stats.total_completion_tokens.toLocaleString()}</span>
           </div>
         </div>
         <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
