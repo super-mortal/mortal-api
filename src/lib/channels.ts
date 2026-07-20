@@ -48,6 +48,90 @@ export function updateChannelHealth(id: string, status: string) {
   getDb().prepare("UPDATE channels SET health_status = ?, last_health_check = datetime('now', '+8 hours') WHERE id = ?").run(status, id);
 }
 
+export function recordChannelSuccess(channelId: string) {
+  const db = getDb();
+  db.prepare(`
+    UPDATE channels SET
+      health_status = 'healthy',
+      fail_count = 0,
+      cooldown_until = NULL,
+      last_health_check = datetime('now', '+8 hours')
+    WHERE id = ?
+  `).run(channelId);
+}
+
+export function recordChannelFailure(channelId: string, kind: 'quota' | 'failure') {
+  const db = getDb();
+  const ch = getChannelById(channelId);
+  if (!ch) return;
+
+  if (kind === 'quota') {
+    // 额度上限 → 固定 6 小时冷却
+    db.prepare(`
+      UPDATE channels SET
+        health_status = 'cooling_down',
+        cooldown_until = datetime('now', '+8 hours', '+6 hours'),
+        last_health_check = datetime('now', '+8 hours')
+      WHERE id = ?
+    `).run(channelId);
+  } else {
+    // 真故障 → 指数退避（1→5→15→30 分钟封顶）
+    const seq = [1, 5, 15, 30];
+    const backoffMinutes = seq[Math.min(ch.fail_count || 0, seq.length - 1)];
+    db.prepare(`
+      UPDATE channels SET
+        health_status = 'unhealthy',
+        fail_count = ?,
+        cooldown_until = datetime('now', '+8 hours', '+' || ? || ' minutes'),
+        last_health_check = datetime('now', '+8 hours')
+      WHERE id = ?
+    `).run(backoffMinutes, backoffMinutes, channelId);
+  }
+}
+
+export function isChannelAvailable(ch: { is_active: number; cooldown_until: string | null; health_status: string }): boolean {
+  if (!ch.is_active) return false;
+  if (ch.cooldown_until && ch.cooldown_until > new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().replace('T', ' ').slice(0, 19)) {
+    return false;
+  }
+  return true;
+}
+
+export const AVAILABLE_CHANNEL_SQL = `(
+  c.is_active = 1
+  AND (
+    c.cooldown_until IS NULL
+    OR c.cooldown_until <= datetime('now', '+8 hours')
+  )
+)`;
+
+export function getChannelHealthSummary(channelIds: string[]): Record<string, { recent_checks: any[]; uptime_pct: number; avg_latency_ms: number }> {
+  if (channelIds.length === 0) return {};
+  const db = getDb();
+
+  const results: Record<string, { recent_checks: any[]; uptime_pct: number; avg_latency_ms: number }> = {};
+
+  for (const chId of channelIds) {
+    const checks = db.prepare(`
+      SELECT checked_at, ok, kind, latency_ms, error FROM channel_health_checks
+      WHERE channel_id = ?
+      ORDER BY checked_at DESC LIMIT 30
+    `).all(chId) as any[];
+
+    const recent = checks.reverse(); // chrono order for UI
+    const successCount = checks.filter((c: any) => c.ok === 1).length;
+    const totalLatency = checks.reduce((s: number, c: any) => s + (c.latency_ms || 0), 0);
+
+    results[chId] = {
+      recent_checks: recent,
+      uptime_pct: checks.length > 0 ? Math.round((successCount / checks.length) * 100) : 100,
+      avg_latency_ms: checks.length > 0 ? Math.round(totalLatency / checks.length) : 0,
+    };
+  }
+
+  return results;
+}
+
 export function resolveChannelApiKey(channel: Channel): string {
   if (channel.api_key) return decryptApiKey(channel.api_key);
   return '';

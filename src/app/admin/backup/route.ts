@@ -47,12 +47,12 @@ export async function POST(request: NextRequest) {
       }
 
       // Restore channels (re-encrypt api_key, support both old & new schema)
-      const insertCh = db.prepare('INSERT INTO channels (id, name, base_url, api_key, priority, notes, is_active, health_status, last_health_check, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+      const insertCh = db.prepare('INSERT INTO channels (id, name, base_url, api_key, priority, notes, is_active, health_status, cooldown_until, fail_count, last_health_check, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
       for (const c of data.channels) {
         const reEncrypted = c.api_key ? encryptApiKey(c.api_key) : '';
         const notes = c.notes || c.provider || ''; // old schema had provider field
         const baseUrl = c.base_url || '';
-        insertCh.run(c.id, c.name, baseUrl, reEncrypted, c.priority || 0, notes, c.is_active, c.health_status || 'unknown', c.last_health_check || null, c.created_at);
+        insertCh.run(c.id, c.name, baseUrl, reEncrypted, c.priority || 0, notes, c.is_active, c.health_status || 'unknown', c.cooldown_until || null, c.fail_count || 0, c.last_health_check || null, c.created_at);
       }
 
       // Restore channel_models (new schema)

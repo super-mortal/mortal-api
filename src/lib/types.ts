@@ -26,6 +26,8 @@ export interface Channel {
   notes: string;          // 备注（可写提供商名称等信息）
   is_active: number;
   health_status: string;
+  cooldown_until: string | null;
+  fail_count: number;
   last_health_check: string | null;
   created_at: string;
 }

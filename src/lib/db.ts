@@ -164,6 +164,31 @@ function initSchema(db: Database.Database) {
     }
     db.prepare("INSERT INTO _migrations (name) VALUES ('v3_add_is_pinned')").run();
   }
+
+  // Migration: add cooldown_until, fail_count to channels + channel_health_checks table
+  const cooldownMigrated = db.prepare("SELECT name FROM _migrations WHERE name = 'v4_channel_cooldown'").get();
+  if (!cooldownMigrated) {
+    const chCols = db.prepare("PRAGMA table_info('channels')").all() as { name: string }[];
+    if (!chCols.find(c => c.name === 'cooldown_until')) {
+      db.exec("ALTER TABLE channels ADD COLUMN cooldown_until TEXT");
+    }
+    if (!chCols.find(c => c.name === 'fail_count')) {
+      db.exec("ALTER TABLE channels ADD COLUMN fail_count INTEGER NOT NULL DEFAULT 0");
+    }
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS channel_health_checks (
+        id TEXT PRIMARY KEY,
+        channel_id TEXT NOT NULL,
+        checked_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours')),
+        ok INTEGER NOT NULL,
+        kind TEXT,
+        latency_ms INTEGER NOT NULL DEFAULT 0,
+        error TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_health_checks_channel_time ON channel_health_checks(channel_id, checked_at DESC);
+    `);
+    db.prepare("INSERT INTO _migrations (name) VALUES ('v4_channel_cooldown')").run();
+  }
 }
 
 export function closeDb() {

@@ -75,6 +75,7 @@ export async function callUpstream(
     const err: any = new Error(text);
     err.status = res.status;
     err.body = text;
+    err.kind = res.status === 429 ? 'quota' : 'failure';
     throw err;
   }
 
@@ -121,6 +122,7 @@ export async function callUpstreamStreaming(
     const err: any = new Error(text);
     err.status = res.status;
     err.body = text;
+    err.kind = res.status === 429 ? 'quota' : 'failure';
     throw err;
   }
   if (!res.body) throw new Error('No response body');
