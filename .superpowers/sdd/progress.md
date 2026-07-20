@@ -38,3 +38,4 @@ Task 4: complete (commits 4d39cd3..3d14eff, review clean after fix)
 Final whole-branch review (95e9167..3d14eff): READY TO MERGE, 0 Critical/Important.
   6 deferred Minors triaged acceptable: [a] masked-400 [b] unbounded-IN [c] msg-count [d] non-string-ids [e] error.message-slice [f] checkError-reset(not a bug)
   Note: bulk-delete clears selection before outcome known (pre-existing UX nit)
+Task 1: complete (commits 21fcf63..bb45a8c, review clean)

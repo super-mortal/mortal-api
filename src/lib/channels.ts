@@ -50,6 +50,8 @@ export function updateChannelHealth(id: string, status: string) {
 
 export function recordChannelSuccess(channelId: string) {
   const db = getDb();
+  const ch = getChannelById(channelId);
+  if (!ch) return;
   db.prepare(`
     UPDATE channels SET
       health_status = 'healthy',
@@ -77,7 +79,8 @@ export function recordChannelFailure(channelId: string, kind: 'quota' | 'failure
   } else {
     // 真故障 → 指数退避（1→5→15→30 分钟封顶）
     const seq = [1, 5, 15, 30];
-    const backoffMinutes = seq[Math.min(ch.fail_count || 0, seq.length - 1)];
+    const nextCount = (ch.fail_count || 0) + 1;
+    const backoffMinutes = seq[Math.min(nextCount - 1, seq.length - 1)];
     db.prepare(`
       UPDATE channels SET
         health_status = 'unhealthy',
@@ -85,7 +88,7 @@ export function recordChannelFailure(channelId: string, kind: 'quota' | 'failure
         cooldown_until = datetime('now', '+8 hours', '+' || ? || ' minutes'),
         last_health_check = datetime('now', '+8 hours')
       WHERE id = ?
-    `).run(backoffMinutes, backoffMinutes, channelId);
+    `).run(nextCount, backoffMinutes, channelId);
   }
 }
 
