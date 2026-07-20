@@ -156,9 +156,12 @@ function initSchema(db: Database.Database) {
   }
 
   // Migration: add is_pinned column to relay_keys
-  const relayKeyCols = db.prepare("PRAGMA table_info('relay_keys')").all() as { name: string }[];
-  if (!relayKeyCols.find(c => c.name === 'is_pinned')) {
-    db.exec("ALTER TABLE relay_keys ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0");
+  const pinnedMigrated = db.prepare("SELECT name FROM _migrations WHERE name = 'v3_add_is_pinned'").get();
+  if (!pinnedMigrated) {
+    const relayKeyCols = db.prepare("PRAGMA table_info('relay_keys')").all() as { name: string }[];
+    if (!relayKeyCols.find(c => c.name === 'is_pinned')) {
+      db.exec("ALTER TABLE relay_keys ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0");
+    }
     db.prepare("INSERT INTO _migrations (name) VALUES ('v3_add_is_pinned')").run();
   }
 }
