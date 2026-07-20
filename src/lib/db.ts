@@ -189,6 +189,30 @@ function initSchema(db: Database.Database) {
     `);
     db.prepare("INSERT INTO _migrations (name) VALUES ('v4_channel_cooldown')").run();
   }
+
+  // Migration: model_pricing table + relay_keys spend_limit/total_spent
+  const pricingMigrated = db.prepare("SELECT name FROM _migrations WHERE name = 'v5_model_pricing'").get();
+  if (!pricingMigrated) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS model_pricing (
+        model_id TEXT PRIMARY KEY,
+        prompt_price REAL NOT NULL DEFAULT 0,
+        completion_price REAL NOT NULL DEFAULT 0,
+        cached_prompt_price REAL NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours'))
+      );
+    `);
+
+    const relayKeyCols = db.prepare("PRAGMA table_info('relay_keys')").all() as { name: string }[];
+    if (!relayKeyCols.find(c => c.name === 'spend_limit')) {
+      db.exec("ALTER TABLE relay_keys ADD COLUMN spend_limit REAL NOT NULL DEFAULT 0");
+    }
+    if (!relayKeyCols.find(c => c.name === 'total_spent')) {
+      db.exec("ALTER TABLE relay_keys ADD COLUMN total_spent REAL NOT NULL DEFAULT 0");
+    }
+
+    db.prepare("INSERT INTO _migrations (name) VALUES ('v5_model_pricing')").run();
+  }
 }
 
 export function closeDb() {

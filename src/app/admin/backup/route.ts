@@ -15,6 +15,7 @@ export async function GET() {
     channels: db.prepare('SELECT * FROM channels').all(),
     channel_models: db.prepare('SELECT * FROM channel_models').all(),
     model_aliases: db.prepare('SELECT * FROM model_aliases').all(),
+    model_pricing: db.prepare('SELECT * FROM model_pricing').all(),
     call_logs: db.prepare('SELECT * FROM call_logs').all(),
   };
   return NextResponse.json(backup);
@@ -41,9 +42,9 @@ export async function POST(request: NextRequest) {
       db.prepare('DELETE FROM relay_keys').run();
 
       // Restore relay_keys
-      const insertKey = db.prepare('INSERT INTO relay_keys (id, key, name, balance, used_tokens, is_active, expires_at, allowed_models, allowed_channels, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+      const insertKey = db.prepare('INSERT INTO relay_keys (id, key, name, balance, used_tokens, spend_limit, total_spent, is_active, expires_at, allowed_models, allowed_channels, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
       for (const k of data.relay_keys) {
-        insertKey.run(k.id, k.key, k.name, k.balance || 0, k.used_tokens || 0, k.is_active, k.expires_at || null, k.allowed_models || '', k.allowed_channels || '', k.created_at, k.updated_at);
+        insertKey.run(k.id, k.key, k.name, k.balance || 0, k.used_tokens || 0, k.spend_limit ?? 0, k.total_spent ?? 0, k.is_active, k.expires_at || null, k.allowed_models || '', k.allowed_channels || '', k.created_at, k.updated_at);
       }
 
       // Restore channels (re-encrypt api_key, support both old & new schema)
@@ -85,6 +86,14 @@ export async function POST(request: NextRequest) {
           l.cached_input_tokens || 0, l.total_tokens,
           l.cost || 0, l.status, l.error_message, l.ip, l.created_at
         );
+      }
+
+      // Restore model_pricing
+      if (data.model_pricing && data.model_pricing.length > 0) {
+        const insertPrice = db.prepare('INSERT OR REPLACE INTO model_pricing (model_id, prompt_price, completion_price, cached_prompt_price, updated_at) VALUES (?, ?, ?, ?, ?)');
+        for (const p of data.model_pricing) {
+          insertPrice.run(p.model_id, p.prompt_price || 0, p.completion_price || 0, p.cached_prompt_price || 0, p.updated_at);
+        }
       }
     });
 
