@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { InlineIcon } from '@/lib/icon';
 import { apiFetch } from '@/lib/fetch-with-auth';
 import { Spinner } from '@/lib/ui';
+import { SelectFilter } from '@/lib/select-filter';
 
 interface Channel {
   id: string; name: string; health_status: string; is_active: number;
@@ -113,28 +114,38 @@ export default function ModelsPage() {
         <span className="text-gray-200">|</span>
         <span className="flex items-center gap-1.5"><span className="font-semibold text-indigo-600">{aliasCount}</span> 别名映射</span>
 
-        {/* 右侧筛选 — 仅桌面 */}
-        <div className="hidden md:flex items-center gap-2 ml-auto">
-          <select value={filterChannel} onChange={e => setFilterChannel(e.target.value)}
-            className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 bg-white">
-            <option value="all">全部渠道</option>
-            {channels.filter(c => c.is_active).map(c => (
-              <option key={c.id} value={c.name}>{c.name}</option>
-            ))}
-          </select>
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-            className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 bg-white">
-            <option value="all">全部状态</option>
-            <option value="正常">正常</option>
-            <option value="异常">异常</option>
-            <option value="停用">停用</option>
-          </select>
-          <select value={filterType} onChange={e => setFilterType(e.target.value)}
-            className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 bg-white">
-            <option value="all">全部类型</option>
-            <option value="原生">原生模型</option>
-            <option value="别名">别名映射</option>
-          </select>
+        {/* 右侧筛选 */}
+        <div className="flex items-center gap-2 ml-auto">
+          <SelectFilter
+            options={[
+              { label: '全部渠道', value: 'all' },
+              ...channels.filter(c => c.is_active).map(c => ({ label: c.name, value: c.name })),
+            ]}
+            value={filterChannel}
+            onChange={setFilterChannel}
+            placeholder="全部渠道"
+          />
+          <SelectFilter
+            options={[
+              { label: '全部状态', value: 'all' },
+              { label: '正常', value: '正常', color: 'green' },
+              { label: '异常', value: '异常', color: 'red' },
+              { label: '停用', value: '停用', color: 'gray' },
+            ]}
+            value={filterStatus}
+            onChange={setFilterStatus}
+            placeholder="全部状态"
+          />
+          <SelectFilter
+            options={[
+              { label: '全部类型', value: 'all' },
+              { label: '原生模型', value: '原生' },
+              { label: '别名映射', value: '别名' },
+            ]}
+            value={filterType}
+            onChange={setFilterType}
+            placeholder="全部类型"
+          />
         </div>
       </div>
 
