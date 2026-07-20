@@ -9,6 +9,7 @@ export interface RelayKey {
   balance: number;
   used_tokens: number;
   is_active: number;
+  is_pinned: number;
   expires_at: string | null;
   allowed_models: string;
   allowed_channels: string;

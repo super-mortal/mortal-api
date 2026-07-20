@@ -6,14 +6,14 @@ export function generateRelayKey(): string {
   return 'sk-mortal-' + nanoid(32);
 }
 
-export function createRelayKey(name: string, balance: number, expiresAt?: string | null, allowedModels?: string, allowedChannels?: string): RelayKey {
+export function createRelayKey(name: string, balance: number, expiresAt?: string | null, allowedModels?: string, allowedChannels?: string, isPinned?: number): RelayKey {
   const db = getDb();
   const id = nanoid(16);
   const key = generateRelayKey();
   db.prepare(`
-    INSERT INTO relay_keys (id, key, name, balance, expires_at, allowed_models, allowed_channels, is_active, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 1, datetime('now', '+8 hours'))
-  `).run(id, key, name, balance, expiresAt || null, allowedModels || '', allowedChannels || '');
+    INSERT INTO relay_keys (id, key, name, balance, expires_at, allowed_models, allowed_channels, is_active, is_pinned, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, datetime('now', '+8 hours'))
+  `).run(id, key, name, balance, expiresAt || null, allowedModels || '', allowedChannels || '', isPinned ?? 0);
   return getRelayKeyById(id)!;
 }
 
@@ -29,12 +29,12 @@ export function getRelayKeyByKey(key: string): RelayKey | undefined {
 
 export function listRelayKeys(): RelayKey[] {
   const db = getDb();
-  return db.prepare('SELECT * FROM relay_keys ORDER BY created_at DESC').all() as RelayKey[];
+  return db.prepare('SELECT * FROM relay_keys ORDER BY is_pinned DESC, created_at DESC').all() as RelayKey[];
 }
 
 export function updateRelayKey(
   id: string,
-  data: { name?: string; balance?: number; is_active?: number; expires_at?: string | null; allowed_models?: string; allowed_channels?: string }
+  data: { name?: string; balance?: number; is_active?: number; is_pinned?: number; expires_at?: string | null; allowed_models?: string; allowed_channels?: string }
 ): boolean {
   const db = getDb();
   const sets: string[] = [];
@@ -42,6 +42,7 @@ export function updateRelayKey(
   if (data.name !== undefined) { sets.push('name = ?'); params.push(data.name); }
   if (data.balance !== undefined) { sets.push('balance = ?'); params.push(data.balance); }
   if (data.is_active !== undefined) { sets.push('is_active = ?'); params.push(data.is_active); }
+  if (data.is_pinned !== undefined) { sets.push('is_pinned = ?'); params.push(data.is_pinned); }
   if (data.expires_at !== undefined) { sets.push('expires_at = ?'); params.push(data.expires_at); }
   if (data.allowed_models !== undefined) { sets.push('allowed_models = ?'); params.push(data.allowed_models); }
   if (data.allowed_channels !== undefined) { sets.push('allowed_channels = ?'); params.push(data.allowed_channels); }

@@ -154,6 +154,13 @@ function initSchema(db: Database.Database) {
       INSERT INTO _migrations (name) VALUES ('v2_fix_last_health_check');
     `);
   }
+
+  // Migration: add is_pinned column to relay_keys
+  const relayKeyCols = db.prepare("PRAGMA table_info('relay_keys')").all() as { name: string }[];
+  if (!relayKeyCols.find(c => c.name === 'is_pinned')) {
+    db.exec("ALTER TABLE relay_keys ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0");
+    db.prepare("INSERT INTO _migrations (name) VALUES ('v3_add_is_pinned')").run();
+  }
 }
 
 export function closeDb() {

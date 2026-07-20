@@ -11,7 +11,7 @@ import { Popover } from '@/lib/popover';
 
 interface RelayKey {
   id: string; key: string; name: string; balance: number;
-  used_tokens: number; is_active: number;
+  used_tokens: number; is_active: number; is_pinned: number;
   expires_at: string | null; allowed_models: string; allowed_channels: string; created_at: string;
 }
 
@@ -39,6 +39,7 @@ export default function KeysPage() {
   const [newName, setNewName] = useState('');
   const [newBalance, setNewBalance] = useState(0);
   const [newExpiryDays, setNewExpiryDays] = useState<number | ''>('');
+  const [newIsPinned, setNewIsPinned] = useState(false);
   const [newAllowedChannels, setNewAllowedChannels] = useState<string[]>([]);
   const [newAllowedModels, setNewAllowedModels] = useState<string[]>([]);
   const [editAllowedChannels, setEditAllowedChannels] = useState<string[]>([]);
@@ -148,11 +149,12 @@ export default function KeysPage() {
         expires_at: calcExpiresAt(newExpiryDays),
         allowed_models: newAllowedModels.join(','),
         allowed_channels: newAllowedChannels.join(','),
+        is_pinned: newIsPinned ? 1 : 0,
       }),
     });
     if (res.ok) {
       setShowCreate(false);
-      setNewName(''); setNewBalance(0); setNewExpiryDays('');
+      setNewName(''); setNewBalance(0); setNewExpiryDays(''); setNewIsPinned(false);
       setNewAllowedChannels([]); setNewAllowedModels([]);
       fetchData();
     }
@@ -166,7 +168,7 @@ export default function KeysPage() {
   const handleEditSave = async () => {
     if (!showEdit) return;
     const body: Record<string, any> = {
-      id: showEdit.id, name: showEdit.name, balance: showEdit.balance,
+      id: showEdit.id, name: showEdit.name, balance: showEdit.balance, is_pinned: showEdit.is_pinned,
       allowed_models: editAllowedModels.join(','),
       allowed_channels: editAllowedChannels.join(','),
     };
@@ -246,8 +248,18 @@ export default function KeysPage() {
         <div className="space-y-4">
           <div>
             <label className="block text-xs text-gray-500 mb-1.5">名称</label>
-            <input value={newName} onChange={(e) => setNewName(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" placeholder="My Key" />
+            <div className="flex items-center gap-3">
+              <input value={newName} onChange={(e) => setNewName(e.target.value)}
+                className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" placeholder="My Key" />
+              <label className="flex items-center gap-2 text-xs text-gray-600 shrink-0 cursor-pointer">
+                <span>置顶</span>
+                <Switch
+                  checked={newIsPinned}
+                  onChange={setNewIsPinned}
+                  size="sm"
+                />
+              </label>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -333,8 +345,18 @@ export default function KeysPage() {
           <div className="space-y-4">
             <div>
               <label className="block text-xs text-gray-500 mb-1.5">名称</label>
-              <input value={showEdit.name} onChange={(e) => setShowEdit({...showEdit, name: e.target.value})}
-                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+              <div className="flex items-center gap-3">
+                <input value={showEdit.name} onChange={(e) => setShowEdit({...showEdit, name: e.target.value})}
+                  className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+                <label className="flex items-center gap-2 text-xs text-gray-600 shrink-0 cursor-pointer">
+                  <span>置顶</span>
+                  <Switch
+                    checked={!!showEdit.is_pinned}
+                    onChange={(checked) => setShowEdit({...showEdit, is_pinned: checked ? 1 : 0})}
+                    size="sm"
+                  />
+                </label>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
