@@ -10,8 +10,8 @@ import { ConfirmDialog } from '@/lib/confirm-dialog';
 import { Popover } from '@/lib/popover';
 
 interface RelayKey {
-  id: string; key: string; name: string; balance: number;
-  used_tokens: number; is_active: number; is_pinned: number;
+  id: string; key: string; name: string; spend_limit: number;
+  total_spent: number; is_active: number; is_pinned: number;
   expires_at: string | null; allowed_models: string; allowed_channels: string; created_at: string;
 }
 
@@ -37,7 +37,7 @@ export default function KeysPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState<RelayKey | null>(null);
   const [newName, setNewName] = useState('');
-  const [newBalance, setNewBalance] = useState(0);
+  const [newSpendLimit, setNewSpendLimit] = useState(0);
   const [newExpiryDays, setNewExpiryDays] = useState<number | ''>('');
   const [newIsPinned, setNewIsPinned] = useState(false);
   const [newAllowedChannels, setNewAllowedChannels] = useState<string[]>([]);
@@ -145,7 +145,7 @@ export default function KeysPage() {
     const res = await apiFetch('/admin/keys', {
       method: 'POST',
       body: JSON.stringify({
-        name: newName || 'New Key', balance: newBalance,
+        name: newName || 'New Key', spend_limit: newSpendLimit,
         expires_at: calcExpiresAt(newExpiryDays),
         allowed_models: newAllowedModels.join(','),
         allowed_channels: newAllowedChannels.join(','),
@@ -154,7 +154,7 @@ export default function KeysPage() {
     });
     if (res.ok) {
       setShowCreate(false);
-      setNewName(''); setNewBalance(0); setNewExpiryDays(''); setNewIsPinned(false);
+      setNewName(''); setNewSpendLimit(0); setNewExpiryDays(''); setNewIsPinned(false);
       setNewAllowedChannels([]); setNewAllowedModels([]);
       fetchData();
     }
@@ -168,7 +168,7 @@ export default function KeysPage() {
   const handleEditSave = async () => {
     if (!showEdit) return;
     const body: Record<string, any> = {
-      id: showEdit.id, name: showEdit.name, balance: showEdit.balance, is_pinned: showEdit.is_pinned,
+      id: showEdit.id, name: showEdit.name, spend_limit: showEdit.spend_limit, is_pinned: showEdit.is_pinned,
       allowed_models: editAllowedModels.join(','),
       allowed_channels: editAllowedChannels.join(','),
     };
@@ -263,8 +263,8 @@ export default function KeysPage() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5">额度上限 (0=无限制)</label>
-              <input type="number" value={newBalance} onChange={(e) => setNewBalance(Number(e.target.value))}
+              <label className="block text-xs text-gray-500 mb-1.5">金额上限(元) (0=无限制)</label>
+              <input type="number" value={newSpendLimit} onChange={(e) => setNewSpendLimit(Number(e.target.value))}
                 className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
             </div>
             <div>
@@ -360,8 +360,8 @@ export default function KeysPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">额度上限</label>
-                <input type="number" value={showEdit.balance} onChange={(e) => setShowEdit({...showEdit, balance: Number(e.target.value)})}
+                <label className="block text-xs text-gray-500 mb-1.5">金额上限(元)</label>
+                <input type="number" value={showEdit.spend_limit} onChange={(e) => setShowEdit({...showEdit, spend_limit: Number(e.target.value)})}
                   className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
               </div>
               <div>
@@ -470,8 +470,8 @@ export default function KeysPage() {
               <tr className="border-b border-gray-100 bg-gray-50/50">
                 <th className="text-left px-2.5 sm:px-3 py-2.5 font-medium text-gray-500 text-[11px]">名称</th>
                 <th className="text-left px-2.5 sm:px-3 py-2.5 font-medium text-gray-500 text-[11px]">API Key</th>
-                <th className="text-right px-2.5 sm:px-3 py-2.5 font-medium text-gray-500 text-[11px] hidden sm:table-cell">已用</th>
-                <th className="text-right px-2.5 sm:px-3 py-2.5 font-medium text-gray-500 text-[11px] hidden sm:table-cell">额度</th>
+                <th className="text-right px-2.5 sm:px-3 py-2.5 font-medium text-gray-500 text-[11px] hidden sm:table-cell">已消费(元)</th>
+                <th className="text-right px-2.5 sm:px-3 py-2.5 font-medium text-gray-500 text-[11px] hidden sm:table-cell">金额上限(元)</th>
                 <th className="text-center px-2.5 sm:px-3 py-2.5 font-medium text-gray-500 text-[11px]">状态</th>
                 <th className="text-left px-2.5 sm:px-3 py-2.5 font-medium text-gray-500 text-[11px] hidden md:table-cell">模型限制</th>
                 <th className="text-left px-2.5 sm:px-3 py-2.5 font-medium text-gray-500 text-[11px] hidden lg:table-cell">创建时间</th>
@@ -495,8 +495,8 @@ export default function KeysPage() {
                       {k.key.slice(0, 16)}...
                     </code>
                   </td>
-                  <td className="px-2.5 sm:px-3 py-2.5 text-right text-gray-700 text-[11px] sm:text-xs hidden sm:table-cell">{k.used_tokens.toLocaleString()}</td>
-                  <td className="px-2.5 sm:px-3 py-2.5 text-right text-gray-700 text-[11px] sm:text-xs hidden sm:table-cell">{k.balance > 0 ? k.balance.toLocaleString() : '∞'}</td>
+                  <td className="px-2.5 sm:px-3 py-2.5 text-right text-gray-700 text-[11px] sm:text-xs hidden sm:table-cell">¥{k.total_spent.toFixed(2)}</td>
+                  <td className="px-2.5 sm:px-3 py-2.5 text-right text-gray-700 text-[11px] sm:text-xs hidden sm:table-cell">{k.spend_limit > 0 ? '¥' + k.spend_limit.toFixed(2) : '∞'}</td>
                   <td className="px-2.5 sm:px-3 py-2.5 text-center">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium gap-1 ${
                       expired ? 'bg-red-50 text-red-600' :

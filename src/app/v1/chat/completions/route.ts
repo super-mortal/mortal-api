@@ -2,7 +2,7 @@
 // POST /v1/chat/completions — Main proxy endpoint
 // ============================================================
 import { NextRequest, NextResponse } from 'next/server';
-import { getRelayKeyByKey, addUsedTokens, getAllowedChannelIds } from '@/lib/keys';
+import { getRelayKeyByKey, recordAndCheckSpending, getAllowedChannelIds } from '@/lib/keys';
 import {
   resolveModel,
   getModelsForAuto,
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
                   status: 'success',
                   ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
                 });
-                if (relayKey.balance > 0) addUsedTokens(relayKey.id, totalCompletionTokens);
+                recordAndCheckSpending(relayKey.id, cost);
                 recordChannelSuccess(autoChannel.id);
                 await writer.close();
                 return;
@@ -147,6 +147,7 @@ export async function POST(request: NextRequest) {
               status: 'fail', error_message: err instanceof Error ? err.message : 'Stream error',
               ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
             });
+            recordAndCheckSpending(relayKey.id, 0);
             await writer.close();
           }
         })();
@@ -168,7 +169,7 @@ export async function POST(request: NextRequest) {
           status: 'success',
           ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
         });
-        if (relayKey.balance > 0) addUsedTokens(relayKey.id, prompt_tokens + completion_tokens);
+        recordAndCheckSpending(relayKey.id, cost);
         recordChannelSuccess(autoChannel.id);
 
         result.response.model = body.model || 'auto';
@@ -189,6 +190,7 @@ export async function POST(request: NextRequest) {
         status: 'fail', error_message: err.body || (err instanceof Error ? err.message : 'Upstream error'),
         ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
       });
+      recordAndCheckSpending(relayKey.id, 0);
 
       const status = err.status || 502;
       let errorBody: any;
@@ -289,7 +291,7 @@ export async function POST(request: NextRequest) {
                   status: 'success',
                   ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
                 });
-                if (relayKey.balance > 0) addUsedTokens(relayKey.id, totalCompletionTokens);
+                recordAndCheckSpending(relayKey.id, cost);
                 recordChannelSuccess(channel.id);
                 await writer.close();
                 return;
@@ -321,6 +323,7 @@ export async function POST(request: NextRequest) {
               status: 'fail', error_message: err instanceof Error ? err.message : 'Stream error',
               ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
             });
+            recordAndCheckSpending(relayKey.id, 0);
             await writer.close();
           }
         })();
@@ -342,7 +345,7 @@ export async function POST(request: NextRequest) {
           status: 'success',
           ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
         });
-        if (relayKey.balance > 0) addUsedTokens(relayKey.id, prompt_tokens + completion_tokens);
+        recordAndCheckSpending(relayKey.id, cost);
         recordChannelSuccess(channel.id);
 
         result.response.model = body.model || 'auto';
@@ -373,6 +376,7 @@ export async function POST(request: NextRequest) {
     status: 'fail', error_message: lastError?.body || (lastError instanceof Error ? lastError.message : 'Upstream error'),
     ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
   });
+  recordAndCheckSpending(relayKey.id, 0);
 
   const status = lastError?.status || 502;
   let errorBody: any;

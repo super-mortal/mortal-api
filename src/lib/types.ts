@@ -6,8 +6,8 @@ export interface RelayKey {
   id: string;
   key: string; // sk-mortal-xxx
   name: string;
-  balance: number;
-  used_tokens: number;
+  spend_limit: number;
+  total_spent: number;
   is_active: number;
   is_pinned: number;
   expires_at: string | null;

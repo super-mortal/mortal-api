@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
   if (err) return err;
   try {
     const body = await request.json();
-    const key = createRelayKey(body.name || 'New Key', body.balance || 0, body.expires_at || null, body.allowed_models || '', body.allowed_channels || '', body.is_pinned ? 1 : 0);
+    const key = createRelayKey(body.name || 'New Key', body.spend_limit ?? 0, body.expires_at || null, body.allowed_models || '', body.allowed_channels || '', body.is_pinned ? 1 : 0);
     return NextResponse.json({ key }, { status: 201 });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
@@ -39,7 +39,7 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     const updated = updateRelayKey(body.id, {
       name: body.name,
-      balance: body.balance,
+      spend_limit: body.spend_limit,
       is_active: body.is_active,
       is_pinned: body.is_pinned,
       expires_at: body.expires_at,
