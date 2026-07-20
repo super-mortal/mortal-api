@@ -45,3 +45,4 @@ Task 4: complete (commits 50ee45c..360d10b, review clean)
   Minor (deferred to final review): [1] as any cast resolveChannelApiKey line; [2] duplicated probe logic; [3] missing console.error on probe catch
 Task 5: complete (commits 360d10b..8482373, review clean)
 --- All 5 tasks complete ---
+Final fix (4 Important from review): complete (commit dcc7f5a, build clean)

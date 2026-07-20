@@ -211,6 +211,9 @@ function initSchema(db: Database.Database) {
       db.exec("ALTER TABLE relay_keys ADD COLUMN total_spent REAL NOT NULL DEFAULT 0");
     }
 
+    // Copy existing balance/used_tokens values to new columns
+    db.exec("UPDATE relay_keys SET spend_limit = CAST(balance AS REAL), total_spent = CAST(used_tokens AS REAL) WHERE balance > 0 OR used_tokens > 0");
+
     db.prepare("INSERT INTO _migrations (name) VALUES ('v5_model_pricing')").run();
   }
 }
