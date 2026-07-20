@@ -1,11 +1,26 @@
 'use client';
 
-import { Fragment, useEffect, useState, useCallback } from 'react';
+import { Fragment, useEffect, useState, useCallback, useRef } from 'react';
 import { InlineIcon } from '@/lib/icon';
 import { Modal } from '@/lib/modal';
 import { toBeijingFull } from '@/lib/date';
 import { apiFetch } from '@/lib/fetch-with-auth';
 import { SelectFilter } from '@/lib/select-filter';
+
+function todayStart(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}T00:00`;
+}
+function todayEnd(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}T23:59`;
+}
 
 interface CallLog {
   id: string; relay_key_name: string; relay_key_id: string; model: string; channel_name: string;
@@ -25,9 +40,9 @@ export default function LogsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [keyFilter, setKeyFilter] = useState('');
   const [modelFilter, setModelFilter] = useState('');
-  const [startMonth, setStartMonth] = useState('');
-  const [endMonth, setEndMonth] = useState('');
-  const [activeDate, setActiveDate] = useState<'today' | '7d' | '30d' | 'custom'>('custom');
+  const [startMonth, setStartMonth] = useState(todayStart());
+  const [endMonth, setEndMonth] = useState(todayEnd());
+  const [activeDate, setActiveDate] = useState<'today' | '7d' | '30d' | 'custom'>('today');
   const [showBatchDelete, setShowBatchDelete] = useState(false);
   const [deleteDateFrom, setDeleteDateFrom] = useState('');
   const [deleteDateTo, setDeleteDateTo] = useState('');
@@ -39,11 +54,13 @@ export default function LogsPage() {
     id?: string;
     count?: number;
   } | null>(null);
-  const limit = 20;
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const toggleExpand = (id: string) => {
     setExpandedLogId(prev => prev === id ? null : id);
   };
+  const [pageSize, setPageSize] = useState(20);
+  const [pageSizeOpen, setPageSizeOpen] = useState(false);
+  const pageSizeRef = useRef<HTMLDivElement>(null);
 
   const fetchKeys = useCallback(async () => {
     const res = await apiFetch('/admin/keys');
@@ -52,7 +69,7 @@ export default function LogsPage() {
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);
-    const params = new URLSearchParams({ limit: String(limit), offset: String(page * limit) });
+    const params = new URLSearchParams({ limit: String(pageSize), offset: String(page * pageSize) });
     if (statusFilter) params.set('status', statusFilter);
     if (keyFilter) params.set('relay_key_id', keyFilter);
     if (modelFilter) params.set('model', modelFilter);
@@ -159,7 +176,7 @@ export default function LogsPage() {
     setPageInput(String(np + 1));
   };
 
-  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const pageNumbers: number[] = [];
   for (let i = Math.max(0, page - 2); i <= Math.min(totalPages - 1, page + 2); i++) {
     pageNumbers.push(i);
@@ -447,7 +464,27 @@ export default function LogsPage() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-2 bg-white rounded-xl border border-gray-100 px-4 py-3">
-          <span className="text-xs text-gray-400">共 <b className="text-gray-600">{total}</b> 条记录</span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-gray-400">共 <b className="text-gray-600">{total}</b> 条记录</span>
+            {/* Page size selector */}
+            <div ref={pageSizeRef} className="relative">
+              <button onClick={() => setPageSizeOpen(!pageSizeOpen)}
+                className="flex items-center gap-1 px-2 py-1 rounded border border-gray-200 text-xs text-gray-500 hover:bg-gray-50">
+                {pageSize} 条/页
+                <InlineIcon name="chevronDown" className="w-3 h-3" />
+              </button>
+              {pageSizeOpen && (
+                <div className="absolute z-50 bottom-full mb-1 left-0 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[100px]">
+                  {[10, 20, 50, 100].map(n => (
+                    <button key={n} onClick={() => { setPageSize(n); setPage(0); setPageInput('1'); setPageSizeOpen(false); }}
+                      className={'w-full text-left px-3 py-1.5 text-xs transition-colors ' + (pageSize === n ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-700 hover:bg-gray-50')}>
+                      {n} 条/页
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
           <div className="flex items-center gap-1.5">
             <button onClick={() => goToPage(page - 1)} disabled={page === 0}
               className="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
