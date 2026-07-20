@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { InlineIcon } from '@/lib/icon';
 import { apiFetch } from '@/lib/fetch-with-auth';
+import { Spinner } from '@/lib/ui';
 
 interface Channel {
   id: string; name: string; health_status: string; is_active: number;
@@ -42,7 +43,7 @@ export default function ModelsPage() {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  if (loading) return (<div className="flex items-center justify-center h-64"><InlineIcon name="loaderCircle" className="w-6 h-6 animate-spin text-indigo-600" /></div>);
+  if (loading) return (<div className="flex items-center justify-center h-64"><Spinner /></div>);
 
   const displayItems: {
     type: 'alias' | 'model';

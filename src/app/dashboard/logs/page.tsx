@@ -6,6 +6,7 @@ import { Modal } from '@/lib/modal';
 import { toBeijingFull } from '@/lib/date';
 import { apiFetch } from '@/lib/fetch-with-auth';
 import { SelectFilter } from '@/lib/select-filter';
+import { TableEmpty, StatusBadge } from '@/lib/ui';
 
 function todayStart(): string {
   const now = new Date();
@@ -366,12 +367,9 @@ export default function LogsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} className="px-4 py-16 text-center"><InlineIcon name="loaderCircle" className="w-5 h-5 animate-spin text-indigo-600 inline" /></td></tr>
+                <TableEmpty colSpan={8} loading />
               ) : logs.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-16 text-center">
-                  <div className="text-gray-300 text-3xl mb-2"><InlineIcon name="list" className="w-8 h-8 mx-auto" /></div>
-                  <p className="text-sm text-gray-400">暂无调用记录</p>
-                </td></tr>
+                <TableEmpty colSpan={8} text="暂无调用记录" />
               ) : logs.map((log) => (
                 <Fragment key={log.id}>
                   <tr className={`border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer ${
@@ -395,12 +393,10 @@ export default function LogsPage() {
                     <td className="px-3 sm:px-4 py-3 text-right text-[10px] sm:text-xs text-gray-800 font-medium">{log.total_tokens.toLocaleString()}</td>
                     <td className="px-3 sm:px-4 py-3 text-center hidden sm:table-cell">
                       {log.status === 'success' ? (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50/80 text-emerald-600 border border-emerald-200/50">
-                          <InlineIcon name="check" className="w-2.5 h-2.5 mr-0.5" />成功
-                        </span>
+                        <StatusBadge variant="success" icon="check" label="成功" />
                       ) : (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-red-50/80 text-red-500 border border-red-200/50 cursor-help" title={log.error_message || ''}>
-                          <InlineIcon name="x" className="w-2.5 h-2.5 mr-0.5" />失败
+                        <span className="cursor-help" title={log.error_message || ''}>
+                          <StatusBadge variant="fail" icon="x" label="失败" />
                         </span>
                       )}
                     </td>

@@ -7,6 +7,7 @@ import { ComboBox } from '@/lib/combobox';
 import { apiFetch } from '@/lib/fetch-with-auth';
 import { Switch } from '@/lib/switch';
 import { ConfirmDialog } from '@/lib/confirm-dialog';
+import { Spinner, EmptyState } from '@/lib/ui';
 
 interface Channel {
   id: string; name: string; base_url: string; api_key: string;
@@ -164,7 +165,7 @@ export default function ChannelsPage() {
     fetchAll();
   };
 
-  if (loading) return <div className="flex items-center justify-center h-64"><InlineIcon name="loaderCircle" className="w-6 h-6 animate-spin text-indigo-600" /></div>;
+  if (loading) return <div className="flex items-center justify-center h-64"><Spinner /></div>;
 
   return (
     <div className="space-y-4">
@@ -399,7 +400,7 @@ export default function ChannelsPage() {
         );
       })}
       {channels.length === 0 && (
-        <div className="text-center py-16 text-gray-400"><InlineIcon name="plug" className="w-10 h-10 mx-auto mb-3 text-gray-200" /><p>暂无渠道</p></div>
+        <div className="py-16"><EmptyState icon="plug" text="暂无渠道" /></div>
       )}
 
       <ConfirmDialog

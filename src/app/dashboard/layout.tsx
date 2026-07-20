@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { InlineIcon } from '@/lib/icon';
+import { Spinner } from '@/lib/ui';
 
 const navItems = [
   { href: '/dashboard', label: '仪表盘', icon: 'layout-dashboard' },
@@ -35,7 +36,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.replace('/login');
   };
 
-  if (loading) return (<div className="min-h-screen flex items-center justify-center bg-gray-50"><InlineIcon name="loaderCircle" className="w-6 h-6 animate-spin text-indigo-600" /></div>);
+  if (loading) return (<div className="min-h-screen flex items-center justify-center bg-gray-50"><Spinner /></div>);
   if (!authed) return null;
 
   const sidebarContent = (
