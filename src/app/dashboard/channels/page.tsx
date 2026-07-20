@@ -173,19 +173,24 @@ export default function ChannelsPage() {
   };
   const savePrice = async () => {
     if (!priceModal) return;
-    await apiFetch('/admin/pricing', {
-      method: 'POST',
-      body: JSON.stringify({ model_id: priceModal.modelId, prompt_price: Number(priceForm.prompt_price), completion_price: Number(priceForm.completion_price), cached_prompt_price: Number(priceForm.cached_prompt_price) }),
-    });
-    setPriceModal(null);
-    const r = await apiFetch('/admin/pricing');
-    if (r.ok) {
-      const d = await r.json();
-      if (d?.pricing) {
-        const map: Record<string, any> = {};
-        d.pricing.forEach((p: any) => { map[p.model_id] = p; });
-        setPricingMap(map);
+    try {
+      const res = await apiFetch('/admin/pricing', {
+        method: 'POST',
+        body: JSON.stringify({ model_id: priceModal.modelId, prompt_price: Number(priceForm.prompt_price) || 0, completion_price: Number(priceForm.completion_price) || 0, cached_prompt_price: Number(priceForm.cached_prompt_price) || 0 }),
+      });
+      if (res.ok) {
+        setPriceModal(null);
+        const d = await apiFetch('/admin/pricing').then(r => r.ok && r.json());
+        if (d?.pricing) {
+          const map: Record<string, any> = {};
+          d.pricing.forEach((p: any) => { map[p.model_id] = p; });
+          setPricingMap(map);
+        }
+      } else {
+        alert('保存失败');
       }
+    } catch (e) {
+      alert('保存失败: ' + String(e));
     }
   };
 

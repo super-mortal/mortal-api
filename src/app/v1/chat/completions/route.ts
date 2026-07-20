@@ -2,7 +2,7 @@
 // POST /v1/chat/completions — Main proxy endpoint
 // ============================================================
 import { NextRequest, NextResponse } from 'next/server';
-import { getRelayKeyByKey, recordAndCheckSpending, getAllowedChannelIds } from '@/lib/keys';
+import { getRelayKeyByKey, recordAndCheckSpending, getAllowedChannelIds, checkRelayKeyQuota } from '@/lib/keys';
 import {
   resolveModel,
   getModelsForAuto,
@@ -14,6 +14,7 @@ import {
 import { callUpstream, callUpstreamStreaming, extractCachedInputTokens } from '@/lib/proxy';
 import { createCallLog } from '@/lib/logs';
 import { calculateCost } from '@/lib/model-pricing';
+import { estimateTokens } from '@/lib/token-counter';
 import { ChatCompletionRequest, ChatCompletionChunk } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -62,6 +63,14 @@ export async function POST(request: NextRequest) {
     const picked = filtered[Math.floor(Math.random() * filtered.length)];
     const autoChannel = picked.channel;
     upstreamModelId = picked.modelId;
+
+    // Pre-request quota check
+    const autoEstimatedTokens = estimateTokens(JSON.stringify(body.messages));
+    const autoEstimatedCost = calculateCost(upstreamModelId, autoEstimatedTokens, 0, 0);
+    const autoQuotaCheck = checkRelayKeyQuota(apiKey, autoEstimatedTokens, autoEstimatedCost);
+    if (!autoQuotaCheck.valid) {
+      return NextResponse.json({ error: { message: autoQuotaCheck.reason || 'Insufficient quota', type: 'insufficient_quota' } }, { status: 403 });
+    }
 
     if (!autoChannel || !autoChannel.is_active) return NextResponse.json({ error: { message: 'Channel unavailable', type: 'server_error' } }, { status: 503 });
 
@@ -212,6 +221,14 @@ export async function POST(request: NextRequest) {
   let lastError: any = null;
   let retriesOnCurrentChannel = 0;
   const maxRetries = 3;
+
+  // Pre-request quota check
+  const pinnedEstimatedTokens = estimateTokens(JSON.stringify(body.messages));
+  const pinnedEstimatedCost = calculateCost(modelName, pinnedEstimatedTokens, 0, 0);
+  const pinnedQuotaCheck = checkRelayKeyQuota(apiKey, pinnedEstimatedTokens, pinnedEstimatedCost);
+  if (!pinnedQuotaCheck.valid) {
+    return NextResponse.json({ error: { message: pinnedQuotaCheck.reason || 'Insufficient quota', type: 'insufficient_quota' } }, { status: 403 });
+  }
 
   for (let attempt = 0; attempt < 9; attempt++) {
     // ── Select next available channel (first time or after failover) ──
