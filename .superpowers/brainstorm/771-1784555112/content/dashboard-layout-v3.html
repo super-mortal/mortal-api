@@ -1,0 +1,143 @@
+<h2>📐 仪表盘布局 V3 — 终版确认</h2>
+<p class="subtitle">顶部保持不动，底部调整，柱状图加滚动</p>
+
+<div class="section">
+  <h3>🔒 保持当前布局（不变）</h3>
+</div>
+
+<div class="mockup">
+  <div class="mockup-body" style="padding:14px;">
+
+    <!-- 顶部筛选行 -->
+    <div style="background:#f1f5f9;border-radius:6px;padding:8px 12px;margin-bottom:12px;display:flex;gap:8px;">
+      <span style="background:#111;color:#fff;padding:2px 10px;border-radius:4px;font-size:10px;">今日</span>
+      <span style="padding:2px 10px;border-radius:4px;font-size:10px;color:#666;">7 天</span>
+      <span style="padding:2px 10px;border-radius:4px;font-size:10px;color:#666;">30 天</span>
+      <span style="padding:2px 10px;border-radius:4px;font-size:10px;color:#666;">全部</span>
+      <span style="padding:2px 10px;border-radius:4px;font-size:10px;color:#6366f1;border:1px solid #6366f1;">📅 自定义</span>
+    </div>
+
+    <!-- 统计卡片 4×4 -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px;">
+      <div style="background:#f8f9fa;border-radius:6px;padding:10px;border:1px solid #eee;">
+        <div style="font-size:16px;font-weight:bold;">12,345</div>
+        <div style="font-size:9px;color:#888;">总调用次数</div>
+      </div>
+      <div style="background:#f8f9fa;border-radius:6px;padding:10px;border:1px solid #eee;">
+        <div style="font-size:16px;font-weight:bold;color:#16a34a;">12,000</div>
+        <div style="font-size:9px;color:#888;">成功</div>
+      </div>
+      <div style="background:#f8f9fa;border-radius:6px;padding:10px;border:1px solid #eee;">
+        <div style="font-size:16px;font-weight:bold;color:#dc2626;">345</div>
+        <div style="font-size:9px;color:#888;">失败</div>
+      </div>
+      <div style="background:#f8f9fa;border-radius:6px;padding:10px;border:1px solid #eee;">
+        <div style="font-size:16px;font-weight:bold;color:#6366f1;">1.2M</div>
+        <div style="font-size:9px;color:#888;">总 Tokens</div>
+      </div>
+      <div style="background:#f8f9fa;border-radius:6px;padding:10px;border:1px solid #eee;">
+        <div style="font-size:16px;font-weight:bold;color:#a855f7;">890K</div>
+        <div style="font-size:9px;color:#888;">输出 Tokens</div>
+      </div>
+      <div style="background:#f8f9fa;border-radius:6px;padding:10px;border:1px solid #eee;">
+        <div style="font-size:16px;font-weight:bold;color:#22c55e;">80K</div>
+        <div style="font-size:9px;color:#888;">命中缓存</div>
+      </div>
+      <div style="background:#f8f9fa;border-radius:6px;padding:10px;border:1px solid #eee;">
+        <div style="font-size:16px;font-weight:bold;color:#f59e0b;">230K</div>
+        <div style="font-size:9px;color:#888;">未命中缓存</div>
+      </div>
+      <div style="background:#f8f9fa;border-radius:6px;padding:10px;border:1px solid #eee;">
+        <div style="font-size:16px;font-weight:bold;color:#16a34a;">¥1.23</div>
+        <div style="font-size:9px;color:#888;">今日消费</div>
+      </div>
+    </div>
+
+    <!-- 第1行：每日调用趋势 + 每日Token消耗（保持现状） -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div style="background:#f8f9fa;border-radius:8px;padding:12px;border:1px solid #e2e8f0;">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">
+          <span style="background:#e0e7ff;color:#6366f1;font-size:9px;padding:1px 6px;border-radius:3px;">不变</span>
+          <span style="font-size:12px;font-weight:600;">每日调用趋势</span>
+        </div>
+        <div style="font-size:9px;color:#94a3b8;">面积图 · 调用次数</div>
+      </div>
+      <div style="background:#f8f9fa;border-radius:8px;padding:12px;border:1px solid #e2e8f0;">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">
+          <span style="background:#f59e0b;color:#fff;font-size:9px;padding:1px 6px;border-radius:3px;">➕滚动</span>
+          <span style="font-size:12px;font-weight:600;">每日 Token 消耗</span>
+        </div>
+        <div style="font-size:9px;color:#94a3b8;">堆叠柱状图 · ↔ 可横向滚动 · 固定柱宽</div>
+      </div>
+    </div>
+
+    <!-- 第2行：消费趋势（保持现状） -->
+    <div style="background:#f8f9fa;border-radius:8px;padding:12px;border:1px solid #e2e8f0;margin-bottom:10px;">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">
+        <span style="background:#e0e7ff;color:#6366f1;font-size:9px;padding:1px 6px;border-radius:3px;">不变</span>
+        <span style="font-size:12px;font-weight:600;">近 7 天消费趋势</span>
+      </div>
+      <div style="font-size:9px;color:#94a3b8;">面积图 · 消费金额</div>
+    </div>
+
+    <!-- 分隔线 -->
+    <div style="border-top:2px dashed #cbd5e1;margin:14px 0;position:relative;">
+      <span style="position:absolute;right:0;top:-8px;background:#f1f5f9;padding:0 8px;font-size:9px;color:#64748b;">👇 以下重新排列</span>
+    </div>
+
+    <!-- 第3行：Token构成（全宽） -->
+    <div style="background:#f8f9fa;border-radius:8px;padding:12px;border:2px solid #a855f7;margin-bottom:10px;">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">
+        <span style="background:#a855f7;color:#fff;font-size:9px;padding:1px 6px;border-radius:3px;">改</span>
+        <span style="font-size:12px;font-weight:600;">Token 构成</span>
+        <span style="font-size:9px;color:#a855f7;">← 单独一行全宽</span>
+      </div>
+      <div style="font-size:9px;color:#94a3b8;">柱状图 · 输出 / 缓存输入 / 未缓存输入</div>
+    </div>
+
+    <!-- 第4行：模型消费排行（全宽） -->
+    <div style="background:#f8f9fa;border-radius:8px;padding:12px;border:2px solid #a855f7;margin-bottom:10px;">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">
+        <span style="background:#a855f7;color:#fff;font-size:9px;padding:1px 6px;border-radius:3px;">改</span>
+        <span style="font-size:12px;font-weight:600;">按模型消费排行</span>
+        <span style="font-size:9px;color:#a855f7;">← 单独一行全宽</span>
+      </div>
+      <div style="font-size:9px;color:#94a3b8;">横向柱状图 · Top 10 模型</div>
+    </div>
+
+    <!-- 第5行：模型分布 + 成功率（2列） -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div style="background:#f8f9fa;border-radius:8px;padding:12px;border:2px dashed #f59e0b;">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">
+          <span style="background:#f59e0b;color:#fff;font-size:9px;padding:1px 6px;border-radius:3px;">移</span>
+          <span style="font-size:12px;font-weight:600;">模型调用分布</span>
+        </div>
+        <div style="font-size:9px;color:#94a3b8;">环形图 · 各模型占比</div>
+      </div>
+      <div style="background:#f8f9fa;border-radius:8px;padding:12px;border:2px dashed #f59e0b;">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">
+          <span style="background:#f59e0b;color:#fff;font-size:9px;padding:1px 6px;border-radius:3px;">移</span>
+          <span style="font-size:12px;font-weight:600;">成功率</span>
+        </div>
+        <div style="font-size:9px;color:#94a3b8;">环形进度 · 健康度概览</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="section">
+  <h3>📋 Token 消耗柱状图改造方案</h3>
+  <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;">
+    <ul style="margin:0;font-size:13px;">
+      <li>✅ 保持 <code>maxBarSize={36}</code> 固定柱宽不变</li>
+      <li>✅ 外层容器加 <code>overflow-x: auto</code>，所有时段都可横向滚动</li>
+      <li>✅ 今日 (少量数据) 居中显示，不需要滚动就不滚动</li>
+      <li>✅ 30天 (大量数据) 自然出现滚动条，鼠标拖拽查看</li>
+    </ul>
+  </div>
+</div>
+
+<div class="section">
+  <p style="text-align:center;font-size:14px;color:#6366f1;font-weight:500;">这个布局你认可吗？确认后我们继续聊其他优化点～</p>
+</div>

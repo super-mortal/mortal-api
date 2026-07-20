@@ -1,0 +1,139 @@
+<h2>渠道管理 — 右侧侧边栏设计</h2>
+<p class="subtitle">1/3 屏幕宽度 · 整合所有配置内容</p>
+
+<div class="section">
+  <h3>当前 → 改造后</h3>
+</div>
+
+<div class="split">
+  <!-- 当前 -->
+  <div class="mockup">
+    <div class="mockup-header">❌ 当前：点击展开</div>
+    <div class="mockup-body" style="padding:12px;font-size:11px;font-family:monospace;">
+      <div style="border:1px solid #eee;border-radius:8px;padding:10px;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:600;">DeepSeek 官方</span>
+          <span>🔽</span>
+        </div>
+        <div style="color:#94a3b8;font-size:10px;">api.deepseek.com</div>
+      </div>
+      <!-- 展开内容 -->
+      <div style="border:1px solid #e0e7ff;border-radius:8px;padding:10px;background:#f8faff;">
+        <div style="font-weight:600;font-size:10px;margin-bottom:6px;">📦 模型与别名</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;">
+          <span style="background:#fff;border:1px solid #e2e8f0;padding:4px 8px;border-radius:6px;">deepseek-v4-pro</span>
+          <span style="background:#fff;border:1px solid #e2e8f0;padding:4px 8px;border-radius:6px;">deepseek-v4-flash</span>
+        </div>
+      </div>
+      <div style="color:#94a3b8;text-align:center;margin-top:8px;">← 展开后内容变长，操作繁琐</div>
+    </div>
+  </div>
+
+  <!-- 改造后 -->
+  <div class="mockup">
+    <div class="mockup-header">✅ 改造后：右侧侧边栏</div>
+    <div class="mockup-body" style="padding:0;position:relative;">
+      <!-- 模拟渠道列表，侧边栏从右侧滑出 -->
+      <div style="padding:12px;">
+        <div style="border:1px solid #eee;border-radius:8px;padding:10px;font-size:11px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-weight:600;">DeepSeek 官方</span>
+            <span style="display:flex;gap:4px;">
+              <span style="background:#6366f1;color:#fff;padding:2px 8px;border-radius:4px;font-size:9px;">编辑</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 侧边栏覆盖层 -->
+      <div style="position:absolute;right:0;top:0;bottom:0;width:70%;background:#fff;border-left:2px solid #e2e8f0;box-shadow:-4px 0 12px rgba(0,0,0,0.06);padding:16px;overflow-y:auto;font-size:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <span style="font-weight:600;font-size:13px;">✏️ 编辑渠道</span>
+          <span style="color:#94a3b8;">✕</span>
+        </div>
+
+        <!-- 基本信息 -->
+        <div style="margin-bottom:12px;">
+          <div style="font-size:10px;font-weight:600;color:#64748b;margin-bottom:6px;">基本信息</div>
+          <div style="display:grid;gap:6px;">
+            <div><span style="font-size:9px;color:#94a3b8;">名称</span><br/><span style="border:1px solid #e2e8f0;border-radius:4px;padding:4px 8px;display:block;">DeepSeek 官方</span></div>
+            <div><span style="font-size:9px;color:#94a3b8;">Base URL</span><br/><span style="border:1px solid #e2e8f0;border-radius:4px;padding:4px 8px;display:block;font-size:10px;">https://api.deepseek.com</span></div>
+            <div><span style="font-size:9px;color:#94a3b8;">优先级</span><br/><span style="border:1px solid #e2e8f0;border-radius:4px;padding:4px 8px;display:block;">1</span></div>
+          </div>
+        </div>
+
+        <!-- 模型列表 -->
+        <div style="margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span style="font-size:10px;font-weight:600;color:#64748b;">模型与别名</span>
+            <span style="font-size:9px;color:#6366f1;">+ 添加</span>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:6px;padding:8px;margin-bottom:4px;">
+            <div style="display:flex;justify-content:space-between;">
+              <code style="font-size:10px;">deepseek-v4-pro</code>
+              <span style="display:flex;gap:4px;">
+                <span style="font-size:9px;color:#6366f1;">别名</span>
+                <span style="font-size:9px;color:#f59e0b;">¥</span>
+                <span style="font-size:9px;color:red;">✕</span>
+              </span>
+            </div>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:6px;padding:8px;margin-bottom:4px;">
+            <div style="display:flex;justify-content:space-between;">
+              <code style="font-size:10px;">deepseek-v4-flash</code>
+              <span style="display:flex;gap:4px;">
+                <span style="font-size:9px;color:#6366f1;">别名</span>
+                <span style="font-size:9px;color:#f59e0b;">¥</span>
+                <span style="font-size:9px;color:red;">✕</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div style="display:flex;gap:6px;">
+          <span style="flex:1;background:#6366f1;color:#fff;text-align:center;padding:6px;border-radius:6px;font-size:11px;">保存</span>
+          <span style="flex:1;text-align:center;padding:6px;border-radius:6px;border:1px solid #e2e8f0;font-size:11px;">取消</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>侧边栏内容（从顶部到底部）</h3>
+  <div style="background:#f8faff;border:1px solid #e0e7ff;border-radius:8px;padding:14px;font-size:13px;">
+    <ol style="margin:0;padding-left:18px;line-height:1.8;">
+      <li><strong>头部</strong> — 渠道名称 + 关闭按钮</li>
+      <li><strong>基本信息区</strong> — 名称 / Base URL / API Key / 优先级 / 备注（当前 Modal 里的内容）</li>
+      <li><strong>模型与别名区</strong> — 当前展开区域的模型卡片 + 别名管理 + 定价</li>
+      <li><strong>操作区</strong> — 拉取上游模型 + 连通检测 + 保存 / 取消</li>
+    </ol>
+  </div>
+</div>
+
+<div class="section">
+  <h3>交互流程</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
+    <div style="background:#f8f9fa;border-radius:6px;padding:10px;border:1px solid #eee;">
+      <div style="font-weight:600;margin-bottom:4px;">打开</div>
+      <div style="color:#64748b;">点击渠道卡的"编辑"按钮 → 右侧滑出侧边栏 → 背景半透明遮罩</div>
+    </div>
+    <div style="background:#f8f9fa;border-radius:6px;padding:10px;border:1px solid #eee;">
+      <div style="font-weight:600;margin-bottom:4px;">关闭</div>
+      <div style="color:#64748b;">点击遮罩 / 关闭按钮 / Escape 键 → 保存后自动关闭刷新</div>
+    </div>
+    <div style="background:#f8f9fa;border-radius:6px;padding:10px;border:1px solid #eee;">
+      <div style="font-weight:600;margin-bottom:4px;">模型操作</div>
+      <div style="color:#64748b;">添加/删除模型、别名、定价都在侧边栏内完成，不需要弹新窗</div>
+    </div>
+    <div style="background:#f8f9fa;border-radius:6px;padding:10px;border:1px solid #eee;">
+      <div style="font-weight:600;margin-bottom:4px;">健康检测</div>
+      <div style="color:#64748b;">"连通检测"按钮也放到侧边栏底部，保持一个地方完成所有配置</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <p style="text-align:center;font-size:14px;color:#6366f1;font-weight:500;">这个设计 OK 吗？有想调整的地方吗？</p>
+</div>

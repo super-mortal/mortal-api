@@ -32,8 +32,12 @@ export function DatePicker({
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
-    if (open) document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    const keyHandler = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    if (open) { document.addEventListener('mousedown', handler); document.addEventListener('keydown', keyHandler); }
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('keydown', keyHandler);
+    };
   }, [open]);
 
   const defaultCls = getDefaultClassNames();

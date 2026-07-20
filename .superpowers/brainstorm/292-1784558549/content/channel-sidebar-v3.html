@@ -1,0 +1,165 @@
+<h2>渠道侧边栏 V3 — 别名改进 + 定价新样式</h2>
+<p class="subtitle">别名左原始右 · 参考 New API 的定价 UI</p>
+
+<div class="mockup">
+  <div class="mockup-body" style="padding:0;position:relative;height:540px;background:#f1f5f9;overflow:hidden;">
+
+    <!-- 背景遮罩 -->
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,0.3);backdrop-filter:blur(2px);z-index:1;"></div>
+
+    <!-- === 侧边栏 === -->
+    <div style="position:absolute;right:0;top:0;bottom:0;width:33.33%;background:#fff;z-index:2;box-shadow:-8px 0 24px rgba(0,0,0,0.12);display:flex;flex-direction:column;overflow:hidden;">
+
+      <!-- 头部 -->
+      <div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+        <div>
+          <span style="font-size:15px;font-weight:600;">✏️ 编辑渠道</span>
+          <div style="font-size:10px;color:#94a3b8;">DeepSeek 官方</div>
+        </div>
+        <span style="padding:4px 8px;border-radius:6px;font-size:16px;cursor:pointer;">✕</span>
+      </div>
+
+      <!-- 可滚动内容 -->
+      <div style="flex:1;overflow-y:auto;padding:16px 20px;">
+
+        <!-- 基本信息 -->
+        <div style="margin-bottom:16px;">
+          <div style="font-size:10px;font-weight:600;color:#64748b;margin-bottom:8px;">📋 基本信息</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <input value="DeepSeek 官方" placeholder="名称" style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;box-sizing:border-box;" />
+            <input value="https://api.deepseek.com" placeholder="Base URL" style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px;font-family:monospace;box-sizing:border-box;" />
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <input type="password" value="sk-xxxx" placeholder="API Key" style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px;font-family:monospace;box-sizing:border-box;" />
+              <input value="1" placeholder="优先级" style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;box-sizing:border-box;" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 模型与别名 -->
+        <div style="margin-bottom:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <span style="font-size:10px;font-weight:600;color:#64748b;">🤖 模型与别名</span>
+            <div style="display:flex;gap:6px;">
+              <span style="font-size:9px;color:#6366f1;border:1px solid #e0e7ff;padding:3px 8px;border-radius:4px;cursor:pointer;">📡 拉取</span>
+              <span style="font-size:9px;color:#6366f1;border:1px solid #e0e7ff;padding:3px 8px;border-radius:4px;cursor:pointer;">+ 添加</span>
+            </div>
+          </div>
+
+          <!-- 模型卡片 1：有别名 → 别名左 原始右 -->
+          <div style="border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;margin-bottom:6px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <!-- 别名（左侧，醒目） -->
+              <span style="font-size:13px;font-weight:600;color:#d97706;font-family:monospace;">my-deepseek</span>
+              <!-- 箭头 -->
+              <span style="color:#cbd5e1;font-size:11px;">→</span>
+              <!-- 原始模型（右侧） -->
+              <span style="font-size:11px;color:#64748b;font-family:monospace;">deepseek-v4-pro</span>
+              <span style="margin-left:auto;display:flex;gap:4px;">
+                <span style="font-size:8px;color:#6366f1;border:1px solid #e0e7ff;padding:1px 6px;border-radius:6px;cursor:pointer;">价格</span>
+                <span style="font-size:9px;color:#94a3b8;cursor:pointer;">✕</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- 模型卡片 2：无别名 → 显示原始模型 + 添加别名按钮 -->
+          <div style="border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;margin-bottom:6px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:13px;font-weight:600;color:#1e293b;font-family:monospace;">deepseek-v4-flash</span>
+              <span style="margin-left:auto;display:flex;gap:4px;">
+                <span style="font-size:8px;color:#6366f1;border:1px dashed #e0e7ff;padding:1px 6px;border-radius:6px;cursor:pointer;">+ 别名</span>
+                <span style="font-size:8px;color:#6366f1;border:1px solid #e0e7ff;padding:1px 6px;border-radius:6px;cursor:pointer;">价格</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- 价格设置 — 参考 New API 风格 -->
+          <div style="border:2px solid #e0e7ff;border-radius:10px;padding:12px;margin-top:8px;background:#f8faff;">
+            <div style="font-size:10px;font-weight:600;color:#6366f1;margin-bottom:8px;">
+              💰 价格设置 · <code style="font-size:10px;">deepseek-v4-pro</code>
+            </div>
+            <!-- New API 风格：紧凑三列输入 -->
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;">
+              <div>
+                <div style="font-size:8px;color:#64748b;margin-bottom:2px;">标准输入</div>
+                <div style="display:flex;align-items:center;border:1px solid #e2e8f0;border-radius:5px;overflow:hidden;">
+                  <input value="0.5" style="width:100%;padding:5px 6px;border:none;font-size:11px;font-family:monospace;text-align:right;outline:none;" />
+                  <span style="padding:0 5px;font-size:8px;color:#94a3b8;background:#f8f9fa;padding:5px 4px;">元/M</span>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:8px;color:#64748b;margin-bottom:2px;">输出</div>
+                <div style="display:flex;align-items:center;border:1px solid #e2e8f0;border-radius:5px;overflow:hidden;">
+                  <input value="2.0" style="width:100%;padding:5px 6px;border:none;font-size:11px;font-family:monospace;text-align:right;outline:none;" />
+                  <span style="padding:0 5px;font-size:8px;color:#94a3b8;background:#f8f9fa;padding:5px 4px;">元/M</span>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:8px;color:#64748b;margin-bottom:2px;">缓存输入</div>
+                <div style="display:flex;align-items:center;border:1px solid #e2e8f0;border-radius:5px;overflow:hidden;">
+                  <input value="0.1" style="width:100%;padding:5px 6px;border:none;font-size:11px;font-family:monospace;text-align:right;outline:none;" />
+                  <span style="padding:0 5px;font-size:8px;color:#94a3b8;background:#f8f9fa;padding:5px 4px;">元/M</span>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;gap:4px;">
+              <span style="flex:1;text-align:center;padding:4px;background:#6366f1;color:#fff;border-radius:4px;font-size:10px;cursor:pointer;">保存价格</span>
+              <span style="text-align:center;padding:4px 12px;border:1px solid #e2e8f0;border-radius:4px;font-size:10px;cursor:pointer;">取消</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 上游可用模型 -->
+        <div style="margin-bottom:16px;">
+          <details open>
+            <summary style="font-size:10px;color:#64748b;cursor:pointer;">上游可用模型（5个） ▼</summary>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">
+              <span style="font-size:9px;background:#f0fdf4;border:1px solid #bbf7d0;padding:2px 8px;border-radius:4px;color:#16a34a;">deepseek-v4-pro ✓</span>
+              <span style="font-size:9px;background:#f8f9fa;border:1px solid #e2e8f0;padding:2px 8px;border-radius:4px;cursor:pointer;color:#64748b;">+ deepseek-r1</span>
+              <span style="font-size:9px;background:#f8f9fa;border:1px solid #e2e8f0;padding:2px 8px;border-radius:4px;cursor:pointer;color:#64748b;">+ deepseek-v3</span>
+            </div>
+          </details>
+        </div>
+
+      </div>
+
+      <!-- 底部操作 -->
+      <div style="padding:14px 20px;border-top:1px solid #f1f5f9;display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+        <div style="display:flex;gap:8px;">
+          <span style="flex:1;background:#6366f1;color:#fff;text-align:center;padding:8px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;">💾 保存</span>
+          <span style="flex:1;text-align:center;padding:8px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;cursor:pointer;">取消</span>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <span style="flex:1;text-align:center;padding:5px;border-radius:5px;border:1px solid #dbeafe;font-size:10px;color:#6366f1;cursor:pointer;">◎ 连通检测</span>
+          <span style="flex:1;text-align:center;padding:5px;border-radius:5px;border:1px solid #fee2e2;font-size:10px;color:#ef4444;cursor:pointer;">🗑 删除渠道</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>两个改进点</h3>
+
+  <div class="options">
+    <div class="option" style="border-color:#e0e7ff;">
+      <div class="letter">🔄</div>
+      <div class="content">
+        <h3>别名显示</h3>
+        <p>别名 <strong>在左</strong>（橙色 + 粗体），→ 箭头分隔，原始模型 <strong>在右</strong>（灰色）。一眼看出映射关系。</p>
+      </div>
+    </div>
+    <div class="option" style="border-color:#e0e7ff;">
+      <div class="letter">💰</div>
+      <div class="content">
+        <h3>价格设置（New API 风格）</h3>
+        <p>直接在模型卡片下方展开内联编辑：三列 输入/输出/缓存输入，每格带 <strong>元/M</strong> 后缀。不需要弹新窗口。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <p style="text-align:center;font-size:14px;color:#6366f1;font-weight:500;">这样看着 OK 吗？</p>
+</div>

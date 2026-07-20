@@ -1,0 +1,100 @@
+<h2>日期选择器 — 统一方案</h2>
+<p class="subtitle">用 react-day-picker 替代浏览器原生弹出日历</p>
+
+<div class="mockup">
+  <div class="mockup-header" style="font-size:13px;">🎨 统一日期选择器方案</div>
+  <div class="mockup-body" style="padding:16px;">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <!-- 当前 -->
+      <div>
+        <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:8px;">❌ 当前</div>
+        <div style="border:1px solid #e2e8f0;border-radius:8px;padding:12px;">
+          <input type="date" value="2026-07-20" style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;box-sizing:border-box;" />
+          <div style="font-size:10px;color:#94a3b8;margin-top:6px;">点击后弹出：浏览器原生日历（样式无法控制）</div>
+          <div style="margin-top:6px;padding:10px;background:#f8f9fa;border:1px dashed #e2e8f0;border-radius:6px;font-size:10px;text-align:center;color:#94a3b8;">
+            📅 浏览器系统渲染<br/>不同系统/浏览器长不一样
+          </div>
+        </div>
+      </div>
+
+      <!-- 改造后 -->
+      <div>
+        <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:8px;">✅ 改造后</div>
+        <div style="border:1px solid #e0e7ff;border-radius:8px;padding:12px;background:#f8faff;">
+          <div style="display:flex;align-items:center;gap:6px;border:1px solid #e2e8f0;border-radius:5px;padding:7px 10px;background:#fff;cursor:pointer;">
+            <span style="color:#6366f1;font-size:12px;">📅</span>
+            <span style="font-size:12px;color:#1e293b;">2026-07-20</span>
+            <span style="margin-left:auto;font-size:9px;color:#94a3b8;">▼</span>
+          </div>
+          <!-- 模拟日历弹出 -->
+          <div style="margin-top:6px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;box-shadow:0 4px 16px rgba(0,0,0,0.08);">
+            <!-- 头部 -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <span style="font-size:11px;cursor:pointer;color:#6366f1;">◀</span>
+              <span style="font-size:11px;font-weight:600;">2026年7月</span>
+              <span style="font-size:11px;cursor:pointer;color:#6366f1;">▶</span>
+            </div>
+            <!-- 星期 -->
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px;text-align:center;font-size:9px;color:#94a3b8;">
+              <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+            </div>
+            <!-- 日期 -->
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;">
+              <span style="font-size:10px;padding:4px;border-radius:4px;color:#94a3b8;">29</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;color:#94a3b8;">30</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">1</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">2</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">3</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">4</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">5</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">6</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">7</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">8</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">9</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">10</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">11</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">12</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">13</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">14</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">15</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">16</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">17</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">18</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">19</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;background:#6366f1;color:#fff;font-weight:600;">20</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">21</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">22</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">23</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">24</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">25</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;">26</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;color:#94a3b8;">27</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;color:#94a3b8;">28</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;color:#94a3b8;">29</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;color:#94a3b8;">30</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;color:#94a3b8;">31</span>
+              <span style="font-size:10px;padding:4px;border-radius:4px;color:#94a3b8;">1</span>
+            </div>
+            <!-- 底部按钮 -->
+            <div style="display:flex;gap:4px;margin-top:8px;border-top:1px solid #f1f5f9;padding-top:8px;">
+              <span style="flex:1;text-align:center;padding:4px;background:#6366f1;color:#fff;border-radius:4px;font-size:10px;cursor:pointer;">确认</span>
+              <span style="flex:1;text-align:center;padding:4px;border:1px solid #e2e8f0;border-radius:4px;font-size:10px;cursor:pointer;">取消</span>
+            </div>
+          </div>
+          <div style="font-size:9px;color:#6366f1;margin-top:6px;">← 完全自定义样式，统一所有浏览器</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:14px;background:#f1f5f9;border-radius:8px;padding:12px;font-size:12px;">
+      <div style="font-weight:600;margin-bottom:4px;">方案：react-day-picker + Tailwind CSS</div>
+      <ul style="margin:4px 0 0;padding-left:16px;color:#475569;">
+        <li>通过 <code>classNames</code> 属性完全用 Tailwind 控制日历样式</li>
+        <li>与项目现有技术栈一致（已用 Tailwind）</li>
+        <li>替换所有 <code>&lt;input type="date"&gt;</code> 和 <code>&lt;input type="datetime-local"&gt;</code></li>
+        <li>封装成统一的 <code>DatePicker</code> 组件，整个项目复用</li>
+      </ul>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,96 @@
+<h2>渠道侧边栏 V4 — 可折叠模型卡片</h2>
+<p class="subtitle">每模型一个大框 · 收起看原始/别名 · 展开配定价</p>
+
+<div style="background:#f1f5f9;border-radius:10px;padding:20px;margin-bottom:16px;">
+
+  <!-- 卡片1：展开状态 -->
+  <div style="background:#fff;border:2px solid #e0e7ff;border-radius:10px;margin-bottom:12px;overflow:hidden;">
+    <!-- 头部（点击切换折叠） -->
+    <div style="padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;border-bottom:1px solid #f1f5f9;">
+      <!-- 原始模型 -->
+      <code style="font-size:13px;font-weight:600;color:#1e293b;font-family:monospace;">deepseek-v4-pro</code>
+      <span style="color:#cbd5e1;font-size:11px;">──→</span>
+      <!-- 别名 -->
+      <code style="font-size:13px;font-weight:600;color:#d97706;font-family:monospace;">my-deepseek</code>
+      <!-- 状态标签 -->
+      <span style="margin-left:auto;display:flex;align-items:center;gap:6px;">
+        <span style="font-size:9px;background:#f0fdf4;color:#16a34a;padding:2px 8px;border-radius:4px;">¥ 已定价</span>
+        <span style="font-size:11px;color:#6366f1;transform:rotate(180deg);display:inline-block;">▼</span>
+      </span>
+    </div>
+    <!-- 展开内容 -->
+    <div style="padding:14px;">
+      <!-- 别名编辑 -->
+      <div style="margin-bottom:12px;">
+        <div style="font-size:10px;font-weight:600;color:#64748b;margin-bottom:6px;">🔗 别名映射</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <code style="font-size:11px;color:#1e293b;background:#f8f9fa;padding:4px 8px;border-radius:4px;font-family:monospace;">deepseek-v4-pro</code>
+          <span style="color:#94a3b8;">→</span>
+          <input value="my-deepseek" style="flex:1;padding:6px 10px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;font-family:monospace;box-sizing:border-box;" />
+          <span style="font-size:9px;color:#6366f1;border:1px solid #e0e7ff;padding:4px 10px;border-radius:4px;cursor:pointer;">更新</span>
+        </div>
+      </div>
+      <!-- 价格设置（当前 UI 风格） -->
+      <div>
+        <div style="font-size:10px;font-weight:600;color:#64748b;margin-bottom:6px;">💲 价格设置（元/1M tokens）</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+          <div>
+            <div style="font-size:8px;color:#94a3b8;margin-bottom:2px;">标准输入</div>
+            <div style="display:flex;align-items:center;border:1px solid #e2e8f0;border-radius:5px;overflow:hidden;background:#fff;">
+              <input value="0.5" style="width:100%;padding:5px 6px;border:none;font-size:11px;font-family:monospace;text-align:right;outline:none;" />
+              <span style="font-size:8px;color:#94a3b8;background:#f8f9fa;padding:5px 6px;">元/M</span>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:8px;color:#94a3b8;margin-bottom:2px;">输出</div>
+            <div style="display:flex;align-items:center;border:1px solid #e2e8f0;border-radius:5px;overflow:hidden;background:#fff;">
+              <input value="2.0" style="width:100%;padding:5px 6px;border:none;font-size:11px;font-family:monospace;text-align:right;outline:none;" />
+              <span style="font-size:8px;color:#94a3b8;background:#f8f9fa;padding:5px 6px;">元/M</span>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:8px;color:#94a3b8;margin-bottom:2px;">缓存输入</div>
+            <div style="display:flex;align-items:center;border:1px solid #e2e8f0;border-radius:5px;overflow:hidden;background:#fff;">
+              <input value="0.1" style="width:100%;padding:5px 6px;border:none;font-size:11px;font-family:monospace;text-align:right;outline:none;" />
+              <span style="font-size:8px;color:#94a3b8;background:#f8f9fa;padding:5px 6px;">元/M</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 操作按钮 -->
+      <div style="display:flex;gap:6px;margin-top:10px;">
+        <span style="flex:1;text-align:center;padding:6px;background:#6366f1;color:#fff;border-radius:5px;font-size:10px;cursor:pointer;">💾 保存</span>
+        <span style="text-align:center;padding:6px 14px;border:1px solid #fee2e2;border-radius:5px;font-size:10px;color:#ef4444;cursor:pointer;">🗑 删除</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 卡片2：折叠状态（小巧） -->
+  <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:12px;cursor:pointer;">
+    <code style="font-size:12px;font-weight:600;color:#1e293b;font-family:monospace;">deepseek-v4-flash</code>
+    <span style="color:#cbd5e1;font-size:10px;">──→</span>
+    <span style="font-size:11px;color:#94a3b8;font-style:italic;">未设置别名</span>
+    <span style="margin-left:auto;font-size:9px;background:#fef3c7;color:#d97706;padding:1px 6px;border-radius:4px;">未定价</span>
+    <span style="font-size:10px;color:#94a3b8;">▶</span>
+  </div>
+
+  <!-- 卡片3：折叠状态（有别名） -->
+  <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;">
+    <code style="font-size:12px;font-weight:600;color:#1e293b;font-family:monospace;">glm-5</code>
+    <span style="color:#cbd5e1;font-size:10px;">──→</span>
+    <code style="font-size:12px;font-weight:600;color:#d97706;font-family:monospace;">my-glm5</code>
+    <span style="margin-left:auto;font-size:9px;background:#f0fdf4;color:#16a34a;padding:1px 6px;border-radius:4px;">¥ 已定价</span>
+    <span style="font-size:10px;color:#94a3b8;">▶</span>
+  </div>
+
+</div>
+
+<div class="section">
+  <h3>总结变化</h3>
+  <table style="width:100%;font-size:12px;border-collapse:collapse;">
+    <tr><td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;font-weight:600;">📦 卡片结构</td><td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;">每个模型一个大框，含别名 + 定价 + 操作</td></tr>
+    <tr><td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;font-weight:600;">🔽 折叠/展开</td><td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;">折叠=小巧看原始/别名，展开=完整配置</td></tr>
+    <tr><td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;font-weight:600;">💰 定价</td><td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;">展开后内联编辑三列（输入/输出/缓存）</td></tr>
+    <tr><td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;font-weight:600;">📝 日志</td><td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;">记录价格时使用别名（如调用日志中显示 my-deepseek）</td></tr>
+  </table>
+</div>

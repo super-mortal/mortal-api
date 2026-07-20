@@ -49,6 +49,7 @@ export default function ChannelsPage() {
   const [expandedModelId, setExpandedModelId] = useState<string | null>(null);
   const [modelChannelId, setModelChannelId] = useState('');
   const [newModelId, setNewModelId] = useState('');
+  const [showAddModel, setShowAddModel] = useState(false);
 
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string } | null>(null);
   const [modelErrModal, setModelErrModal] = useState(false);
@@ -161,6 +162,12 @@ export default function ChannelsPage() {
     setNewModelId('');
     setSidePanelOpen(true);
   };
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setSidePanelOpen(false); };
+    if (sidePanelOpen) window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [sidePanelOpen]);
 
   if (loading) return <div className="flex items-center justify-center h-64"><Spinner /></div>;
 
@@ -319,14 +326,35 @@ export default function ChannelsPage() {
                       <button onClick={() => doPullModels(editId)} disabled={pullingId === editId}
                         className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-50 inline-flex items-center gap-1.5 transition-colors">
                         {pullingId === editId ? <InlineIcon name="loaderCircle" className="w-3.5 h-3.5 animate-spin" /> : <InlineIcon name="server" className="w-3.5 h-3.5" />} 拉取</button>
-                      <button onClick={() => { setNewModelId(''); }}
+                      <button onClick={() => setShowAddModel(!showAddModel)}
                         className="text-xs px-3 py-1.5 rounded-lg border border-indigo-200 text-indigo-600 bg-indigo-50/50 hover:bg-indigo-100 inline-flex items-center gap-1.5 transition-colors"
                       ><InlineIcon name="plus" className="w-3.5 h-3.5" /> 添加</button>
                     </div>
                   </div>
 
+                  {showAddModel && (
+                    <div className="mt-2 mb-3 flex items-center gap-2">
+                      <input
+                        value={newModelId}
+                        onChange={e => setNewModelId(e.target.value)}
+                        placeholder="输入模型 ID..."
+                        className="flex-1 px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
+                      />
+                      <button onClick={() => { addModel(); setShowAddModel(false); }}
+                        className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition-colors">确认</button>
+                      <button onClick={() => setShowAddModel(false)}
+                        className="text-xs text-gray-400 hover:text-gray-600">取消</button>
+                    </div>
+                  )}
+
                   {/* Model cards */}
-                  {modelsForChannel(editId).map(m => {
+                  {modelsForChannel(editId).length === 0 ? (
+                    <div className="py-6 text-center">
+                      <InlineIcon name="bot" className="w-8 h-8 mx-auto mb-2 text-gray-200" />
+                      <p className="text-sm text-gray-400">暂无模型，点击"拉取"或"添加"</p>
+                    </div>
+                  ) : (
+                    modelsForChannel(editId).map(m => {
                     const als = aliasesForModel(m.id);
                     const alias = als.length > 0 ? als[0] : null;
                     const isExpanded = expandedModelId === m.id;
@@ -461,7 +489,7 @@ export default function ChannelsPage() {
                         )}
                       </div>
                     );
-                  })}
+                  }))}
 
                   {/* Pulled models */}
                   {pulledModels[editId]?.length > 0 && (

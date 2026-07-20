@@ -278,8 +278,10 @@ export default function LogsPage() {
           </div>
           {/* 自定义日期输入框 — 仅 activeDate === 'custom' 时显示 */}
           {activeDate === 'custom' && (
-            <div className="flex items-center gap-1.5 px-1">
+            <div className="flex items-center gap-1.5 bg-white rounded-lg border border-gray-200 px-3 py-1.5">
               <DateTimePicker value={startMonth} onChange={(v) => { setStartMonth(v); setPage(0); }} />
+              <span className="text-gray-300 shrink-0">—</span>
+              <DateTimePicker value={endMonth} onChange={(v) => { setEndMonth(v); setPage(0); }} />
             </div>
           )}
           <div className="flex items-center gap-2 flex-wrap">

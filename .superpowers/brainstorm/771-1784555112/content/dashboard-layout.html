@@ -1,0 +1,133 @@
+<h2>仪表盘图表布局优化方案</h2>
+<p class="subtitle">当前 vs 建议方案，看看哪种感觉对</p>
+
+<div class="section">
+  <h3>📊 统计卡片：8 个 → 两行展示</h3>
+  <p>当前 8 个挤在一行（lg:grid-cols-8），数字显示不全。建议改成两行，每行 4 个（4×4）。</p>
+</div>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">🟢 建议方案 4×4</div>
+    <div class="mockup-body" style="padding:12px;font-size:11px;font-family:monospace;">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+        <div style="background:#f8f9fa;border-radius:8px;padding:12px;border:1px solid #eee;">
+          <div style="font-size:18px;font-weight:bold;color:#111">12,345</div>
+          <div style="font-size:10px;color:#888;">总调用次数</div>
+        </div>
+        <div style="background:#f8f9fa;border-radius:8px;padding:12px;border:1px solid #eee;">
+          <div style="font-size:18px;font-weight:bold;color:#16a34a">12,000</div>
+          <div style="font-size:10px;color:#888;">成功</div>
+        </div>
+        <div style="background:#f8f9fa;border-radius:8px;padding:12px;border:1px solid #eee;">
+          <div style="font-size:18px;font-weight:bold;color:#dc2626">345</div>
+          <div style="font-size:10px;color:#888;">失败</div>
+        </div>
+        <div style="background:#f8f9fa;border-radius:8px;padding:12px;border:1px solid #eee;">
+          <div style="font-size:18px;font-weight:bold;color:#6366f1">1.2M</div>
+          <div style="font-size:10px;color:#888;">总 Tokens</div>
+        </div>
+        <div style="background:#f8f9fa;border-radius:8px;padding:12px;border:1px solid #eee;">
+          <div style="font-size:18px;font-weight:bold;color:#a855f7">890K</div>
+          <div style="font-size:10px;color:#888;">输出 Tokens</div>
+        </div>
+        <div style="background:#f8f9fa;border-radius:8px;padding:12px;border:1px solid #eee;">
+          <div style="font-size:18px;font-weight:bold;color:#22c55e">80K</div>
+          <div style="font-size:10px;color:#888;">命中缓存</div>
+        </div>
+        <div style="background:#f8f9fa;border-radius:8px;padding:12px;border:1px solid #eee;">
+          <div style="font-size:18px;font-weight:bold;color:#f59e0b">230K</div>
+          <div style="font-size:10px;color:#888;">未命中缓存</div>
+        </div>
+        <div style="background:#f8f9fa;border-radius:8px;padding:12px;border:1px solid #eee;">
+          <div style="font-size:18px;font-weight:bold;color:#16a34a">¥1.2345</div>
+          <div style="font-size:10px;color:#888;">今日消费</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>📈 图表区域布局</h3>
+  <p>建议布局方案：</p>
+</div>
+
+<div class="mockup">
+  <div class="mockup-header">建议图表排列</div>
+  <div class="mockup-body" style="padding:12px;">
+    <!-- Row 1: 两张小图 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div style="background:#f8f9fa;border-radius:8px;padding:16px;border:1px solid #eee;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px;">模型调用分布</div>
+        <div style="font-size:10px;color:#888;margin-bottom:8px;">各模型调用占比</div>
+        <div style="height:80px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:11px;">🍩 环形图</div>
+      </div>
+      <div style="background:#f8f9fa;border-radius:8px;padding:16px;border:1px solid #eee;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px;">成功率</div>
+        <div style="font-size:10px;color:#888;margin-bottom:8px;">调用健康度概览</div>
+        <div style="height:80px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:11px;">🎯 环形进度</div>
+      </div>
+    </div>
+    <!-- Row 2: 每日调用趋势 -->
+    <div style="background:#f8f9fa;border-radius:8px;padding:16px;border:1px solid #eee;margin-bottom:12px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px;">每日调用趋势</div>
+      <div style="font-size:10px;color:#888;margin-bottom:8px;">按日期统计的调用次数</div>
+      <div style="height:80px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:11px;">📈 面积图 - 全宽</div>
+    </div>
+    <!-- Row 3: Token消耗 -->
+    <div style="background:#f8f9fa;border-radius:8px;padding:16px;border:1px solid #eee;margin-bottom:12px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px;">每日 Token 消耗 <span style="color:#f59e0b;font-size:10px;font-weight:400;">⚠ 30天展示需要优化</span></div>
+      <div style="font-size:10px;color:#888;margin-bottom:8px;">输出 / 缓存输入 / 未缓存输入</div>
+      <div style="height:80px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:11px;">📊 堆叠柱状图 - 全宽</div>
+    </div>
+    <!-- Row 4: 消费趋势 -->
+    <div style="background:#f8f9fa;border-radius:8px;padding:16px;border:1px solid #eee;margin-bottom:12px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px;">消费趋势</div>
+      <div style="font-size:10px;color:#888;margin-bottom:8px;">按日期统计的消费金额</div>
+      <div style="height:80px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:11px;">📈 面积图 - 全宽</div>
+    </div>
+    <!-- Row 5: Token构成 + 模型消费排行 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div style="background:#f8f9fa;border-radius:8px;padding:16px;border:1px solid #eee;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Token 构成</div>
+        <div style="font-size:10px;color:#888;margin-bottom:8px;">输出 / 缓存 / 未缓存</div>
+        <div style="height:80px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:11px;">📊 柱状图</div>
+      </div>
+      <div style="background:#f8f9fa;border-radius:8px;padding:16px;border:1px solid #eee;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px;">按模型消费排行</div>
+        <div style="font-size:10px;color:#888;margin-bottom:8px;">各模型消费金额</div>
+        <div style="height:80px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:11px;">📊 横向柱状图</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>❓ 关于 Token 消耗柱状图的 30 天展示</h3>
+  <p>当前 <code>maxBarSize={36}</code> 固定宽度，30天数据 30 根柱子会堆在一起。</p>
+  <p>有两种优化思路：</p>
+  <div class="options">
+    <div class="option" data-choice="adaptive" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>自适应柱宽</h3>
+        <p>移除 maxBarSize，让 Recharts 根据数据量自动分配柱宽，少数据时粗，30天时细。</p>
+      </div>
+    </div>
+    <div class="option" data-choice="areachange" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>切换为面积图</h3>
+        <p>30天数据用堆叠面积图替代柱状图，更流畅且一目了然。</p>
+      </div>
+    </div>
+    <div class="option" data-choice="none" onclick="toggleSelect(this)">
+      <div class="letter">C</div>
+      <div class="content">
+        <h3>不需要改</h3>
+        <p>自适应柱宽就够了，保持柱状图。</p>
+      </div>
+    </div>
+  </div>
+</div>
