@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { InlineIcon } from '@/lib/icon';
 import { toBeijing } from '@/lib/date';
-import { DateRangePicker } from '@/lib/date-range-picker';
+import { DatePicker } from '@/lib/date-picker';
 import { SelectFilter } from '@/lib/select-filter';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -131,14 +131,13 @@ export default function DashboardPage() {
               <InlineIcon name="calendar" className="w-3 h-3 inline mr-1" />自定义</button>
           </div>
           {showCustom && (
-            <DateRangePicker
-              startDate={startMonth}
-              endDate={endMonth}
-              onStartChange={setStartMonth}
-              onEndChange={setEndMonth}
-              onConfirm={() => { setShowCustom(false); fetchStats(); }}
-              onCancel={() => setShowCustom(false)}
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <DatePicker value={startMonth} onChange={(v) => { setStartMonth(v); fetchStats(); }} />
+              <span className="text-gray-400 text-sm">→</span>
+              <DatePicker value={endMonth} onChange={(v) => { setEndMonth(v); fetchStats(); }} />
+              <button onClick={() => { setActiveDate('today'); setShowCustom(false); setStartMonth(''); setEndMonth(''); }}
+                className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2">清除</button>
+            </div>
           )}
           <SelectFilter
             options={[
@@ -255,7 +254,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Row 4: Model Distribution + Success Rate — 2 cols */}
+      {/* Row 4: Model Distribution + Token Composition — 2 cols */}
       <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
         <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
           <h3 className="text-sm font-semibold text-gray-900 mb-1">模型调用分布</h3>
@@ -315,6 +314,10 @@ export default function DashboardPage() {
             <span className="font-mono text-gray-700">{data.stats.total_completion_tokens.toLocaleString()}</span>
           </div>
         </div>
+      </div>
+
+      {/* Row 5: Success Rate + Model Cost Ranking — 2 cols */}
+      <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
         <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
           <h3 className="text-sm font-semibold text-gray-900 mb-1">成功率</h3>
           <p className="text-xs text-gray-400 mb-4">调用健康度概览</p>
@@ -336,39 +339,6 @@ export default function DashboardPage() {
               <span className="flex items-center gap-1"><InlineIcon name="check" className="w-3 h-3 text-emerald-500" /> {data.stats.success_calls}</span>
               <span className="flex items-center gap-1"><InlineIcon name="x" className="w-3 h-3 text-red-400" /> {data.stats.fail_calls}</span>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Row 5: Token Composition + Model Cost Ranking — 2 cols */}
-      <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
-        <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-1">Token 构成</h3>
-          <p className="text-xs text-gray-400 mb-4">输出 / 缓存输入 / 未缓存输入</p>
-          {data.dailyStats.length > 0 ? (
-            <div className="h-44 sm:h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.dailyStats} maxBarSize={36}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={(v) => v.slice(5)} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={26} />
-                  <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }} />
-                  <Bar dataKey="uncached_tokens" name="未缓存输入" fill="#f59e0b" stackId="a" />
-                  <Bar dataKey="cached_tokens" name="缓存输入" fill="#22c55e" stackId="a" />
-                  <Bar dataKey="completion_tokens" name="输出" fill="#a78bfa" stackId="a" radius={[2, 2, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <div className="h-44 sm:h-48 flex items-center justify-center text-sm text-gray-400">暂无数据</div>
-          )}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 sm:mt-3 text-[10px] sm:text-xs text-gray-500">
-            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#f59e0b]" /> 未缓存</span>
-            <span className="font-mono text-gray-700">{data.stats.total_uncached_input_tokens.toLocaleString()}</span>
-            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#22c55e]" /> 缓存</span>
-            <span className="font-mono text-gray-700">{data.stats.total_cached_input_tokens.toLocaleString()}</span>
-            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[#a78bfa]" /> 输出</span>
-            <span className="font-mono text-gray-700">{data.stats.total_completion_tokens.toLocaleString()}</span>
           </div>
         </div>
         <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
