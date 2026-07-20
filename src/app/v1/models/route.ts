@@ -38,14 +38,14 @@ export async function GET(request: NextRequest) {
   }
 
   const channelModels = db.prepare(`
-    SELECT DISTINCT cm.model_id, c.name as owned_by, c.id as channel_id
+    SELECT DISTINCT cm.model_id
     FROM channel_models cm
     LEFT JOIN channels c ON c.id = cm.channel_id
     WHERE ${channelWhere}
   `).all(...channelModelsParams) as any[];
 
   const aliases = db.prepare(`
-    SELECT ma.alias_name, cm.model_id, c.name as owned_by
+    SELECT ma.alias_name, cm.model_id
     FROM model_aliases ma
     LEFT JOIN channel_models cm ON cm.id = ma.channel_model_id
     LEFT JOIN channels c ON c.id = cm.channel_id
@@ -62,14 +62,17 @@ export async function GET(request: NextRequest) {
 
   for (const a of aliases) {
     if (allowedModels.length > 0 && !allowedModels.includes(a.alias_name)) continue;
-    allModels.push({ id: a.alias_name, object: 'model', created: Math.floor(Date.now() / 1000), owned_by: a.owned_by || 'mortal' });
+    if (seen.has(a.alias_name)) continue;
+    allModels.push({ id: a.alias_name, object: 'model', created: Math.floor(Date.now() / 1000), owned_by: 'mortal' });
     seen.add(a.alias_name);
   }
 
   for (const m of channelModels) {
     if (aliasedModelIds.has(m.model_id)) continue;
     if (allowedModels.length > 0 && !allowedModels.includes(m.model_id)) continue;
-    allModels.push({ id: m.model_id, object: 'model', created: Math.floor(Date.now() / 1000), owned_by: m.owned_by || 'mortal' });
+    if (seen.has(m.model_id)) continue;
+    allModels.push({ id: m.model_id, object: 'model', created: Math.floor(Date.now() / 1000), owned_by: 'mortal' });
+    seen.add(m.model_id);
   }
 
   return NextResponse.json({
