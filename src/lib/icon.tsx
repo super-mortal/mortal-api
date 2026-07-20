@@ -85,7 +85,7 @@ export const icons = {
   ban: 'M3 3l18 18M9 3h6v2H9zM5 7v10l3 3h8l3-3V7M7 7h10v8l-2 2H9l-2-2V7z',
   'funnel-x': 'M3 3h18L13 12v9l-2-2v-7L3 3zm15 11l4 4m0-4l-4 4',
   'layout-dashboard': 'M3 3h7v9H3V3zm0 13h7v5H3v-5zm11-13h7v5h-7V3zm0 9h7v9h-7v-9z',
-  'refresh-cw': 'M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16m0 5v-5h5',
+  refreshCw: 'M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16m0 5v-5h5',
 };
 
 /**
