@@ -44,8 +44,8 @@ export default function ChannelsPage() {
 
   // Side panel state
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
-  const [chForm, setChForm] = useState({ name: '', base_url: '', api_key: '', priority: 0, notes: '' });
+  const [panelEditId, setPanelEditId] = useState<string | null>(null);
+  const [panelForm, setPanelForm] = useState({ name: '', base_url: '', api_key: '', priority: 0, notes: '' });
   const [expandedModelId, setExpandedModelId] = useState<string | null>(null);
   const [modelChannelId, setModelChannelId] = useState('');
   const [newModelId, setNewModelId] = useState('');
@@ -54,6 +54,11 @@ export default function ChannelsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string } | null>(null);
   const [modelErrModal, setModelErrModal] = useState(false);
   const [pricingMap, setPricingMap] = useState<Record<string, { prompt_price: number; completion_price: number; cached_prompt_price: number }>>({});
+
+  // Modal state (independent from side panel)
+  const [chModal, setChModal] = useState(false);
+  const [modalForm, setModalForm] = useState({ name: '', base_url: '', api_key: '', priority: 0, notes: '' });
+  const [modalEditId, setModalEditId] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
     const res = await apiFetch('/admin/channels?scope=models');
@@ -76,11 +81,19 @@ export default function ChannelsPage() {
   const aliasesForModel = (cmId: string) => aliases.filter(a => a.channel_model_id === cmId);
 
   const saveChannel = async () => {
-    const isEdit = !!editId;
-    const body: Record<string, any> = isEdit ? { id: editId, ...chForm } : chForm;
+    const isEdit = !!panelEditId;
+    const body: Record<string, any> = isEdit ? { id: panelEditId, ...panelForm } : panelForm;
     if (isEdit && !body.api_key) delete body.api_key;
     const res = await apiFetch('/admin/channels', { method: isEdit ? 'PATCH' : 'POST', body: JSON.stringify(body) });
     if (res.ok) { setSidePanelOpen(false); fetchAll(); }
+  };
+
+  const saveModalChannel = async () => {
+    const isEdit = !!modalEditId;
+    const body: Record<string, any> = isEdit ? { id: modalEditId, ...modalForm } : modalForm;
+    if (isEdit && !body.api_key) delete body.api_key;
+    const res = await apiFetch('/admin/channels', { method: isEdit ? 'PATCH' : 'POST', body: JSON.stringify(body) });
+    if (res.ok) { setChModal(false); fetchAll(); }
   };
 
   const handleDeleteChannel = async () => {
@@ -150,12 +163,12 @@ export default function ChannelsPage() {
 
   const openSidePanel = (ch?: Channel) => {
     if (ch) {
-      setChForm({ name: ch.name, base_url: ch.base_url, api_key: '', priority: ch.priority, notes: ch.notes });
-      setEditId(ch.id);
+      setPanelForm({ name: ch.name, base_url: ch.base_url, api_key: '', priority: ch.priority, notes: ch.notes });
+      setPanelEditId(ch.id);
       setModelChannelId(ch.id);
     } else {
-      setChForm({ name: '', base_url: '', api_key: '', priority: 0, notes: '' });
-      setEditId(null);
+      setPanelForm({ name: '', base_url: '', api_key: '', priority: 0, notes: '' });
+      setPanelEditId(null);
       setModelChannelId('');
     }
     setExpandedModelId(null);
@@ -175,7 +188,7 @@ export default function ChannelsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div><h1 className="text-lg sm:text-xl font-semibold text-gray-900">渠道管理</h1><p className="text-xs sm:text-sm text-gray-500 mt-0.5">管理上游 API 提供商</p></div>
-        <button onClick={() => openSidePanel()}
+        <button onClick={() => { setModalForm({ name: '', base_url: '', api_key: '', priority: 0, notes: '' }); setModalEditId(null); setChModal(true); }}
           className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 transition-colors">
           <InlineIcon name="plus" className="w-4 h-4" /> 新建渠道</button>
       </div>
@@ -235,15 +248,23 @@ export default function ChannelsPage() {
                     <HealthBar recent_checks={ch.recent_checks || []} uptime_pct={ch.uptime_pct ?? 100} avg_latency_ms={ch.avg_latency_ms ?? 0} />
                   </div>
                 <div className="flex items-center gap-0.5 shrink-0">
+                  {/* ✏️ edit button - NEW */}
                   <span className="group relative">
-                    <button onClick={() => openSidePanel(ch)}
-                      className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all border border-transparent hover:border-indigo-200"><InlineIcon name="settings" className="w-4 h-4" /></button>
-                    <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">配置</span>
+                    <button onClick={() => { setModalForm({ name: ch.name, base_url: ch.base_url, api_key: '', priority: ch.priority, notes: ch.notes }); setModalEditId(ch.id); setChModal(true); }}
+                      className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all border border-transparent hover:border-blue-200"><InlineIcon name="pencil" className="w-4 h-4" /></button>
+                    <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">编辑</span>
                   </span>
+                  {/* 连通检测 — unchanged */}
                   <span className="group relative">
                     <button onClick={() => openCheckModal(ch)}
                       className="p-2 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all border border-transparent hover:border-emerald-200"><InlineIcon name="activity" className="w-4 h-4" /></button>
                     <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">连通检测</span>
+                  </span>
+                  {/* ▼ side panel button — NEW (repurposed from config) */}
+                  <span className="group relative">
+                    <button onClick={() => { setPanelForm({ name: ch.name, base_url: ch.base_url, api_key: '', priority: ch.priority, notes: ch.notes }); setPanelEditId(ch.id); setModelChannelId(ch.id); setSidePanelOpen(true); }}
+                      className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all border border-transparent hover:border-indigo-200"><InlineIcon name="chevronDown" className="w-4 h-4" /></button>
+                    <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">展开</span>
                   </span>
                   <Switch
                     checked={!!ch.is_active}
@@ -267,12 +288,12 @@ export default function ChannelsPage() {
       {sidePanelOpen && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setSidePanelOpen(false)} />
-          <div className="absolute right-0 top-0 bottom-0 w-1/3 min-w-[380px] max-w-[520px] bg-white shadow-2xl flex flex-col">
+          <div className="absolute right-0 top-0 bottom-0 w-1/2 min-w-[480px] max-w-[640px] bg-white shadow-2xl flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-gray-100 shrink-0">
               <div>
-                <h3 className="text-base font-semibold text-gray-900">{editId ? '编辑渠道' : '新建渠道'}</h3>
-                <p className="text-xs text-gray-400 mt-0.5">{chForm.name || '未命名'}</p>
+                <h3 className="text-base font-semibold text-gray-900">{panelEditId ? '编辑渠道' : '新建渠道'}</h3>
+                <p className="text-xs text-gray-400 mt-0.5">{panelForm.name || '未命名'}</p>
               </div>
               <button onClick={() => setSidePanelOpen(false)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
                 <InlineIcon name="x" className="w-4 h-4" />
@@ -289,43 +310,43 @@ export default function ChannelsPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">名称</label>
-                    <input value={chForm.name} onChange={e => setChForm({...chForm, name: e.target.value})}
+                    <input value={panelForm.name} onChange={e => setPanelForm({...panelForm, name: e.target.value})}
                       className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" placeholder="DeepSeek 官方" />
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">优先级</label>
-                    <input type="number" value={chForm.priority} onChange={e => setChForm({...chForm, priority: Number(e.target.value)})}
+                    <input type="number" value={panelForm.priority} onChange={e => setPanelForm({...panelForm, priority: Number(e.target.value)})}
                       className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
                   </div>
                 </div>
                 <div className="mt-3">
                   <label className="block text-xs text-gray-500 mb-1">Base URL</label>
-                  <input value={chForm.base_url} onChange={e => setChForm({...chForm, base_url: e.target.value})}
+                  <input value={panelForm.base_url} onChange={e => setPanelForm({...panelForm, base_url: e.target.value})}
                     className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono" placeholder="https://api.deepseek.com" />
                 </div>
                 <div className="mt-3">
                   <label className="block text-xs text-gray-500 mb-1">API Key <span className="text-gray-400">（加密存储）</span></label>
-                  <input type="password" value={chForm.api_key} onChange={e => setChForm({...chForm, api_key: e.target.value})}
-                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono" placeholder={editId ? '留空保持不变' : 'sk-...'} />
+                  <input type="password" value={panelForm.api_key} onChange={e => setPanelForm({...panelForm, api_key: e.target.value})}
+                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono" placeholder={panelEditId ? '留空保持不变' : 'sk-...'} />
                 </div>
                 <div className="mt-3">
                   <label className="block text-xs text-gray-500 mb-1">备注</label>
-                  <input value={chForm.notes} onChange={e => setChForm({...chForm, notes: e.target.value})}
+                  <input value={panelForm.notes} onChange={e => setPanelForm({...panelForm, notes: e.target.value})}
                     className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" placeholder="如 DeepSeek" />
                 </div>
               </div>
 
               {/* 模型与别名 — only show for edit mode */}
-              {editId && (
+              {panelEditId && (
                 <div className="mb-6">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-xs font-semibold text-gray-500 flex items-center gap-1.5">
                       <InlineIcon name="bot" className="w-3.5 h-3.5" /> 模型与别名
                     </h4>
                     <div className="flex gap-2">
-                      <button onClick={() => doPullModels(editId)} disabled={pullingId === editId}
+                      <button onClick={() => doPullModels(panelEditId)} disabled={pullingId === panelEditId}
                         className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 disabled:opacity-50 inline-flex items-center gap-1.5 transition-colors">
-                        {pullingId === editId ? <InlineIcon name="loaderCircle" className="w-3.5 h-3.5 animate-spin" /> : <InlineIcon name="server" className="w-3.5 h-3.5" />} 拉取</button>
+                        {pullingId === panelEditId ? <InlineIcon name="loaderCircle" className="w-3.5 h-3.5 animate-spin" /> : <InlineIcon name="server" className="w-3.5 h-3.5" />} 拉取</button>
                       <button onClick={() => setShowAddModel(!showAddModel)}
                         className="text-xs px-3 py-1.5 rounded-lg border border-indigo-200 text-indigo-600 bg-indigo-50/50 hover:bg-indigo-100 inline-flex items-center gap-1.5 transition-colors"
                       ><InlineIcon name="plus" className="w-3.5 h-3.5" /> 添加</button>
@@ -348,13 +369,13 @@ export default function ChannelsPage() {
                   )}
 
                   {/* Model cards */}
-                  {modelsForChannel(editId).length === 0 ? (
+                  {modelsForChannel(panelEditId).length === 0 ? (
                     <div className="py-6 text-center">
                       <InlineIcon name="bot" className="w-8 h-8 mx-auto mb-2 text-gray-200" />
                       <p className="text-sm text-gray-400">暂无模型，点击"拉取"或"添加"</p>
                     </div>
                   ) : (
-                    modelsForChannel(editId).map(m => {
+                    modelsForChannel(panelEditId).map(m => {
                     const als = aliasesForModel(m.id);
                     const alias = als.length > 0 ? als[0] : null;
                     const isExpanded = expandedModelId === m.id;
@@ -492,17 +513,17 @@ export default function ChannelsPage() {
                   }))}
 
                   {/* Pulled models */}
-                  {pulledModels[editId]?.length > 0 && (
+                  {pulledModels[panelEditId]?.length > 0 && (
                     <details className="text-sm text-gray-500 mt-2" open>
-                      <summary className="cursor-pointer hover:text-gray-700 font-medium text-xs">上游可用模型（{pulledModels[editId].length} 个）</summary>
+                      <summary className="cursor-pointer hover:text-gray-700 font-medium text-xs">上游可用模型（{pulledModels[panelEditId].length} 个）</summary>
                       <div className="flex flex-wrap gap-2 mt-2">
-                        {pulledModels[editId].map(m => {
-                          const exists = modelsForChannel(editId).some(mod => mod.model_id === m);
+                        {pulledModels[panelEditId].map(m => {
+                          const exists = modelsForChannel(panelEditId).some(mod => mod.model_id === m);
                           return exists ? (
                             <span key={m} className="text-xs bg-gray-200 text-gray-500 px-2.5 py-1 rounded-lg cursor-default">{m} ✓</span>
                           ) : (
                             <button key={m} onClick={() => {
-                              apiFetch('/admin/channels', { method: 'POST', body: JSON.stringify({ _type: 'channel-model', channel_id: editId, model_id: m }) }).then(() => fetchAll());
+                              apiFetch('/admin/channels', { method: 'POST', body: JSON.stringify({ _type: 'channel-model', channel_id: panelEditId, model_id: m }) }).then(() => fetchAll());
                             }}
                               className="text-xs bg-white border border-gray-200 px-2.5 py-1 rounded-lg hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 transition-all">{m}</button>
                           );
@@ -519,7 +540,7 @@ export default function ChannelsPage() {
               <div className="flex gap-3">
                 <button onClick={saveChannel}
                   className="flex-1 px-4 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors">
-                  {editId ? '💾 保存' : '创建'}
+                  {panelEditId ? '💾 保存' : '创建'}
                 </button>
                 <button onClick={() => setSidePanelOpen(false)}
                   className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
@@ -530,6 +551,43 @@ export default function ChannelsPage() {
           </div>
         </div>
       )}
+
+      {/* Channel Create/Edit Modal */}
+      <Modal open={chModal} onClose={() => setChModal(false)} title={modalEditId ? '编辑渠道' : '新建渠道'}>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">名称</label>
+              <input value={modalForm.name} onChange={e => setModalForm({...modalForm, name: e.target.value})}
+                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" placeholder="DeepSeek 官方" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">优先级</label>
+              <input type="number" value={modalForm.priority} onChange={e => setModalForm({...modalForm, priority: Number(e.target.value)})}
+                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Base URL</label>
+            <input value={modalForm.base_url} onChange={e => setModalForm({...modalForm, base_url: e.target.value})}
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono" placeholder="https://api.deepseek.com" />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">API Key <span className="text-gray-400">（加密存储）</span></label>
+            <input type="password" value={modalForm.api_key} onChange={e => setModalForm({...modalForm, api_key: e.target.value})}
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono" placeholder={modalEditId ? '留空保持不变' : 'sk-...'} />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">备注</label>
+            <input value={modalForm.notes} onChange={e => setModalForm({...modalForm, notes: e.target.value})}
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" placeholder="如 DeepSeek" />
+          </div>
+          <button onClick={saveModalChannel}
+            className="w-full py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors">
+            {modalEditId ? '保存修改' : '创建渠道'}
+          </button>
+        </div>
+      </Modal>
 
       <ConfirmDialog
         open={!!deleteConfirm}
