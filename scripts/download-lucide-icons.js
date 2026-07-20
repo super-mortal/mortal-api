@@ -21,7 +21,7 @@ const ICONS_DIR = path.join(__dirname, '..', 'public', 'icons');
 
 const neededIcons = [
   'layout-dashboard', 'key-round', 'plug', 'list', 'log-out', 'check', 'x',
-  'trash-2', 'plus', 'pencil', 'copy', 'search', 'calendar', 'filter',
+  'trash-2', 'plus', 'pencil', 'copy', 'refresh-cw', 'search', 'calendar', 'filter',
   'chevron-down', 'chevron-left', 'chevron-right', 'chevron-up',
   'check-check', 'sparkles', 'zap', 'arrow-right', 'arrow-left',
   'loader-circle', 'bot', 'server', 'database', 'shield', 'clock',
