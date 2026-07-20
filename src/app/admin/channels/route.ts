@@ -11,6 +11,7 @@ import {
   pullModelsFromEndpoint, getChannelHealthSummary,
 } from '@/lib/channels';
 import { healthCheckChannel, getChatUrl } from '@/lib/proxy';
+import { listAllPricing } from '@/lib/model-pricing';
 
 export async function GET(request: NextRequest) {
   const err = requireAdmin(request);
@@ -31,7 +32,10 @@ export async function GET(request: NextRequest) {
       uptime_pct: healthSummary[c.id]?.uptime_pct ?? 100,
       avg_latency_ms: healthSummary[c.id]?.avg_latency_ms ?? 0,
     }));
-    return NextResponse.json({ channels: channelsWithHealth, channelModels, aliases });
+    const pricingMap = Object.fromEntries(
+      listAllPricing().map(p => [p.model_id, p])
+    );
+    return NextResponse.json({ channels: channelsWithHealth, channelModels, aliases, pricing: pricingMap });
   }
 
   const channels = allChannels.map(c => ({ ...c, api_key: c.api_key ? '[ENCRYPTED]' : '' }));

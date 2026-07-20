@@ -51,6 +51,14 @@ export interface ModelAlias {
   model_id?: string;      // joined
 }
 
+export interface ModelPricing {
+  model_id: string;
+  prompt_price: number;
+  completion_price: number;
+  cached_prompt_price: number;
+  updated_at: string;
+}
+
 export interface CallLog {
   id: string;
   relay_key_id: string;
