@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
               prompt_tokens: 0, completion_tokens: totalCompletionTokens,
               cached_input_tokens: cachedInputTokens,
               cost: 0,
-              status: 'fail', error_message: err instanceof Error ? err.message : 'Stream error',
+              status: 'fail', error_message: err instanceof Error ? err.message : typeof err === 'string' ? err : '流式连接中断',
               ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
             });
             recordAndCheckSpending(relayKey.id, 0);
@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
         model: modelName, channel_id: autoChannel.id, channel_name: autoChannel.name,
         prompt_tokens: 0, completion_tokens: 0,
         cost: 0,
-        status: 'fail', error_message: err.body || (err instanceof Error ? err.message : 'Upstream error'),
+        status: 'fail', error_message: err.body || (err instanceof Error ? err.message : typeof err === 'string' ? err : '上游连接异常'),
         ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
       });
       recordAndCheckSpending(relayKey.id, 0);
@@ -337,7 +337,7 @@ export async function POST(request: NextRequest) {
               prompt_tokens: 0, completion_tokens: totalCompletionTokens,
               cached_input_tokens: cachedInputTokens,
               cost: 0,
-              status: 'fail', error_message: err instanceof Error ? err.message : 'Stream error',
+              status: 'fail', error_message: err instanceof Error ? err.message : typeof err === 'string' ? err : '流式连接中断',
               ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
             });
             recordAndCheckSpending(relayKey.id, 0);
@@ -390,7 +390,7 @@ export async function POST(request: NextRequest) {
     model: modelName, channel_id: channel?.id || '', channel_name: channel?.name || 'unknown',
     prompt_tokens: 0, completion_tokens: 0,
     cost: 0,
-    status: 'fail', error_message: lastError?.body || (lastError instanceof Error ? lastError.message : 'Upstream error'),
+    status: 'fail', error_message: lastError?.body || (lastError instanceof Error ? lastError.message : typeof lastError === 'string' ? lastError : '上游连接异常'),
     ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
   });
   recordAndCheckSpending(relayKey.id, 0);
