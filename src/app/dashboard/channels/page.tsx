@@ -59,6 +59,9 @@ export default function ChannelsPage() {
   const [aliasName, setAliasName] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string } | null>(null);
   const [modelErrModal, setModelErrModal] = useState(false);
+  const [pricingMap, setPricingMap] = useState<Record<string, { prompt_price: number; completion_price: number; cached_prompt_price: number }>>({});
+  const [priceModal, setPriceModal] = useState<{ modelId: string } | null>(null);
+  const [priceForm, setPriceForm] = useState({ prompt_price: '', completion_price: '', cached_prompt_price: '' });
 
   const fetchAll = useCallback(async () => {
     const res = await apiFetch('/admin/channels?scope=models');
@@ -67,6 +70,15 @@ export default function ChannelsPage() {
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => {
+    apiFetch('/admin/pricing').then(r => r.ok && r.json()).then(d => {
+      if (d?.pricing) {
+        const map: Record<string, any> = {};
+        d.pricing.forEach((p: any) => { map[p.model_id] = p; });
+        setPricingMap(map);
+      }
+    });
+  }, [fetchAll]);
 
   const modelsForChannel = (chId: string) => channelModels.filter(m => m.channel_id === chId);
   const aliasesForModel = (cmId: string) => aliases.filter(a => a.channel_model_id === cmId);
@@ -158,6 +170,23 @@ export default function ChannelsPage() {
   const deleteAlias = async (id: string) => {
     await apiFetch(`/admin/channels?id=${id}&type=alias`, { method: 'DELETE' });
     fetchAll();
+  };
+  const savePrice = async () => {
+    if (!priceModal) return;
+    await apiFetch('/admin/pricing', {
+      method: 'POST',
+      body: JSON.stringify({ model_id: priceModal.modelId, prompt_price: Number(priceForm.prompt_price), completion_price: Number(priceForm.completion_price), cached_prompt_price: Number(priceForm.cached_prompt_price) }),
+    });
+    setPriceModal(null);
+    const r = await apiFetch('/admin/pricing');
+    if (r.ok) {
+      const d = await r.json();
+      if (d?.pricing) {
+        const map: Record<string, any> = {};
+        d.pricing.forEach((p: any) => { map[p.model_id] = p; });
+        setPricingMap(map);
+      }
+    }
   };
 
   if (loading) return <div className="flex items-center justify-center h-64"><Spinner /></div>;
@@ -346,16 +375,40 @@ export default function ChannelsPage() {
                                   <code className="text-sm font-semibold text-amber-700 font-mono truncate">{alias.alias_name}</code>
                                   <button onClick={() => deleteAlias(alias.id)} className="p-0.5 rounded text-red-200 hover:text-red-500 hover:bg-red-50 transition-all shrink-0"><InlineIcon name="x" className="w-3 h-3" /></button>
                                 </div>
-                                <div className="text-[10px] text-gray-400 mt-0.5 font-mono">
-                                  <span className="text-gray-300">model: </span>{m.model_id}
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <div className="text-[10px] text-gray-400 font-mono">
+                                    <span className="text-gray-300">model: </span>{m.model_id}
+                                  </div>
+                                  <button onClick={() => {
+                                    const p = pricingMap[m.model_id];
+                                    setPriceForm({
+                                      prompt_price: String(p?.prompt_price ?? ''),
+                                      completion_price: String(p?.completion_price ?? ''),
+                                      cached_prompt_price: String(p?.cached_prompt_price ?? ''),
+                                    });
+                                    setPriceModal({ modelId: m.model_id });
+                                  }} className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-50 text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 border border-gray-200">
+                                    价格</button>
                                 </div>
                               </>
                             ) : (
                               <>
                                 <code className="text-sm font-semibold text-gray-800 font-mono truncate block">{m.model_id}</code>
-                                <button onClick={() => { setAliasChannelModelId(m.id); setAliasName(''); setAliasModal(true); }}
-                                  className="mt-1 inline-flex items-center gap-1 text-[10px] text-gray-400 border border-dashed border-gray-300 rounded px-2 py-0.5 hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50 transition-all">
-                                  <InlineIcon name="plus" className="w-3 h-3" /> 别名</button>
+                                <div className="flex items-center gap-1 mt-1">
+                                  <button onClick={() => { setAliasChannelModelId(m.id); setAliasName(''); setAliasModal(true); }}
+                                    className="inline-flex items-center gap-1 text-[10px] text-gray-400 border border-dashed border-gray-300 rounded px-2 py-0.5 hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50 transition-all">
+                                    <InlineIcon name="plus" className="w-3 h-3" /> 别名</button>
+                                  <button onClick={() => {
+                                    const p = pricingMap[m.model_id];
+                                    setPriceForm({
+                                      prompt_price: String(p?.prompt_price ?? ''),
+                                      completion_price: String(p?.completion_price ?? ''),
+                                      cached_prompt_price: String(p?.cached_prompt_price ?? ''),
+                                    });
+                                    setPriceModal({ modelId: m.model_id });
+                                  }} className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-50 text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 border border-gray-200">
+                                    价格</button>
+                                </div>
                               </>
                             )}
                           </div>
@@ -398,6 +451,33 @@ export default function ChannelsPage() {
       })}
       {channels.length === 0 && (
         <div className="py-16"><EmptyState icon="plug" text="暂无渠道" iconClassName="w-10 h-10 mx-auto mb-3 text-gray-200" /></div>
+      )}
+
+      {/* Pricing Modal */}
+      {priceModal && (
+        <Modal open={true} onClose={() => setPriceModal(null)} title={`设置价格 — ${priceModal.modelId}`}>
+          <div className="space-y-3 p-2">
+            <div>
+              <label className="text-xs text-gray-500">标准输入 (元/1M tokens)</label>
+              <input type="number" step="0.001" className="w-full border rounded-lg p-2 text-sm" value={priceForm.prompt_price}
+                onChange={e => setPriceForm(p => ({...p, prompt_price: e.target.value}))} />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">输出 (元/1M tokens)</label>
+              <input type="number" step="0.001" className="w-full border rounded-lg p-2 text-sm" value={priceForm.completion_price}
+                onChange={e => setPriceForm(p => ({...p, completion_price: e.target.value}))} />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">缓存命中输入 (元/1M tokens)</label>
+              <input type="number" step="0.001" className="w-full border rounded-lg p-2 text-sm" value={priceForm.cached_prompt_price}
+                onChange={e => setPriceForm(p => ({...p, cached_prompt_price: e.target.value}))} />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button onClick={() => setPriceModal(null)} className="flex-1 py-2 rounded-lg border text-sm">取消</button>
+              <button onClick={savePrice} className="flex-1 py-2 rounded-lg bg-indigo-500 text-white text-sm">保存</button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       <ConfirmDialog
