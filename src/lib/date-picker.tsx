@@ -1,11 +1,42 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { DayPicker, getDefaultClassNames } from 'react-day-picker';
-import { format, parse, isValid } from 'date-fns';
+import { DayPicker, getDefaultClassNames, useDayPicker } from 'react-day-picker';
+import { format, parse, isValid, addMonths, subMonths, addYears, subYears } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import { createPortal } from 'react-dom';
 import { InlineIcon } from './icon';
+
+// ── Custom Nav component ────────────────────────────────────
+
+function CustomNav() {
+  const { goToMonth, months } = useDayPicker();
+  const currentMonth = months[0]?.date ?? new Date();
+
+  return (
+    <div className="flex items-center justify-between mb-2 px-1">
+      <div className="flex items-center gap-0.5">
+        <button type="button" onClick={() => goToMonth(subYears(currentMonth, 1))}
+          className="p-1 rounded-md hover:bg-gray-100 text-gray-500 transition-colors" title="上一年">
+          <InlineIcon name="chevronsLeft" className="w-3.5 h-3.5" />
+        </button>
+        <button type="button" onClick={() => goToMonth(subMonths(currentMonth, 1))}
+          className="p-1 rounded-md hover:bg-gray-100 text-gray-500 transition-colors" title="上一月">
+          <InlineIcon name="chevronLeft" className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      <div className="flex items-center gap-0.5">
+        <button type="button" onClick={() => goToMonth(addMonths(currentMonth, 1))}
+          className="p-1 rounded-md hover:bg-gray-100 text-gray-500 transition-colors" title="下一月">
+          <InlineIcon name="chevronRight" className="w-3.5 h-3.5" />
+        </button>
+        <button type="button" onClick={() => goToMonth(addYears(currentMonth, 1))}
+          className="p-1 rounded-md hover:bg-gray-100 text-gray-500 transition-colors" title="下一年">
+          <InlineIcon name="chevronsRight" className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // ── DatePicker (date only) ─────────────────────────────────────
 
@@ -54,14 +85,8 @@ export function DatePicker({
         <span className={value ? 'font-medium' : 'text-gray-400'}>{displayText}</span>
       </button>
 
-      {open && createPortal(
-        <div
-          className="fixed z-[9999]"
-          style={{
-            top: (btnRef.current?.getBoundingClientRect().bottom ?? 0) + 4,
-            left: btnRef.current?.getBoundingClientRect().left ?? 0,
-          }}
-        >
+      {open && (
+        <div className="absolute z-50 mt-1" style={{ left: 0 }}>
           <div className="bg-white border border-gray-200 rounded-xl shadow-lg p-4">
             <DayPicker
               mode="single"
@@ -73,28 +98,28 @@ export function DatePicker({
                 }
               }}
               locale={zhCN}
+              components={{
+                Nav: CustomNav,
+              }}
               classNames={{
                 root: `${defaultCls.root} w-fit`,
                 chevron: `${defaultCls.chevron} fill-indigo-500`,
                 month_caption: 'text-sm font-semibold text-gray-900 text-center mb-2',
-                weekday: 'text-xs text-gray-400 text-center w-9 py-1',
+                weekday: 'hidden',
                 week: 'flex',
                 day: 'p-0',
                 day_button: 'w-9 h-9 text-sm rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition-colors',
                 today: 'font-semibold text-indigo-600',
                 selected: 'bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-semibold',
                 outside: 'text-gray-300',
-                nav: 'flex items-center justify-between mb-1',
-                button_previous: 'p-1 rounded-md hover:bg-gray-100 text-gray-600',
-                button_next: 'p-1 rounded-md hover:bg-gray-100 text-gray-600',
+                nav: 'hidden', // Hide default nav, using CustomNav
               }}
               formatters={{
                 formatCaption: (date: Date) => `${date.getFullYear()}年${date.getMonth() + 1}月`,
               }}
             />
           </div>
-        </div>,
-        document.body
+        </div>
       )}
     </div>
   );

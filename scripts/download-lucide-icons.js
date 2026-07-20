@@ -23,6 +23,7 @@ const neededIcons = [
   'layout-dashboard', 'key-round', 'plug', 'list', 'log-out', 'check', 'x',
   'trash-2', 'plus', 'pencil', 'copy', 'refresh-cw', 'search', 'calendar', 'filter',
   'chevron-down', 'chevron-left', 'chevron-right', 'chevron-up',
+  'chevrons-left', 'chevrons-right',
   'check-check', 'sparkles', 'zap', 'arrow-right', 'arrow-left',
   'loader-circle', 'bot', 'server', 'database', 'shield', 'clock',
   'trending-up', 'chart-line', 'chart-pie', 'chart-area', 'gauge',
