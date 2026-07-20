@@ -361,13 +361,14 @@ export default function LogsPage() {
                 <th className="text-left px-3 sm:px-4 py-3 font-medium text-gray-500 text-[10px] sm:text-xs">模型</th>
                 <th className="text-right px-3 sm:px-4 py-3 font-medium text-gray-500 text-[10px] sm:text-xs hidden sm:table-cell">渠道</th>
                 <th className="text-right px-3 sm:px-4 py-3 font-medium text-gray-500 text-[10px] sm:text-xs">Token</th>
+                <th className="px-2.5 sm:px-3 py-2.5 text-[10px] font-medium text-gray-400 uppercase tracking-wider text-right hidden md:table-cell">费用(元)</th>
                 <th className="text-center px-3 sm:px-4 py-3 font-medium text-gray-500 text-[10px] sm:text-xs hidden sm:table-cell">状态</th>
                 <th className="text-center px-3 sm:px-4 py-3 font-medium text-gray-500 text-[10px] sm:text-xs w-10">操作</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <TableEmpty colSpan={8} loading />
+                <TableEmpty colSpan={9} loading />
               ) : logs.length === 0 ? (
                 <TableEmpty colSpan={8} icon="list" text="暂无调用记录" />
               ) : logs.map((log) => (
@@ -391,6 +392,11 @@ export default function LogsPage() {
                     <td className="px-3 sm:px-4 py-3"><code className="text-[10px] sm:text-xs text-indigo-600 bg-indigo-50/80 px-1.5 py-0.5 rounded">{log.model}</code></td>
                     <td className="px-3 sm:px-4 py-3 text-right text-[10px] sm:text-xs text-gray-500 hidden sm:table-cell truncate max-w-[80px]">{log.channel_name || '-'}</td>
                     <td className="px-3 sm:px-4 py-3 text-right text-[10px] sm:text-xs text-gray-800 font-medium">{log.total_tokens.toLocaleString()}</td>
+                    <td className="px-2.5 sm:px-3 py-2.5 hidden md:table-cell">
+                      <span className="text-xs text-gray-600 tabular-nums">
+                        {log.cost ? `¥${log.cost.toFixed(6)}` : '-'}
+                      </span>
+                    </td>
                     <td className="px-3 sm:px-4 py-3 text-center hidden sm:table-cell">
                       {log.status === 'success' ? (
                         <StatusBadge variant="success" icon="check" label="成功" />
