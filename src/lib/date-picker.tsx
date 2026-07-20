@@ -17,21 +17,21 @@ function CustomNav() {
       <div className="flex items-center gap-0.5">
         <button type="button" onClick={() => goToMonth(subYears(currentMonth, 1))}
           className="p-1 rounded-md hover:bg-gray-100 text-gray-500 transition-colors" title="上一年">
-          <InlineIcon name="chevronsLeft" className="w-3.5 h-3.5" />
+          <InlineIcon name="chevrons-left" className="w-3.5 h-3.5" />
         </button>
         <button type="button" onClick={() => goToMonth(subMonths(currentMonth, 1))}
           className="p-1 rounded-md hover:bg-gray-100 text-gray-500 transition-colors" title="上一月">
-          <InlineIcon name="chevronLeft" className="w-3.5 h-3.5" />
+          <InlineIcon name="chevron-left" className="w-3.5 h-3.5" />
         </button>
       </div>
       <div className="flex items-center gap-0.5">
         <button type="button" onClick={() => goToMonth(addMonths(currentMonth, 1))}
           className="p-1 rounded-md hover:bg-gray-100 text-gray-500 transition-colors" title="下一月">
-          <InlineIcon name="chevronRight" className="w-3.5 h-3.5" />
+          <InlineIcon name="chevron-right" className="w-3.5 h-3.5" />
         </button>
         <button type="button" onClick={() => goToMonth(addYears(currentMonth, 1))}
           className="p-1 rounded-md hover:bg-gray-100 text-gray-500 transition-colors" title="下一年">
-          <InlineIcon name="chevronsRight" className="w-3.5 h-3.5" />
+          <InlineIcon name="chevrons-right" className="w-3.5 h-3.5" />
         </button>
       </div>
     </div>
