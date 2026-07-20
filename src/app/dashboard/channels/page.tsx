@@ -8,11 +8,16 @@ import { apiFetch } from '@/lib/fetch-with-auth';
 import { Switch } from '@/lib/switch';
 import { ConfirmDialog } from '@/lib/confirm-dialog';
 import { Spinner, EmptyState } from '@/lib/ui';
+import { HealthBadge, HealthBar } from '@/lib/health-badge';
 
 interface Channel {
   id: string; name: string; base_url: string; api_key: string;
   priority: number; notes: string; is_active: number;
   health_status: string; last_health_check: string | null;
+  cooldown_until?: string | null;
+  recent_checks?: Array<{ checked_at: string; ok: number; kind: string | null; latency_ms: number; error?: string | null }>;
+  uptime_pct?: number;
+  avg_latency_ms?: number;
 }
 interface ChannelModel {
   id: string; channel_id: string; model_id: string; is_active: number;
@@ -21,16 +26,6 @@ interface ModelAlias {
   id: string; alias_name: string; channel_model_id: string;
   is_active: number; model_id?: string; channel_name?: string;
 }
-
-const healthBadge = (s: string) => {
-  const m: Record<string, { s: string; l: string }> = {
-    healthy: { s: 'bg-emerald-50 text-emerald-600', l: '正常' },
-    unhealthy: { s: 'bg-red-50 text-red-500', l: '异常' },
-    unknown: { s: 'bg-gray-100 text-gray-500', l: '未知' },
-  };
-  const r = m[s] || m.unknown;
-  return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${r.s}`}>{r.l}</span>;
-};
 
 export default function ChannelsPage() {
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -280,8 +275,7 @@ export default function ChannelsPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
                     <h3 className="font-semibold text-gray-900 text-sm sm:text-base">{ch.name}</h3>
-                    {healthBadge(ch.health_status)}
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${ch.is_active ? 'bg-indigo-50 text-indigo-600' : 'bg-gray-100 text-gray-400'}`}>{ch.is_active ? '活跃' : '停用'}</span>
+                    <HealthBadge health_status={ch.health_status} is_active={ch.is_active} cooldown_until={ch.cooldown_until} />
                   </div>
                   <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-gray-500 mt-0.5">
                     <code className="text-gray-400 font-mono text-[10px]">{ch.base_url}</code>
@@ -290,6 +284,11 @@ export default function ChannelsPage() {
                     <span>· 模型: {models.length} 个</span>
                   </div>
                 </div>
+                {ch.recent_checks && ch.recent_checks.length > 0 && (
+                  <div className="mt-2 md:mt-0 md:mx-3 md:flex-1 hidden md:block">
+                    <HealthBar recent_checks={ch.recent_checks} uptime_pct={ch.uptime_pct ?? 100} avg_latency_ms={ch.avg_latency_ms ?? 0} />
+                  </div>
+                )}
                 <div className="flex items-center gap-0.5 shrink-0">
                   <span className="group relative">
                     <button onClick={() => { setChForm({ name: ch.name, base_url: ch.base_url, api_key: '', priority: ch.priority, notes: ch.notes }); setEditId(ch.id); setChModal(true); }}

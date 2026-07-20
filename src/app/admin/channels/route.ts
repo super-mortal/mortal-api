@@ -8,7 +8,7 @@ import {
   getChannelById, updateChannelHealth, resolveChannelApiKey,
   listChannelModels, createChannelModel, deleteChannelModel,
   listModelAliases, createModelAlias, deleteModelAlias,
-  pullModelsFromEndpoint,
+  pullModelsFromEndpoint, getChannelHealthSummary,
 } from '@/lib/channels';
 import { healthCheckChannel, getChatUrl } from '@/lib/proxy';
 
@@ -18,15 +18,29 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const scope = searchParams.get('scope');
 
+  const healthSummary = getChannelHealthSummary(listChannels().map(c => c.id));
+
   if (scope === 'models') {
     const channels = listChannels().map(c => ({ ...c, api_key: '' }));
     const channelModels = listChannelModels();
     const aliases = listModelAliases();
-    return NextResponse.json({ channels, channelModels, aliases });
+    const channelsWithHealth = channels.map(c => ({
+      ...c,
+      recent_checks: healthSummary[c.id]?.recent_checks || [],
+      uptime_pct: healthSummary[c.id]?.uptime_pct ?? 100,
+      avg_latency_ms: healthSummary[c.id]?.avg_latency_ms ?? 0,
+    }));
+    return NextResponse.json({ channels: channelsWithHealth, channelModels, aliases });
   }
 
   const channels = listChannels().map(c => ({ ...c, api_key: c.api_key ? '[ENCRYPTED]' : '' }));
-  return NextResponse.json({ channels });
+  const channelsWithHealth = channels.map(c => ({
+    ...c,
+    recent_checks: healthSummary[c.id]?.recent_checks || [],
+    uptime_pct: healthSummary[c.id]?.uptime_pct ?? 100,
+    avg_latency_ms: healthSummary[c.id]?.avg_latency_ms ?? 0,
+  }));
+  return NextResponse.json({ channels: channelsWithHealth });
 }
 
 export async function POST(request: NextRequest) {
