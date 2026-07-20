@@ -161,21 +161,6 @@ export default function ChannelsPage() {
     fetchAll();
   };
 
-  const openSidePanel = (ch?: Channel) => {
-    if (ch) {
-      setPanelForm({ name: ch.name, base_url: ch.base_url, api_key: '', priority: ch.priority, notes: ch.notes });
-      setPanelEditId(ch.id);
-      setModelChannelId(ch.id);
-    } else {
-      setPanelForm({ name: '', base_url: '', api_key: '', priority: 0, notes: '' });
-      setPanelEditId(null);
-      setModelChannelId('');
-    }
-    setExpandedModelId(null);
-    setNewModelId('');
-    setSidePanelOpen(true);
-  };
-
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setSidePanelOpen(false); };
     if (sidePanelOpen) window.addEventListener('keydown', handleEsc);
@@ -553,7 +538,7 @@ export default function ChannelsPage() {
       )}
 
       {/* Channel Create/Edit Modal */}
-      <Modal open={chModal} onClose={() => setChModal(false)} title={modalEditId ? '编辑渠道' : '新建渠道'}>
+      <Modal open={chModal} onClose={() => { setChModal(false); setModalForm({ name: '', base_url: '', api_key: '', priority: 0, notes: '' }); setModalEditId(null); }} title={modalEditId ? '编辑渠道' : '新建渠道'}>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>

@@ -132,9 +132,9 @@ export default function DashboardPage() {
           </div>
           {showCustom && (
             <div className="flex flex-wrap items-center gap-2">
-              <DatePicker value={startMonth} onChange={(v) => { setStartMonth(v); fetchStats(); }} />
+              <DatePicker value={startMonth} onChange={(v) => { setStartMonth(v); }} />
               <span className="text-gray-400 text-sm">→</span>
-              <DatePicker value={endMonth} onChange={(v) => { setEndMonth(v); fetchStats(); }} />
+              <DatePicker value={endMonth} onChange={(v) => { setEndMonth(v); }} />
               <button onClick={() => { setActiveDate('today'); setShowCustom(false); setStartMonth(''); setEndMonth(''); }}
                 className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2">清除</button>
             </div>
