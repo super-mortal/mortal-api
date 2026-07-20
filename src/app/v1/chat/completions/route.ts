@@ -13,6 +13,7 @@ import {
 } from '@/lib/channels';
 import { callUpstream, callUpstreamStreaming, extractCachedInputTokens } from '@/lib/proxy';
 import { createCallLog } from '@/lib/logs';
+import { calculateCost } from '@/lib/model-pricing';
 import { ChatCompletionRequest, ChatCompletionChunk } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -102,12 +103,15 @@ export async function POST(request: NextRequest) {
             while (true) {
               const { done, value } = await reader.read();
               if (done) {
+                const prompt_tokens = body.messages ? Math.ceil(JSON.stringify(body.messages).length / 2) : 0;
+                const cost = calculateCost(modelName, prompt_tokens, totalCompletionTokens, cachedInputTokens);
                 createCallLog({
                   relay_key_id: relayKey.id, relay_key_name: relayKey.name,
                   model: modelName, channel_id: autoChannel.id, channel_name: autoChannel.name,
-                  prompt_tokens: body.messages ? Math.ceil(JSON.stringify(body.messages).length / 2) : 0,
+                  prompt_tokens,
                   completion_tokens: totalCompletionTokens,
                   cached_input_tokens: cachedInputTokens,
+                  cost,
                   status: 'success',
                   ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
                 });
@@ -139,6 +143,7 @@ export async function POST(request: NextRequest) {
               model: modelName, channel_id: autoChannel.id, channel_name: autoChannel.name,
               prompt_tokens: 0, completion_tokens: totalCompletionTokens,
               cached_input_tokens: cachedInputTokens,
+              cost: 0,
               status: 'fail', error_message: err instanceof Error ? err.message : 'Stream error',
               ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
             });
@@ -152,12 +157,14 @@ export async function POST(request: NextRequest) {
       } else {
         const result = await callUpstream(autoChannel, upstreamBody, autoChannelApiKey);
         const { prompt_tokens, completion_tokens, total_tokens } = result.response.usage;
+        const cost = calculateCost(modelName, prompt_tokens, completion_tokens, result.cachedInputTokens || 0);
 
         createCallLog({
           relay_key_id: relayKey.id, relay_key_name: relayKey.name,
           model: modelName, channel_id: autoChannel.id, channel_name: autoChannel.name,
           prompt_tokens, completion_tokens,
           cached_input_tokens: result.cachedInputTokens,
+          cost,
           status: 'success',
           ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
         });
@@ -178,6 +185,7 @@ export async function POST(request: NextRequest) {
         relay_key_id: relayKey.id, relay_key_name: relayKey.name,
         model: modelName, channel_id: autoChannel.id, channel_name: autoChannel.name,
         prompt_tokens: 0, completion_tokens: 0,
+        cost: 0,
         status: 'fail', error_message: err.body || (err instanceof Error ? err.message : 'Upstream error'),
         ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
       });
@@ -269,12 +277,15 @@ export async function POST(request: NextRequest) {
             while (true) {
               const { done, value } = await reader.read();
               if (done) {
+                const prompt_tokens = body.messages ? Math.ceil(JSON.stringify(body.messages).length / 2) : 0;
+                const cost = calculateCost(modelName, prompt_tokens, totalCompletionTokens, cachedInputTokens);
                 createCallLog({
                   relay_key_id: relayKey.id, relay_key_name: relayKey.name,
                   model: modelName, channel_id: channel.id, channel_name: channel.name,
-                  prompt_tokens: body.messages ? Math.ceil(JSON.stringify(body.messages).length / 2) : 0,
+                  prompt_tokens,
                   completion_tokens: totalCompletionTokens,
                   cached_input_tokens: cachedInputTokens,
+                  cost,
                   status: 'success',
                   ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
                 });
@@ -306,6 +317,7 @@ export async function POST(request: NextRequest) {
               model: modelName, channel_id: channel.id, channel_name: channel.name,
               prompt_tokens: 0, completion_tokens: totalCompletionTokens,
               cached_input_tokens: cachedInputTokens,
+              cost: 0,
               status: 'fail', error_message: err instanceof Error ? err.message : 'Stream error',
               ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
             });
@@ -319,12 +331,14 @@ export async function POST(request: NextRequest) {
       } else {
         const result = await callUpstream(channel, upstreamBody, channelApiKey);
         const { prompt_tokens, completion_tokens, total_tokens } = result.response.usage;
+        const cost = calculateCost(modelName, prompt_tokens, completion_tokens, result.cachedInputTokens || 0);
 
         createCallLog({
           relay_key_id: relayKey.id, relay_key_name: relayKey.name,
           model: modelName, channel_id: channel.id, channel_name: channel.name,
           prompt_tokens, completion_tokens,
           cached_input_tokens: result.cachedInputTokens,
+          cost,
           status: 'success',
           ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
         });
@@ -355,6 +369,7 @@ export async function POST(request: NextRequest) {
     relay_key_id: relayKey.id, relay_key_name: relayKey.name,
     model: modelName, channel_id: channel?.id || '', channel_name: channel?.name || 'unknown',
     prompt_tokens: 0, completion_tokens: 0,
+    cost: 0,
     status: 'fail', error_message: lastError?.body || (lastError instanceof Error ? lastError.message : 'Upstream error'),
     ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
   });
