@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { InlineIcon } from './icon';
 
 interface ComboBoxOption {
@@ -39,6 +40,36 @@ export function ComboBox({
   const [highlightIdx, setHighlightIdx] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropPos, setDropPos] = useState<{ top: number; left: number; width: number; flip: boolean } | null>(null);
+
+  // Position the portal dropdown relative to the input, flipping above when
+  // there isn't room below. Uses fixed coordinates so it escapes any ancestor
+  // overflow-hidden (e.g. Modal panels).
+  useLayoutEffect(() => {
+    if (!open) return;
+    const update = () => {
+      const r = inputRef.current?.getBoundingClientRect();
+      if (!r) return;
+      const dropH = dropdownRef.current?.offsetHeight ?? 200;
+      const gap = 4;
+      const spaceBelow = window.innerHeight - r.bottom;
+      const flip = spaceBelow < dropH + gap && r.top > spaceBelow;
+      setDropPos({
+        left: r.left,
+        width: r.width,
+        flip,
+        top: flip ? r.top - Math.min(dropH, r.top - gap) - gap : r.bottom + gap,
+      });
+    };
+    update();
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!multi) setInput(value);
@@ -46,7 +77,9 @@ export function ComboBox({
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (ref.current?.contains(t) || dropdownRef.current?.contains(t)) return;
+      setOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -143,8 +176,12 @@ export function ComboBox({
         </button>
       </div>
 
-      {open && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+      {open && dropPos && createPortal(
+        <div
+          ref={dropdownRef}
+          className="fixed z-[9999] bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto"
+          style={{ top: dropPos.top, left: dropPos.left, width: dropPos.width }}
+        >
           {filtered.length > 0 ? (
             filtered.map((opt, i) => {
               const isSelected = selectedValues.includes(opt.value);
@@ -187,7 +224,8 @@ export function ComboBox({
               )}
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
