@@ -119,11 +119,26 @@ export async function PUT(request: NextRequest) {
         // ✅ 检测成功 → 恢复健康
         if (res.ok) {
           updateChannelHealth(channel.id, 'healthy');
+          return NextResponse.json({ healthy: true, status: res.status, latency: latency + 'ms' });
         }
 
-        return NextResponse.json({ healthy: res.ok, status: res.status, latency: latency + 'ms' });
-      } catch {
-        return NextResponse.json({ healthy: false, latency: '超时' }, { status: 200 });
+        // ❌ 失败 → 读取上游真实错误 body
+        const rawText = await res.text().catch(() => '');
+        let upstreamError = rawText;
+        try {
+          const parsed = JSON.parse(rawText);
+          if (parsed?.error?.message) upstreamError = parsed.error.message;
+          else if (typeof parsed?.error === 'string') upstreamError = parsed.error;
+          else if (parsed?.message) upstreamError = parsed.message;
+        } catch {
+          // 非 JSON（如 HTML 错误页）→ 用原文
+        }
+        upstreamError = (upstreamError || `HTTP ${res.status}`).slice(0, 500);
+
+        return NextResponse.json({ healthy: false, status: res.status, latency: latency + 'ms', error: upstreamError });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return NextResponse.json({ healthy: false, latency: '超时', error: msg.slice(0, 500) }, { status: 200 });
       }
     }
 

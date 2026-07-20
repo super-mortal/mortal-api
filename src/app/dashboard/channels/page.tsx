@@ -42,6 +42,7 @@ export default function ChannelsPage() {
   const [checkRunning, setCheckRunning] = useState(false);
   const [checkDone, setCheckDone] = useState<'ok' | 'fail' | null>(null);
   const [checkLatency, setCheckLatency] = useState<string | null>(null);
+  const [checkError, setCheckError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [pullingId, setPullingId] = useState<string | null>(null);
   const [pulledModels, setPulledModels] = useState<Record<string, string[]>>({});
@@ -112,7 +113,8 @@ export default function ChannelsPage() {
       const data = await res.json();
       setCheckDone(data.healthy ? 'ok' : 'fail');
       setCheckLatency(data.latency || null);
-    } catch { setCheckDone('fail'); }
+      setCheckError(data.healthy ? null : (data.error || null));
+    } catch { setCheckDone('fail'); setCheckError('请求异常'); }
     setCheckRunning(false);
   };
   const openCheckModal = (ch: Channel) => {
@@ -121,6 +123,7 @@ export default function ChannelsPage() {
     setCheckSelectedModel(models.length > 0 ? models[0].model_id : '');
     setCheckDone(null);
     setCheckLatency(null);
+    setCheckError(null);
     setCheckModal(true);
   };
   const doPullModels = async (id: string) => {
@@ -212,12 +215,12 @@ export default function ChannelsPage() {
       </Modal>
 
       {/* Health Check Modal */}
-      <Modal open={checkModal} onClose={() => { setCheckModal(false); setCheckDone(null); setCheckLatency(null); }} title={`连通性检测 - ${checkChannel?.name || ''}`}>
+      <Modal open={checkModal} onClose={() => { setCheckModal(false); setCheckDone(null); setCheckLatency(null); setCheckError(null); }} title={`连通性检测 - ${checkChannel?.name || ''}`}>
         <div className="space-y-4">
           <p className="text-xs text-gray-500">选择要检测的模型，测试能否正常调用。</p>
           <div>
             <label className="block text-xs text-gray-500 mb-1.5">选择模型</label>
-            <select value={checkSelectedModel} onChange={function(e) { setCheckSelectedModel(e.target.value); setCheckDone(null); setCheckLatency(null); }}
+            <select value={checkSelectedModel} onChange={function(e) { setCheckSelectedModel(e.target.value); setCheckDone(null); setCheckLatency(null); setCheckError(null); }}
               className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white font-mono">
               {modelsForChannel(checkChannel?.id || '').map(m => (
                 <option key={m.id} value={m.model_id}>{m.model_id}</option>
@@ -225,10 +228,15 @@ export default function ChannelsPage() {
             </select>
           </div>
           {checkDone && (
-            <div className={'px-4 py-3 rounded-lg text-sm flex items-center gap-2 ' + (checkDone === 'ok' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-600 border border-red-200')}>
-              <InlineIcon name={checkDone === 'ok' ? 'check' : 'x'} className="w-4 h-4 shrink-0" />
-              <span>{checkDone === 'ok' ? '连接正常' : '连接异常'}</span>
-              {checkLatency && <span className="text-xs opacity-75 ml-auto font-mono">{checkLatency}</span>}
+            <div className={'px-4 py-3 rounded-lg text-sm ' + (checkDone === 'ok' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-600 border border-red-200')}>
+              <div className="flex items-center gap-2">
+                <InlineIcon name={checkDone === 'ok' ? 'check' : 'x'} className="w-4 h-4 shrink-0" />
+                <span>{checkDone === 'ok' ? '连接正常' : '连接异常'}</span>
+                {checkLatency && <span className="text-xs opacity-75 ml-auto font-mono">{checkLatency}</span>}
+              </div>
+              {checkDone === 'fail' && checkError && (
+                <p className="mt-1.5 text-xs break-all whitespace-pre-wrap leading-relaxed opacity-90">{checkError}</p>
+              )}
             </div>
           )}
           <button onClick={doHealthCheck} disabled={checkRunning || !checkSelectedModel}
