@@ -141,7 +141,8 @@ export function getStats(days: number = 7) {
     SELECT
       model,
       COUNT(*) as calls,
-      COALESCE(SUM(total_tokens), 0) as tokens
+      COALESCE(SUM(total_tokens), 0) as tokens,
+      COALESCE(SUM(cost), 0) as total_cost
     FROM call_logs
     WHERE created_at >= datetime('now', '+8 hours', ?)
     GROUP BY model

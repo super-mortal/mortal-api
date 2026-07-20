@@ -18,7 +18,7 @@ interface DashboardData {
     total_cost: number;
   };
   dailyStats: { date: string; calls: number; tokens: number; completion_tokens: number; cached_tokens: number; uncached_tokens: number; cost: number }[];
-  modelStats: { model: string; calls: number; tokens: number; completion_tokens: number; cached_tokens: number; uncached_tokens: number }[];
+  modelStats: { model: string; calls: number; tokens: number; completion_tokens: number; cached_tokens: number; uncached_tokens: number; total_cost: number }[];
 }
 
 interface RelayKey { id: string; name: string; key: string; }
@@ -152,7 +152,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-3">
         {statCards.map((c) => (
           <div key={c.label} className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4 hover:shadow-sm transition-shadow">
             <div className={`text-lg sm:text-xl font-semibold ${c.color} truncate`}>{c.value}</div>
@@ -162,6 +162,15 @@ export default function DashboardPage() {
             </div>
           </div>
         ))}
+        <div className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4 hover:shadow-sm transition-shadow">
+          <div className="text-lg sm:text-xl font-semibold text-emerald-600 truncate">
+            ¥{data.dailyStats.length > 0 ? data.dailyStats[data.dailyStats.length - 1].cost?.toFixed(4) || '0.0000' : '0.0000'}
+          </div>
+          <div className="text-[10px] sm:text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+            <InlineIcon name="dollar-sign" className="w-3 h-3" />
+            今日消费
+          </div>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
@@ -216,7 +225,31 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
+        <h3 className="text-sm font-semibold text-gray-900 mb-1">近 7 天消费趋势</h3>
+        <p className="text-xs text-gray-400 mb-4">按日期统计的消费金额</p>
+        {data.dailyStats.length > 0 ? (
+          <div className="h-52 sm:h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={data.dailyStats}>
+                <defs><linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                </linearGradient></defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(v) => v.slice(5)} axisLine={{ stroke: '#e2e8f0' }} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={44} />
+                <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }} />
+                <Area type="monotone" dataKey="cost" stroke="#6366f1" strokeWidth={2} fill="url(#colorCost)" name="消费(元)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div className="h-52 sm:h-64 flex items-center justify-center text-sm text-gray-400">暂无数据</div>
+        )}
+      </div>
+
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
           <h3 className="text-sm font-semibold text-gray-900 mb-1">模型调用分布</h3>
           <p className="text-xs text-gray-400 mb-4">各模型调用占比</p>
@@ -297,6 +330,26 @@ export default function DashboardPage() {
               <span className="flex items-center gap-1"><InlineIcon name="x" className="w-3 h-3 text-red-400" /> {data.stats.fail_calls}</span>
             </div>
           </div>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
+          <h3 className="text-sm font-semibold text-gray-900 mb-1">按模型消费排行</h3>
+          <p className="text-xs text-gray-400 mb-4">各模型消费金额</p>
+          {data.modelStats.length > 0 ? (
+            <div className="h-44 sm:h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data.modelStats.slice(0, 10)} layout="vertical" maxBarSize={24}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey="model" width={80} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
+                    formatter={(value: any) => [`¥${Number(value).toFixed(4)}`, '消费']} />
+                  <Bar dataKey="total_cost" fill="#6366f1" name="消费(元)" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-44 sm:h-48 flex items-center justify-center text-sm text-gray-400">暂无数据</div>
+          )}
         </div>
       </div>
     </div>
