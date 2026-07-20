@@ -369,7 +369,7 @@ export default function LogsPage() {
               {loading ? (
                 <TableEmpty colSpan={8} loading />
               ) : logs.length === 0 ? (
-                <TableEmpty colSpan={8} text="暂无调用记录" />
+                <TableEmpty colSpan={8} icon="list" text="暂无调用记录" />
               ) : logs.map((log) => (
                 <Fragment key={log.id}>
                   <tr className={`border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer ${

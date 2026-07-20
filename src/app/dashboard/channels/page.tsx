@@ -400,7 +400,7 @@ export default function ChannelsPage() {
         );
       })}
       {channels.length === 0 && (
-        <div className="py-16"><EmptyState icon="plug" text="暂无渠道" /></div>
+        <div className="py-16"><EmptyState icon="plug" text="暂无渠道" iconClassName="w-10 h-10 mx-auto mb-3 text-gray-200" /></div>
       )}
 
       <ConfirmDialog

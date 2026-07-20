@@ -9,11 +9,11 @@ export function Spinner({ className = 'w-6 h-6' }: { className?: string }) {
 }
 
 /** 空状态：图标 + 文案 */
-export function EmptyState({ icon, text, className = '' }: { icon: string; text: string; className?: string }) {
+export function EmptyState({ icon, text, className = '', iconClassName = 'w-8 h-8 mb-2 text-gray-300' }: { icon: string; text: string; className?: string; iconClassName?: string }) {
   return (
     <div className={`flex flex-col items-center justify-center text-gray-400 ${className}`}>
-      <InlineIcon name={icon} className="w-8 h-8 mb-2 text-gray-300" />
-      <p className="text-sm">{text}</p>
+      <InlineIcon name={icon} className={iconClassName} />
+      <p>{text}</p>
     </div>
   );
 }
@@ -31,13 +31,22 @@ export function StatusBadge({ variant, icon, label }: { variant: 'success' | 'fa
 }
 
 /** 表格加载/空行 */
-export function TableEmpty({ colSpan, loading, text }: { colSpan: number; loading?: boolean; text?: string }) {
+export function TableEmpty({ colSpan, loading, text, icon }: { colSpan: number; loading?: boolean; text?: string; icon?: string }) {
   return (
     <tr>
       <td colSpan={colSpan} className="px-4 py-16 text-center">
-        {loading
-          ? <InlineIcon name="loaderCircle" className="w-5 h-5 animate-spin text-indigo-600 inline" />
-          : <p className="text-sm text-gray-400">{text || '暂无数据'}</p>}
+        {loading ? (
+          <InlineIcon name="loaderCircle" className="w-5 h-5 animate-spin text-indigo-600 inline" />
+        ) : (
+          <>
+            {icon && (
+              <div className="text-gray-300 text-3xl mb-2">
+                <InlineIcon name={icon} className="w-8 h-8 mx-auto" />
+              </div>
+            )}
+            <p className="text-sm text-gray-400">{text || '暂无数据'}</p>
+          </>
+        )}
       </td>
     </tr>
   );
