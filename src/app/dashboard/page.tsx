@@ -116,7 +116,7 @@ export default function DashboardPage() {
           <h1 className="text-lg sm:text-xl font-semibold text-gray-900">仪表盘</h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-0.5">数据总览与统计图表</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 pr-1">
           <div className="flex items-center gap-1 bg-white rounded-lg border border-gray-200 p-1">
             <button onClick={function() { setActiveDate('today'); setShowCustom(false); }}
               className={'px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all ' + (activeDate === 'today' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50')}>今日</button>
@@ -140,16 +140,17 @@ export default function DashboardPage() {
               onCancel={() => setShowCustom(false)}
             />
           )}
-          <SelectFilter
-            options={[
-              { label: '全部 Key', value: '' },
-              ...keys.map(k => ({ label: k.name, value: k.id })),
-            ]}
-            value={selectedKeyId}
-            onChange={setSelectedKeyId}
-            placeholder="全部 Key"
-            className="max-w-[160px]"
-          />
+          <div className="flex items-center gap-1 bg-white rounded-lg border border-gray-200 p-1">
+            <SelectFilter
+              options={[
+                { label: '全部 Key', value: '' },
+                ...keys.map(k => ({ label: k.name, value: k.id })),
+              ]}
+              value={selectedKeyId}
+              onChange={setSelectedKeyId}
+              placeholder="全部 Key"
+            />
+          </div>
         </div>
       </div>
 
