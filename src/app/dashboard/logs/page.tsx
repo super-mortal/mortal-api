@@ -436,7 +436,7 @@ export default function LogsPage() {
                             )}
                             <TokenBadge label="未缓存输入" value={Math.max(0, log.prompt_tokens - (log.cached_input_tokens || 0))} color="amber" />
                             <TokenBadge label="总 Token" value={log.total_tokens} color="indigo" />
-                            <TokenBadge label="费用" value={log.cost ? `¥${log.cost.toFixed(6)}` : '¥0'} color="purple" />
+                            <TokenBadge label="费用" value={log.cost || 0} color="purple" />
                           </div>
                           {log.status === 'fail' && log.error_message && (
                             <div className="bg-red-50 border border-red-200 rounded-lg p-3">
