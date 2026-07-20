@@ -370,7 +370,7 @@ export default function LogsPage() {
               {loading ? (
                 <TableEmpty colSpan={9} loading />
               ) : logs.length === 0 ? (
-                <TableEmpty colSpan={8} icon="list" text="暂无调用记录" />
+                <TableEmpty colSpan={9} icon="list" text="暂无调用记录" />
               ) : logs.map((log) => (
                 <Fragment key={log.id}>
                   <tr className={`border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer ${
@@ -418,7 +418,7 @@ export default function LogsPage() {
                   </tr>
                   {expandedLogId === log.id && (
                     <tr key={`detail-${log.id}`} className="bg-gray-50/50 border-b border-gray-100">
-                      <td colSpan={8} className="px-4 sm:px-6 py-4">
+                      <td colSpan={9} className="px-4 sm:px-6 py-4">
                         <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-3">
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             <DetailField label="时间" value={toBeijingFull(log.created_at)} />
