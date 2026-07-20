@@ -552,7 +552,7 @@ export default function KeysPage() {
                         className="p-1.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
                         title="刷新 Key"
                       >
-                        <InlineIcon name="refreshCw" className="w-3.5 h-3.5" />
+                        <InlineIcon name="refresh-cw" className="w-3.5 h-3.5" />
                       </button>
                       <button onClick={() => {
                         setShowEdit(k);

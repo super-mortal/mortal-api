@@ -17,11 +17,18 @@ interface IconProps {
 }
 
 export function Icon({ name, className = 'w-4 h-4', size }: IconProps) {
-  const cn = size ? `${className}` : className;
+  // Render the local SVG file directly. Using <img> avoids the broken
+  // `<use href="...#svg-icon">` fragment reference — the downloaded files
+  // carry no svg-icon anchor id. Size via className or explicit size prop.
   return (
-    <svg className={cn} width={size || 24} height={size || 24} strokeWidth={1.5} aria-hidden="true">
-      <use href={`/icons/${name}.svg#svg-icon`} />
-    </svg>
+    <img
+      src={`/icons/${name}.svg`}
+      width={size || 24}
+      height={size || 24}
+      className={className}
+      aria-hidden="true"
+      alt=""
+    />
   );
 }
 
@@ -85,7 +92,7 @@ export const icons = {
   ban: 'M3 3l18 18M9 3h6v2H9zM5 7v10l3 3h8l3-3V7M7 7h10v8l-2 2H9l-2-2V7z',
   'funnel-x': 'M3 3h18L13 12v9l-2-2v-7L3 3zm15 11l4 4m0-4l-4 4',
   'layout-dashboard': 'M3 3h7v9H3V3zm0 13h7v5H3v-5zm11-13h7v5h-7V3zm0 9h7v9h-7v-9z',
-  refreshCw: 'M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16m0 5v-5h5',
+  'refresh-cw': 'M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16m0 5v-5h5',
 };
 
 /**
