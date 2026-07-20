@@ -128,26 +128,26 @@ export default function LogsPage() {
       fetchLogs();
       return;
     }
-    const errors: string[] = [];
+    const count = selected.size;
     setDeletingInProgress(true);
-    setDeleteMsg(`正在删除 ${selected.size} 条日志...`);
-    for (const id of selected) {
-      try {
-        const res = await fetch(`/admin/logs?id=${id}`, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${localStorage.getItem('admin_token')}` },
-        });
-        if (!res.ok) errors.push(id);
-      } catch { errors.push(id); }
-    }
+    setDeleteMsg(`正在删除 ${count} 条日志...`);
+    let failed = false;
+    try {
+      const res = await fetch('/admin/logs', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('admin_token')}` },
+        body: JSON.stringify({ ids: [...selected] }),
+      });
+      if (!res.ok) failed = true;
+    } catch { failed = true; }
     setDeleteConfirm(null);
     setSelected(new Set());
     setDeletingInProgress(false);
-    if (errors.length > 0) {
-      setDeleteMsg(`删除完成，但 ${errors.length} 条删除失败`);
+    if (failed) {
+      setDeleteMsg('批量删除失败，请重试');
       setTimeout(() => setDeleteMsg(null), 5000);
     } else {
-      setDeleteMsg(`已删除 ${selected.size - errors.length} 条日志`);
+      setDeleteMsg(`已删除 ${count} 条日志`);
       setTimeout(() => setDeleteMsg(null), 3000);
     }
     fetchLogs();

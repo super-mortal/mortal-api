@@ -88,6 +88,15 @@ export function deleteCallLog(id: string): boolean {
   return result.changes > 0;
 }
 
+export function deleteCallLogsByIds(ids: string[]): number {
+  if (!ids || ids.length === 0) return 0;
+  const db = getDb();
+  const placeholders = ids.map(() => '?').join(',');
+  const stmt = db.prepare(`DELETE FROM call_logs WHERE id IN (${placeholders})`);
+  const runMany = db.transaction((list: string[]) => stmt.run(...list).changes);
+  return runMany(ids);
+}
+
 export function deleteCallLogsByDate(startDate: string, endDate?: string): number {
   const db = getDb();
   let count: number;

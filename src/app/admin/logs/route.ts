@@ -3,7 +3,7 @@
 // ============================================================
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-middleware';
-import { listCallLogs, deleteCallLog, deleteCallLogsByDate } from '@/lib/logs';
+import { listCallLogs, deleteCallLog, deleteCallLogsByDate, deleteCallLogsByIds } from '@/lib/logs';
 
 function normalizeDate(s?: string): string | undefined {
   if (!s) return s;
@@ -33,6 +33,17 @@ export async function DELETE(request: NextRequest) {
   const err = requireAdmin(request);
   if (err) return err;
 
+  // Bulk delete by explicit id list (request body)
+  try {
+    const body = await request.json().catch(() => null);
+    if (body && Array.isArray(body.ids) && body.ids.length > 0) {
+      const deletedCount = deleteCallLogsByIds(body.ids.filter((x: any) => typeof x === 'string'));
+      return NextResponse.json({ success: true, deleted: deletedCount });
+    }
+  } catch {
+    // fall through to query-param handling below
+  }
+
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
   const startDate = searchParams.get('start_date');
@@ -45,7 +56,7 @@ export async function DELETE(request: NextRequest) {
   }
 
   // Single delete by id
-  if (!id) return NextResponse.json({ error: 'id or start_date required' }, { status: 400 });
+  if (!id) return NextResponse.json({ error: 'id, ids, or start_date required' }, { status: 400 });
   const deleted = deleteCallLog(id);
   return NextResponse.json({ success: deleted });
 }
