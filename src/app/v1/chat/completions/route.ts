@@ -394,7 +394,7 @@ export async function POST(request: NextRequest) {
     const allChannels = listChannels().filter(c => c.is_active);
     const coolingChannels = allChannels.filter(c => c.health_status === 'cooling_down');
     const healthyCount = allChannels.filter(c => c.health_status === 'healthy').length;
-    errorMsg = `无可用的渠道。共 ${allChannels.length} 个活跃渠道，其中 ${coolingChannels.length} 个处于冷却状态，${healthyCount} 个健康 — 但均未配置模型 "${modelName}" 的别名`;
+    errorMsg = `无可用的渠道。共 ${allChannels.length} 个活跃渠道，其中 ${coolingChannels.length} 个处于冷却状态，${healthyCount} 个健康 — 但均未配置模型 "${modelName}"`;
   } else if (lastError) {
     errorMsg = lastError.body || (lastError instanceof Error ? lastError.message : typeof lastError === 'string' ? lastError : '上游调用失败');
   } else {
