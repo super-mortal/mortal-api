@@ -65,7 +65,7 @@ export function Popover({
 
   return (
     <div ref={ref} className="relative inline-block">
-      <div data-popover-trigger onClick={() => setIsOpen(!isOpen)} className="cursor-pointer">
+      <div ref={triggerRef} data-popover-trigger onClick={() => setIsOpen(!isOpen)} className="cursor-pointer">
         {trigger}
       </div>
       {isOpen && dropPos && createPortal(
