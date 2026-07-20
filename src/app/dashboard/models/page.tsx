@@ -28,6 +28,9 @@ export default function ModelsPage() {
   const [aliases, setAliases] = useState<ModelAlias[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState<string | null>(null);
+  const [filterChannel, setFilterChannel] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterType, setFilterType] = useState('all');
 
   const fetchData = useCallback(async () => {
     const res = await apiFetch('/admin/channels?scope=models');
@@ -86,11 +89,21 @@ export default function ModelsPage() {
   const nativeModels = channelModels.filter(m => m.is_active).length;
   const aliasCount = aliases.filter(a => a.is_active).length;
 
+  const filteredItems = displayItems.filter(item => {
+    if (filterChannel !== 'all' && item.channelName !== filterChannel) return false;
+    if (filterStatus === '正常' && (item.channelHealth !== 'healthy' || !item.isActive)) return false;
+    if (filterStatus === '异常' && item.channelHealth !== 'unhealthy') return false;
+    if (filterStatus === '停用' && item.isActive) return false;
+    if (filterType === '原生' && item.type !== 'model') return false;
+    if (filterType === '别名' && item.type !== 'alias') return false;
+    return true;
+  });
+
   return (
     <div className="space-y-5">
       <div>
         <h1 className="text-lg sm:text-xl font-semibold text-gray-900">模型广场</h1>
-        <p className="text-xs sm:text-sm text-gray-500 mt-0.5">所有可用模型一览，共 {displayItems.length} 个</p>
+        <p className="text-xs sm:text-sm text-gray-500 mt-0.5">所有可用模型一览，共 {filteredItems.length} 个</p>
       </div>
 
       <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 bg-white rounded-xl border border-gray-100 px-4 py-3">
@@ -99,17 +112,41 @@ export default function ModelsPage() {
         <span className="flex items-center gap-1.5"><span className="font-semibold text-gray-900">{nativeModels}</span> 原生模型</span>
         <span className="text-gray-200">|</span>
         <span className="flex items-center gap-1.5"><span className="font-semibold text-indigo-600">{aliasCount}</span> 别名映射</span>
+
+        {/* 右侧筛选 — 仅桌面 */}
+        <div className="hidden md:flex items-center gap-2 ml-auto">
+          <select value={filterChannel} onChange={e => setFilterChannel(e.target.value)}
+            className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 bg-white">
+            <option value="all">全部渠道</option>
+            {channels.filter(c => c.is_active).map(c => (
+              <option key={c.id} value={c.name}>{c.name}</option>
+            ))}
+          </select>
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+            className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 bg-white">
+            <option value="all">全部状态</option>
+            <option value="正常">正常</option>
+            <option value="异常">异常</option>
+            <option value="停用">停用</option>
+          </select>
+          <select value={filterType} onChange={e => setFilterType(e.target.value)}
+            className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 bg-white">
+            <option value="all">全部类型</option>
+            <option value="原生">原生模型</option>
+            <option value="别名">别名映射</option>
+          </select>
+        </div>
       </div>
 
-      {displayItems.length === 0 ? (
+      {filteredItems.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           <InlineIcon name="bot" className="w-10 h-10 mx-auto mb-3 text-gray-200" />
           <p>暂无可用模型</p>
-          <p className="text-xs mt-1">先在渠道管理中添加渠道和模型</p>
+          <p className="text-xs mt-1">先在渠道管理中添加渠道和模型，或调整筛选条件</p>
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {displayItems.map((item, i) => {
+          {filteredItems.map((item, i) => {
             const copyKey = `${item.type}-${item.displayName}-${i}`;
             return (
             <div key={copyKey}
