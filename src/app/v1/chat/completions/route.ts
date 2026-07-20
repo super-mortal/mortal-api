@@ -10,6 +10,7 @@ import {
   getChannelById,
   recordChannelSuccess,
   recordChannelFailure,
+  listChannels,
 } from '@/lib/channels';
 import { callUpstream, callUpstreamStreaming, extractCachedInputTokens } from '@/lib/proxy';
 import { createCallLog } from '@/lib/logs';
@@ -196,7 +197,7 @@ export async function POST(request: NextRequest) {
         model: modelName, channel_id: autoChannel.id, channel_name: autoChannel.name,
         prompt_tokens: 0, completion_tokens: 0,
         cost: 0,
-        status: 'fail', error_message: err.body || (err instanceof Error ? err.message : typeof err === 'string' ? err : '上游连接异常'),
+        status: 'fail', error_message: err.body || (err instanceof Error ? err.message : typeof err === 'string' ? err : '未知上游错误(未捕获具体异常)'),
         ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
       });
       recordAndCheckSpending(relayKey.id, 0);
@@ -385,12 +386,27 @@ export async function POST(request: NextRequest) {
   if (channel && lastError) {
     recordChannelFailure(channel.id, lastError?.status === 429 ? 'quota' : 'failure');
   }
+
+  // Construct clear error message
+  let errorMsg: string;
+  if (!channel && !lastError) {
+    // No channel found for the model name
+    const allChannels = listChannels().filter(c => c.is_active);
+    const coolingChannels = allChannels.filter(c => c.health_status === 'cooling_down');
+    const healthyCount = allChannels.filter(c => c.health_status === 'healthy').length;
+    errorMsg = `无可用的渠道。共 ${allChannels.length} 个活跃渠道，其中 ${coolingChannels.length} 个处于冷却状态，${healthyCount} 个健康 — 但均未配置模型 "${modelName}" 的别名`;
+  } else if (lastError) {
+    errorMsg = lastError.body || (lastError instanceof Error ? lastError.message : typeof lastError === 'string' ? lastError : '上游调用失败');
+  } else {
+    errorMsg = '未知错误';
+  }
+
   createCallLog({
     relay_key_id: relayKey.id, relay_key_name: relayKey.name,
-    model: modelName, channel_id: channel?.id || '', channel_name: channel?.name || 'unknown',
+    model: modelName, channel_id: channel?.id || '', channel_name: channel?.name || (lastError ? 'unknown' : '无可用渠道'),
     prompt_tokens: 0, completion_tokens: 0,
     cost: 0,
-    status: 'fail', error_message: lastError?.body || (lastError instanceof Error ? lastError.message : typeof lastError === 'string' ? lastError : '上游连接异常'),
+    status: 'fail', error_message: errorMsg,
     ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
   });
   recordAndCheckSpending(relayKey.id, 0);
