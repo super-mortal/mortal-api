@@ -80,7 +80,7 @@ export default function LogsPage() {
     const res = await fetch(`/admin/logs?${params}`, { headers: { Authorization: `Bearer ${localStorage.getItem('admin_token')}` } });
     if (res.ok) { const d = await res.json(); setLogs(d.logs); setTotal(d.total); }
     setLoading(false);
-  }, [page, statusFilter, keyFilter, modelFilter, startMonth, endMonth]);
+  }, [page, pageSize, statusFilter, keyFilter, modelFilter, startMonth, endMonth]);
 
   const handleFilterPreset = useCallback((preset: 'today' | '7d' | '30d') => {
     setActiveDate(preset);
@@ -275,6 +275,24 @@ export default function LogsPage() {
             <button onClick={() => { setActiveDate('custom'); setPage(0); }}
               className={'px-3 py-1.5 rounded-md text-xs font-medium transition-all ' + (activeDate === 'custom' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50')}>
               <InlineIcon name="calendar" className="w-3 h-3 inline mr-1" />自定义</button>
+            {/* 每页条数 */}
+            <div ref={pageSizeRef} className="ml-auto pl-1.5 border-l border-gray-200">
+              <button onClick={() => setPageSizeOpen(!pageSizeOpen)}
+                className="flex items-center gap-1 px-2 py-1.5 rounded text-xs text-gray-500 hover:bg-gray-50 transition-colors">
+                {pageSize} 条/页
+                <InlineIcon name="chevronDown" className="w-3 h-3" />
+              </button>
+              {pageSizeOpen && (
+                <div className="absolute z-50 top-full mt-1 right-0 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[100px]">
+                  {[10, 20, 50, 100].map(n => (
+                    <button key={n} onClick={() => { setPageSize(n); setPage(0); setPageInput('1'); setPageSizeOpen(false); }}
+                      className={'w-full text-left px-3 py-1.5 text-[11px] transition-colors ' + (pageSize === n ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-700 hover:bg-gray-50')}>
+                      {n} 条/页
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           {/* 自定义日期输入框 — 仅 activeDate === 'custom' 时显示 */}
           {activeDate === 'custom' && (
@@ -465,24 +483,6 @@ export default function LogsPage() {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-2 bg-white rounded-xl border border-gray-100 px-4 py-3">
           <div className="flex items-center gap-3">
             <span className="text-[11px] text-gray-400">共 <b className="text-gray-600">{total}</b> 条记录</span>
-            {/* Page size selector */}
-            <div ref={pageSizeRef} className="relative">
-              <button onClick={() => setPageSizeOpen(!pageSizeOpen)}
-                className="flex items-center gap-1 px-2 py-1 rounded border border-gray-200 text-[11px] text-gray-500 hover:bg-gray-50">
-                {pageSize} 条/页
-                <InlineIcon name="chevronDown" className="w-3 h-3" />
-              </button>
-              {pageSizeOpen && (
-                <div className="absolute z-50 bottom-full mb-1 left-0 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[100px]">
-                  {[10, 20, 50, 100].map(n => (
-                    <button key={n} onClick={() => { setPageSize(n); setPage(0); setPageInput('1'); setPageSizeOpen(false); }}
-                      className={'w-full text-left px-3 py-1.5 text-[11px] transition-colors ' + (pageSize === n ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-700 hover:bg-gray-50')}>
-                      {n} 条/页
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
           <div className="flex items-center gap-1.5">
             <button onClick={() => goToPage(page - 1)} disabled={page === 0}
