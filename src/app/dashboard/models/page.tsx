@@ -197,59 +197,58 @@ export default function ModelsPage() {
             return (
             <div key={copyKey}
               className="bg-white rounded-xl border border-gray-100 p-3 hover:shadow-sm transition-all hover:border-gray-200 group">
-              <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start justify-between gap-1">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 mb-0.5">
+                  <div className="flex items-center gap-1.5 mb-0">
                     <code className="text-sm font-semibold text-gray-900 font-mono truncate">{group.displayName}</code>
                     {group.type === 'alias' ? (
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200 shrink-0">别名</span>
                     ) : (
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-50 text-gray-500 border border-gray-200 shrink-0">原生</span>
                     )}
-                    <div className="ml-auto flex items-center gap-0.5 shrink-0">
-                      <button onClick={() => copyToClipboard(group.displayName, copyKey)}
-                        className="p-1 rounded text-gray-300 hover:text-indigo-500 hover:bg-indigo-50 opacity-0 group-hover:opacity-100 transition-all" title="复制模型名">
-                        {copied === copyKey
-                          ? <InlineIcon name="check" className="w-3.5 h-3.5 text-emerald-500" />
-                          : <InlineIcon name="copy" className="w-3.5 h-3.5" />}
-                      </button>
-                      {group.channels.length > 1 ? (
-                        <Popover side="left" trigger={
-                          <span className="p-1 rounded text-gray-300 hover:text-indigo-500 hover:bg-indigo-50 opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
-                            <InlineIcon name="arrowLeft" className="w-3.5 h-3.5" />
-                          </span>
-                        }>
-                          <div className="space-y-1 min-w-[160px]">
-                            <p className="text-[10px] text-gray-400 font-medium mb-1.5">该模型可用渠道</p>
-                            {group.channels.map(ch => (
-                              <div key={ch.name} className="flex items-center gap-1.5">
-                                {healthDot(ch.health)}
-                                <span className="text-xs text-gray-700">{ch.name}</span>
-                                <span className="text-[10px] text-gray-400 ml-auto">{ch.uptimePct}%</span>
-                              </div>
-                            ))}
-                          </div>
-                        </Popover>
-                      ) : (
-                        <span className="p-1 rounded text-gray-300">
-                          <InlineIcon name={group.type === 'alias' ? 'arrowLeft' : 'zap'} className="w-3.5 h-3.5" />
-                        </span>
-                      )}
-                    </div>
+                    <button onClick={() => copyToClipboard(group.displayName, copyKey)}
+                      className="ml-auto p-0.5 rounded text-gray-300 hover:text-indigo-500 hover:bg-indigo-50 opacity-0 group-hover:opacity-100 transition-all" title="复制模型名">
+                      {copied === copyKey
+                        ? <InlineIcon name="check" className="w-3.5 h-3.5 text-emerald-500" />
+                        : <InlineIcon name="copy" className="w-3.5 h-3.5" />}
+                    </button>
                   </div>
                   {group.type === 'alias' && (
-                    <div className="text-[10px] text-gray-400 mt-0.5 font-mono">
+                    <div className="text-[10px] text-gray-400 mt-0 font-mono leading-tight">
                       <span className="text-gray-300">实际请求: </span>{group.actualModel}
                     </div>
                   )}
                   {/* 主渠道显示（uptime 最高的那个） */}
-                  <div className="flex items-center gap-1.5 mt-1">
+                  <div className="flex items-center gap-1.5 mt-0.5">
                     {healthDot(bestChannel.health)}
                     <span className="text-xs text-gray-500 truncate">{bestChannel.name}</span>
                     {!bestChannel.isActive && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-400">停用</span>}
                     <span className="text-[10px] text-gray-400">{bestChannel.uptimePct}% 可用率</span>
                   </div>
                 </div>
+                {/* 箭头 — 放在外层，和复制按钮同行 */}
+                {group.channels.length > 1 ? (
+                  <Popover side="left" trigger={
+                    <span className="p-0.5 rounded text-gray-300 hover:text-indigo-500 hover:bg-indigo-50 opacity-0 group-hover:opacity-100 transition-all cursor-pointer shrink-0">
+                      <InlineIcon name="arrowLeft" className="w-3.5 h-3.5" />
+                    </span>
+                  }>
+                    <div className="space-y-1 min-w-[160px]">
+                      <p className="text-[10px] text-gray-400 font-medium mb-1.5">该模型可用渠道</p>
+                      {group.channels.map(ch => (
+                        <div key={ch.name} className="flex items-center gap-1.5">
+                          {healthDot(ch.health)}
+                          <span className="text-xs text-gray-700">{ch.name}</span>
+                          <span className="text-[10px] text-gray-400 ml-auto">{ch.uptimePct}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </Popover>
+                ) : (
+                  <span className="p-0.5 rounded text-gray-300 shrink-0">
+                    <InlineIcon name={group.type === 'alias' ? 'arrowLeft' : 'zap'} className="w-3.5 h-3.5" />
+                  </span>
+                )}
               </div>
             </div>
             );
