@@ -65,6 +65,7 @@ export default function ChannelsPage() {
     aliasName?: string | null;  // 新增：记录当前别名值（用于确定 pricing key）
   }
   const [pendingModels, setPendingModels] = useState<Record<string, PendingModelChange>>({});
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
   // Modal state (independent from side panel)
   const [chModal, setChModal] = useState(false);
@@ -159,7 +160,7 @@ export default function ChannelsPage() {
         const pricingKey = change.aliasName || modelId;
         // 获取 channel_model 的 id（用于后端同步查询）
         const m = models.find(mm => mm.model_id === modelId);
-        await apiFetch('/admin/pricing', {
+        const res = await apiFetch('/admin/pricing', {
           method: 'POST',
           body: JSON.stringify({
             pricing_key: pricingKey,
@@ -170,6 +171,16 @@ export default function ChannelsPage() {
             cached_prompt_price: Number(change.prices.cached_prompt_price),
           })
         });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.syncedCount > 0) {
+            setSyncFeedback(`价格已同步至 ${data.syncedCount} 个渠道（${data.syncedChannels.map((c: any) => c.channel_name).join('、')}）`);
+          } else {
+            setSyncFeedback(`价格已保存`);
+          }
+          // 3 秒后自动清除
+          setTimeout(() => setSyncFeedback(null), 3000);
+        }
       }
     }
 
@@ -522,6 +533,16 @@ export default function ChannelsPage() {
                             {/* Pricing editor */}
                             <div>
                               <label className="block text-xs text-gray-500 mb-1.5">价格（元/1M tokens）</label>
+                              {/* 新增：定价 key 提示 */}
+                              {alias ? (
+                                <p className="text-[10px] text-gray-400 mb-2">
+                                  此价格为 <code className="text-indigo-500 bg-indigo-50 px-1 rounded">{alias.alias_name}</code> 的全局统一价格，相同别名渠道将自动同步
+                                </p>
+                              ) : (
+                                <p className="text-[10px] text-gray-400 mb-2">
+                                  此价格为 <code className="text-gray-500 bg-gray-100 px-1 rounded">{m.model_id}</code> 的全局统一价格
+                                </p>
+                              )}
                               <div className="grid grid-cols-3 gap-2">
                                 <div>
                                   <div className="text-[10px] text-gray-400 mb-0.5">标准输入</div>
@@ -692,6 +713,11 @@ export default function ChannelsPage() {
         confirmText="知道了"
         variant="info"
       />
+      {syncFeedback && (
+        <div className="fixed top-4 right-4 z-[100] bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-lg text-sm font-medium animate-in slide-in-from-top-2">
+          {syncFeedback}
+        </div>
+      )}
     </div>
   );
 }
