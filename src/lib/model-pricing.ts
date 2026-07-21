@@ -41,9 +41,10 @@ export function calculateCost(
 ): number {
   const pricing = getModelPricing(modelId);
   if (!pricing) return 0;
+  const uncachedInput = Math.max(0, promptTokens - cachedInputTokens);
   const cost =
-    (promptTokens / 1_000_000) * pricing.prompt_price +
-    (completionTokens / 1_000_000) * pricing.completion_price +
-    (cachedInputTokens / 1_000_000) * pricing.cached_prompt_price;
+    (uncachedInput / 1_000_000) * pricing.prompt_price +
+    (cachedInputTokens / 1_000_000) * pricing.cached_prompt_price +
+    (completionTokens / 1_000_000) * pricing.completion_price;
   return Math.round(cost * 1_000_000) / 1_000_000;
 }
