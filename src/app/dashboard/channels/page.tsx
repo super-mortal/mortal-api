@@ -50,6 +50,7 @@ export default function ChannelsPage() {
   const [modelChannelId, setModelChannelId] = useState('');
   const [newModelId, setNewModelId] = useState('');
   const [showAddModel, setShowAddModel] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
 
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string } | null>(null);
   const [modelErrModal, setModelErrModal] = useState(false);
@@ -83,9 +84,9 @@ export default function ChannelsPage() {
   const saveChannel = async () => {
     const isEdit = !!panelEditId;
     const body: Record<string, any> = isEdit ? { id: panelEditId, ...panelForm } : panelForm;
-    if (isEdit && !body.api_key) delete body.api_key;
+    if (isEdit && (!body.api_key || body.api_key === '••••••••••••••••••')) delete body.api_key;
     const res = await apiFetch('/admin/channels', { method: isEdit ? 'PATCH' : 'POST', body: JSON.stringify(body) });
-    if (res.ok) { setSidePanelOpen(false); fetchAll(); }
+    if (res.ok) { setShowApiKey(false); setSidePanelOpen(false); fetchAll(); }
   };
 
   const saveModalChannel = async () => {
@@ -247,7 +248,7 @@ export default function ChannelsPage() {
                   </span>
                   {/* ▼ side panel button — NEW (repurposed from config) */}
                   <span className="group relative">
-                    <button onClick={() => { setPanelForm({ name: ch.name, base_url: ch.base_url, api_key: '', priority: ch.priority, notes: ch.notes }); setPanelEditId(ch.id); setModelChannelId(ch.id); setSidePanelOpen(true); }}
+                    <button onClick={() => { setPanelForm({ name: ch.name, base_url: ch.base_url, api_key: ch.api_key ? '••••••••••••••••••' : '', priority: ch.priority, notes: ch.notes }); setPanelEditId(ch.id); setModelChannelId(ch.id); setSidePanelOpen(true); }}
                       className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all border border-transparent hover:border-indigo-200"><InlineIcon name="chevronDown" className="w-4 h-4" /></button>
                     <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">展开</span>
                   </span>
@@ -272,21 +273,21 @@ export default function ChannelsPage() {
       {/* Side Panel */}
       {sidePanelOpen && (
         <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setSidePanelOpen(false)} />
-          <div className="absolute right-0 top-0 bottom-0 w-1/2 min-w-[480px] max-w-[640px] bg-white shadow-2xl flex flex-col">
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => { setShowApiKey(false); setSidePanelOpen(false); }} />
+          <div className="absolute right-0 top-0 bottom-0 w-1/2 min-w-[500px] max-w-[660px] bg-white shadow-2xl flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-gray-100 shrink-0">
               <div>
                 <h3 className="text-base font-semibold text-gray-900">{panelEditId ? '编辑渠道' : '新建渠道'}</h3>
                 <p className="text-xs text-gray-400 mt-0.5">{panelForm.name || '未命名'}</p>
               </div>
-              <button onClick={() => setSidePanelOpen(false)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+              <button onClick={() => { setShowApiKey(false); setSidePanelOpen(false); }} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
                 <InlineIcon name="x" className="w-4 h-4" />
               </button>
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto px-6 py-4">
+            <div className="flex-1 overflow-y-auto px-6 py-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {/* 基本信息 */}
               <div className="mb-6">
                 <h4 className="text-xs font-semibold text-gray-500 mb-3 flex items-center gap-1.5">
@@ -311,8 +312,18 @@ export default function ChannelsPage() {
                 </div>
                 <div className="mt-3">
                   <label className="block text-xs text-gray-500 mb-1">API Key <span className="text-gray-400">（加密存储）</span></label>
-                  <input type="password" value={panelForm.api_key} onChange={e => setPanelForm({...panelForm, api_key: e.target.value})}
-                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono" placeholder={panelEditId ? '留空保持不变' : 'sk-...'} />
+                  <div className="relative">
+                    <input type={showApiKey ? 'text' : 'password'} value={panelForm.api_key}
+                      onChange={e => setPanelForm({...panelForm, api_key: e.target.value})}
+                      className="w-full px-3 py-2.5 pr-10 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
+                      placeholder={panelEditId ? '••••••••••••••••••' : 'sk-...'} />
+                    {panelEditId && panelForm.api_key === '••••••••••••••••••' && (
+                      <button type="button" onClick={() => setShowApiKey(!showApiKey)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded text-gray-400 hover:text-gray-600">
+                        {showApiKey ? <InlineIcon name="eyeOff" className="w-4 h-4" /> : <InlineIcon name="eye" className="w-4 h-4" />}
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="mt-3">
                   <label className="block text-xs text-gray-500 mb-1">备注</label>
@@ -527,7 +538,7 @@ export default function ChannelsPage() {
                   className="flex-1 px-4 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors">
                   {panelEditId ? '💾 保存' : '创建'}
                 </button>
-                <button onClick={() => setSidePanelOpen(false)}
+                <button onClick={() => { setShowApiKey(false); setSidePanelOpen(false); }}
                   className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
                   取消
                 </button>
