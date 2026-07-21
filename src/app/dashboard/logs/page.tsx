@@ -276,7 +276,7 @@ export default function LogsPage() {
               className={'px-3 py-1.5 rounded-md text-xs font-medium transition-all ' + (activeDate === 'custom' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50')}>
               <InlineIcon name="calendar" className="w-3 h-3 inline mr-1" />自定义</button>
             {/* 每页条数 */}
-            <div ref={pageSizeRef} className="ml-auto pl-1.5 border-l border-gray-200">
+            <div ref={pageSizeRef} className="ml-auto pl-1.5 border-l border-gray-200 relative">
               <button onClick={() => setPageSizeOpen(!pageSizeOpen)}
                 className="flex items-center gap-1 px-2 py-1.5 rounded text-xs text-gray-500 hover:bg-gray-50 transition-colors">
                 {pageSize} 条/页
