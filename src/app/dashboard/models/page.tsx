@@ -196,7 +196,7 @@ export default function ModelsPage() {
             const copyKey = `group-${group.displayName}-${i}`;
             return (
             <div key={copyKey}
-              className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-sm transition-all hover:border-gray-200 group">
+              className="bg-white rounded-xl border border-gray-100 p-3 hover:shadow-sm transition-all hover:border-gray-200 group">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-0.5">
@@ -243,7 +243,7 @@ export default function ModelsPage() {
                     </div>
                   )}
                   {/* 主渠道显示（uptime 最高的那个） */}
-                  <div className="flex items-center gap-1.5 mt-1.5">
+                  <div className="flex items-center gap-1.5 mt-1">
                     {healthDot(bestChannel.health)}
                     <span className="text-xs text-gray-500 truncate">{bestChannel.name}</span>
                     {!bestChannel.isActive && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-400">停用</span>}

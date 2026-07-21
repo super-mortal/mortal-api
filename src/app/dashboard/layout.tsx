@@ -76,7 +76,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   );
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="min-h-screen lg:h-screen lg:overflow-hidden flex bg-gray-50">
       {/* Mobile top bar */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-gray-100 flex items-center justify-between px-4 z-40">
         <div className="flex items-center gap-2.5">
@@ -88,7 +88,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Mobile sidebar backdrop */}
       {mobileOpen && <div className="lg:hidden fixed inset-0 z-40 bg-black/30" onClick={() => setMobileOpen(false)} />}
       {/* Sidebar */}
-      <aside className={`${mobileOpen ? 'fixed left-0 top-0 bottom-0 z-50 flex' : 'hidden'} lg:relative lg:flex lg:w-56 flex-col shrink-0`}>
+      <aside className={`${mobileOpen ? 'fixed left-0 top-0 bottom-0 z-50 flex' : 'hidden'} lg:flex lg:w-56 flex-col shrink-0`}>
         {sidebarContent}
       </aside>
       {/* Main */}
