@@ -13,7 +13,17 @@ export async function GET(request: NextRequest) {
     const keys = listRelayKeys();
     const db = getDb();
     const channels = db.prepare('SELECT id, name FROM channels ORDER BY name').all();
-    return NextResponse.json({ keys, channels });
+    // 返回别名映射：model_id → alias_name（去重，优先级取第一个找到的）
+    const aliases = db.prepare(`
+      SELECT DISTINCT cm.model_id, ma.alias_name FROM model_aliases ma
+      JOIN channel_models cm ON cm.id = ma.channel_model_id
+      WHERE ma.is_active = 1
+    `).all() as { model_id: string; alias_name: string }[];
+    const aliasMap: Record<string, string> = {};
+    for (const a of aliases) {
+      if (!aliasMap[a.model_id]) aliasMap[a.model_id] = a.alias_name;
+    }
+    return NextResponse.json({ keys, channels, aliasMap });
   }
 
   const keys = listRelayKeys();

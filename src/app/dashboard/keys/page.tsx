@@ -21,6 +21,7 @@ interface Channel { id: string; name: string; }
 interface FullData {
   keys: RelayKey[];
   channels: Channel[];
+  aliasMap: Record<string, string>;
 }
 
 function toBeijing(utc: string): string {
@@ -34,6 +35,7 @@ function isExpired(key: RelayKey): boolean {
 export default function KeysPage() {
   const [keys, setKeys] = useState<RelayKey[]>([]);
   const [channels, setChannels] = useState<Channel[]>([]);
+  const [aliasMap, setAliasMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState<RelayKey | null>(null);
@@ -63,7 +65,7 @@ export default function KeysPage() {
 
   const fetchData = useCallback(async () => {
     const res = await apiFetch('/admin/keys?scope=full');
-    if (res.ok) { const d: FullData = await res.json(); setKeys(d.keys); setChannels(d.channels || []); }
+    if (res.ok) { const d: FullData = await res.json(); setKeys(d.keys); setChannels(d.channels || []); setAliasMap(d.aliasMap || {}); }
     setLoading(false);
   }, []);
 
@@ -528,7 +530,7 @@ export default function KeysPage() {
                               {modelsList.map(m => (
                                 <div key={m} className="flex items-center gap-1.5">
                                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
-                                  <code className="text-[11px] text-gray-700 font-mono break-all">{m}</code>
+                                  <code className="text-[11px] text-gray-700 font-mono break-all">{aliasMap[m] || m}</code>
                                 </div>
                               ))}
                             </div>
@@ -536,7 +538,7 @@ export default function KeysPage() {
                             modelsList.map(m => (
                               <div key={m} className="flex items-center gap-1.5">
                                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                                <code className="text-[11px] text-gray-700 font-mono whitespace-nowrap">{m}</code>
+                                <code className="text-[11px] text-gray-700 font-mono whitespace-nowrap">{aliasMap[m] || m}</code>
                               </div>
                             ))
                           )}
