@@ -449,44 +449,56 @@ export default function ChannelsPage() {
                                 <div>
                                   <div className="text-[10px] text-gray-400 mb-0.5">标准输入</div>
                                   <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white">
-                                    <input type="number" step="0.001"
+                                    <input type="text" inputMode="decimal"
                                       defaultValue={pricingMap[m.model_id]?.prompt_price ?? ''}
                                       id={`price-prompt-${m.id}`}
-                                      className="w-full px-2 py-1.5 text-sm font-mono text-right border-0 focus:outline-none focus:ring-0" />
+                                      className="w-full px-2 py-1.5 text-sm font-mono text-right border-0 focus:outline-none focus:ring-0 [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:hidden [&::-webkit-outer-spin-button]:hidden" />
                                     <span className="text-[10px] text-gray-400 bg-gray-50 px-2 py-1.5 shrink-0">元/M</span>
                                   </div>
                                 </div>
                                 <div>
                                   <div className="text-[10px] text-gray-400 mb-0.5">输出</div>
                                   <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white">
-                                    <input type="number" step="0.001"
+                                    <input type="text" inputMode="decimal"
                                       defaultValue={pricingMap[m.model_id]?.completion_price ?? ''}
                                       id={`price-completion-${m.id}`}
-                                      className="w-full px-2 py-1.5 text-sm font-mono text-right border-0 focus:outline-none focus:ring-0" />
+                                      className="w-full px-2 py-1.5 text-sm font-mono text-right border-0 focus:outline-none focus:ring-0 [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:hidden [&::-webkit-outer-spin-button]:hidden" />
                                     <span className="text-[10px] text-gray-400 bg-gray-50 px-2 py-1.5 shrink-0">元/M</span>
                                   </div>
                                 </div>
                                 <div>
                                   <div className="text-[10px] text-gray-400 mb-0.5">缓存输入</div>
                                   <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white">
-                                    <input type="number" step="0.001"
+                                    <input type="text" inputMode="decimal"
                                       defaultValue={pricingMap[m.model_id]?.cached_prompt_price ?? ''}
                                       id={`price-cached-${m.id}`}
-                                      className="w-full px-2 py-1.5 text-sm font-mono text-right border-0 focus:outline-none focus:ring-0" />
+                                      className="w-full px-2 py-1.5 text-sm font-mono text-right border-0 focus:outline-none focus:ring-0 [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:hidden [&::-webkit-outer-spin-button]:hidden" />
                                     <span className="text-[10px] text-gray-400 bg-gray-50 px-2 py-1.5 shrink-0">元/M</span>
                                   </div>
                                 </div>
                               </div>
                               <button
                                 onClick={async () => {
-                                  const getVal = (id: string) => Number((document.getElementById(id) as HTMLInputElement)?.value || 0);
+                                  const getVal = (id: string) => (document.getElementById(id) as HTMLInputElement)?.value || '';
+                                  const validateDecimal = (v: string, label: string): boolean => {
+                                    if (v === '' || v === '0') return true;
+                                    if (!/^\d+\.\d+$/.test(v)) {
+                                      alert(`${label} 价格必须包含小数点，如 28.0`);
+                                      return false;
+                                    }
+                                    return true;
+                                  };
+                                  const p = getVal(`price-prompt-${m.id}`);
+                                  const c = getVal(`price-completion-${m.id}`);
+                                  const ch = getVal(`price-cached-${m.id}`);
+                                  if (!validateDecimal(p, '标准输入') || !validateDecimal(c, '输出') || !validateDecimal(ch, '缓存输入')) return;
                                   await apiFetch('/admin/pricing', {
                                     method: 'POST',
                                     body: JSON.stringify({
                                       model_id: m.model_id,
-                                      prompt_price: getVal(`price-prompt-${m.id}`),
-                                      completion_price: getVal(`price-completion-${m.id}`),
-                                      cached_prompt_price: getVal(`price-cached-${m.id}`),
+                                      prompt_price: Number(p),
+                                      completion_price: Number(c),
+                                      cached_prompt_price: Number(ch),
                                     }),
                                   });
                                   fetchAll();
