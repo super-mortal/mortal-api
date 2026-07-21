@@ -42,9 +42,9 @@ export async function POST(request: NextRequest) {
       db.prepare('DELETE FROM relay_keys').run();
 
       // Restore relay_keys
-      const insertKey = db.prepare('INSERT INTO relay_keys (id, key, name, balance, used_tokens, spend_limit, total_spent, is_active, expires_at, allowed_models, allowed_channels, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+      const insertKey = db.prepare('INSERT INTO relay_keys (id, key, name, balance, used_tokens, spend_limit, total_spent, is_active, is_pinned, expires_at, allowed_models, allowed_channels, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
       for (const k of data.relay_keys) {
-        insertKey.run(k.id, k.key, k.name, k.balance || 0, k.used_tokens || 0, k.spend_limit ?? 0, k.total_spent ?? 0, k.is_active, k.expires_at || null, k.allowed_models || '', k.allowed_channels || '', k.created_at, k.updated_at);
+        insertKey.run(k.id, k.key, k.name, k.balance || 0, k.used_tokens || 0, k.spend_limit ?? 0, k.total_spent ?? 0, k.is_active, k.is_pinned ?? 0, k.expires_at || null, k.allowed_models || '', k.allowed_channels || '', k.created_at, k.updated_at);
       }
 
       // Restore channels (re-encrypt api_key, support both old & new schema)
