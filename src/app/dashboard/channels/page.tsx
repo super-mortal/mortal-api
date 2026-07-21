@@ -218,10 +218,6 @@ export default function ChannelsPage() {
     const res = await apiFetch('/admin/channels', { method: 'POST', body: JSON.stringify({ _type: 'channel-model', channel_id: modelChannelId, model_id: newModelId }) });
     if (res.ok) { setNewModelId(''); fetchAll(); } else { setModelErrModal(true); }
   };
-  const deleteModel = async (id: string) => {
-    await apiFetch(`/admin/channels?id=${id}&type=channel-model`, { method: 'DELETE' });
-    fetchAll();
-  };
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') { setPendingModels({}); setSidePanelOpen(false); } };
