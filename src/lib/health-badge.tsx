@@ -71,20 +71,37 @@ export function HealthBar({ recent_checks, uptime_pct, avg_latency_ms }: HealthB
     return 'bg-emerald-400';
   };
 
+  const maxDots = 24;
+  const checks = recent_checks.slice(-maxDots); // 取最近 24 条
+  const firstRow = checks.slice(0, 12);
+  const secondRow = checks.slice(12, 24);
+
+  const DotRow = ({ items }: { items: CheckItem[] }) => (
+    <div className="flex gap-0.5 items-end">
+      {items.map((check, i) => (
+        <div
+          key={i}
+          className={`w-2 h-3 rounded-[2px] ${dotColor(check)}`}
+          title={`${check.checked_at?.slice(0, 16) || '?'} · ${check.ok ? '成功' : (check.kind === 'quota' ? '额度上限' : '失败')} · ${check.latency_ms}ms${check.error ? ' · ' + check.error : ''}`}
+        />
+      ))}
+    </div>
+  );
+
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex gap-0.5 items-end">
-        {recent_checks.map((check, i) => (
-          <div
-            key={i}
-            className={`w-2 h-3 rounded-[2px] ${dotColor(check)}`}
-            title={`${check.checked_at?.slice(0, 16) || '?'} · ${check.ok ? '成功' : (check.kind === 'quota' ? '额度上限' : '失败')} · ${check.latency_ms}ms${check.error ? ' · ' + check.error : ''}`}
-          />
-        ))}
+    <div className="flex flex-col gap-0.5">
+      <div className="flex items-center gap-2">
+        <DotRow items={firstRow} />
+        <span className="text-[10px] text-gray-500 whitespace-nowrap">{uptime_pct}%</span>
       </div>
-      <span className="text-[10px] text-gray-500 whitespace-nowrap">
-        {uptime_pct}% · <span title="平均响应时间">{avg_latency_ms}ms</span>
-      </span>
+      {secondRow.length > 0 && (
+        <div className="flex items-center gap-2">
+          <DotRow items={secondRow} />
+          <span className="text-[10px] text-gray-500 whitespace-nowrap">
+            <span title="平均响应时间">{avg_latency_ms}ms</span>
+          </span>
+        </div>
+      )}
     </div>
   );
 }
