@@ -9,12 +9,13 @@ interface PopoverProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   align?: 'start' | 'center';
+  side?: 'bottom' | 'left';
 }
 
 export function Popover({
   trigger, children,
   open: controlledOpen, onOpenChange,
-  align = 'start',
+  align = 'start', side = 'bottom',
 }: PopoverProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -74,7 +75,10 @@ export function Popover({
           className="fixed z-[9999] bg-white border border-gray-200 rounded-xl shadow-lg py-2 px-3 max-h-60 overflow-y-auto"
           style={{
             top: dropPos.top,
-            left: dropPos.left,
+            ...(side === 'left'
+              ? { right: window.innerWidth - dropPos.left - 4 }
+              : { left: dropPos.left }
+            ),
             width: 'max-content',
             minWidth: Math.max(dropPos.width, 160),
           }}

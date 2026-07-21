@@ -226,12 +226,12 @@ export default function ModelsPage() {
                     <span className="text-[10px] text-gray-400">{bestChannel.uptimePct}% 可用率</span>
                   </div>
                 </div>
-                {/* 右侧悬浮箭头（多渠道时显示 Popover） */}
+                {/* 左侧箭头（多渠道时显示 Popover） */}
                 {group.channels.length > 1 ? (
-                  <Popover
+                  <Popover side="left"
                     trigger={
-                      <span className="p-1 rounded text-gray-300 hover:text-indigo-500 hover:bg-indigo-50 opacity-0 group-hover:opacity-100 transition-all cursor-pointer shrink-0 mt-0.5">
-                        <InlineIcon name="arrowRight" className="w-3.5 h-3.5" />
+                      <span className="p-1 rounded text-gray-300 hover:text-indigo-500 hover:bg-indigo-50 opacity-0 group-hover:opacity-100 transition-all cursor-pointer shrink-0 mt-1">
+                        <InlineIcon name="arrowLeft" className="w-3.5 h-3.5" />
                       </span>
                     }
                   >
@@ -247,7 +247,7 @@ export default function ModelsPage() {
                     </div>
                   </Popover>
                 ) : (
-                  <InlineIcon name={group.type === 'alias' ? 'arrowRight' : 'zap'} className="w-3.5 h-3.5 text-gray-300 shrink-0 mt-0.5" />
+                  <InlineIcon name={group.type === 'alias' ? 'arrowLeft' : 'zap'} className="w-3.5 h-3.5 text-gray-300 shrink-0 mt-1" />
                 )}
               </div>
             </div>
