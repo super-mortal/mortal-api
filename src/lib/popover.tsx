@@ -71,11 +71,12 @@ export function Popover({
       {isOpen && dropPos && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed z-[9999] bg-white border border-gray-200 rounded-xl shadow-lg py-2 px-3 min-w-[140px] max-h-60 overflow-y-auto"
+          className="fixed z-[9999] bg-white border border-gray-200 rounded-xl shadow-lg py-2 px-3 max-h-60 overflow-y-auto"
           style={{
             top: dropPos.top,
             left: dropPos.left,
-            width: dropPos.width,
+            width: 'max-content',
+            minWidth: Math.max(dropPos.width, 160),
           }}
           onClick={(e) => e.stopPropagation()}
         >

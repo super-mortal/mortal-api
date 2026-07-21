@@ -515,14 +515,25 @@ export default function KeysPage() {
                           </span>
                         }
                       >
-                        <div className="space-y-1 min-w-[140px]">
+                        <div className="space-y-1">
                           <p className="text-[10px] text-gray-400 font-medium mb-1.5">限制模型</p>
-                          {modelsList.map(m => (
-                            <div key={m} className="flex items-center gap-1.5">
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                              <code className="text-[11px] text-gray-700 font-mono">{m}</code>
+                          {modelsList.length > 10 ? (
+                            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                              {modelsList.map(m => (
+                                <div key={m} className="flex items-center gap-1.5">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                                  <code className="text-[11px] text-gray-700 font-mono break-all">{m}</code>
+                                </div>
+                              ))}
                             </div>
-                          ))}
+                          ) : (
+                            modelsList.map(m => (
+                              <div key={m} className="flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                <code className="text-[11px] text-gray-700 font-mono whitespace-nowrap">{m}</code>
+                              </div>
+                            ))
+                          )}
                         </div>
                       </Popover>
                     ) : (
