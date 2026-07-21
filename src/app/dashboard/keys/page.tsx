@@ -69,7 +69,7 @@ export default function KeysPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const getModelsForChannels = useCallback(async (chIds: string[]): Promise<string[]> => {
+  const getModelsForChannels = useCallback(async (chIds: string[]): Promise<Array<{ label: string; value: string }>> => {
     const res = await apiFetch('/admin/channels?scope=models');
     if (!res.ok) return [];
     const d = await res.json();
@@ -82,30 +82,34 @@ export default function KeysPage() {
     const chModelIds = new Set(chModels.map((m: any) => m.id));
     const aliases = (d.aliases || []).filter((a: any) => a.is_active);
 
-    // 哪些 model_id 字符串有别名（跨渠道统一过滤）
-    const aliasedModelNames = new Set(
-      aliases.filter((a: any) => a.model_id).map((a: any) => a.model_id)
-    );
+    // Build alias lookup: model_id → alias_name
+    const aliasByModelId: Record<string, string> = {};
+    aliases
+      .filter((a: any) => a.model_id && chModelIds.has(a.channel_model_id))
+      .forEach((a: any) => { aliasByModelId[a.model_id] = a.alias_name; });
 
-    // 别名作为选项（只取当前渠道相关的）
-    const aliasOptions = aliases
-      .filter((a: any) => chModelIds.has(a.channel_model_id))
-      .map((a: any) => a.alias_name);
-
-    // 原始 model_id 中排除有别名的那部分（按 model_id 字符串判断）
-    const nativeOptions = chModels
-      .filter((m: any) => !aliasedModelNames.has(m.model_id))
-      .map((m: any) => m.model_id);
-
-    return [...new Set([...aliasOptions, ...nativeOptions])].sort();
+    // Build deduplicated options sorted by label
+    const seen = new Set<string>();
+    const options: Array<{ label: string; value: string }> = [];
+    chModels.forEach((m: any) => {
+      if (seen.has(m.model_id)) return;
+      seen.add(m.model_id);
+      const alias = aliasByModelId[m.model_id];
+      options.push({
+        label: alias ? `${m.model_id} (${alias})` : m.model_id,
+        value: m.model_id,
+      });
+    });
+    return options.sort((a, b) => a.label.localeCompare(b.label));
   }, []);
 
   const loadCreateModels = useCallback(async (chIds: string[]) => {
     if (chIds.length === 0) { setCreateModelOptions([]); return; }
     setModelLoading(true);
     const models = await getModelsForChannels(chIds);
-    setCreateModelOptions(models.map(m => ({ label: m, value: m })));
-    setNewAllowedModels(prev => prev.filter(m => models.includes(m)));
+    setCreateModelOptions(models);
+    const modelValues = new Set(models.map(m => m.value));
+    setNewAllowedModels(prev => prev.filter(m => modelValues.has(m)));
     setModelLoading(false);
   }, [getModelsForChannels]);
 
@@ -113,8 +117,9 @@ export default function KeysPage() {
     if (chIds.length === 0) { setEditModelOptions([]); return; }
     setModelLoading(true);
     const models = await getModelsForChannels(chIds);
-    setEditModelOptions(models.map(m => ({ label: m, value: m })));
-    setEditAllowedModels(prev => prev.filter(m => models.includes(m)));
+    setEditModelOptions(models);
+    const modelValues = new Set(models.map(m => m.value));
+    setEditAllowedModels(prev => prev.filter(m => modelValues.has(m)));
     setModelLoading(false);
   }, [getModelsForChannels]);
 
