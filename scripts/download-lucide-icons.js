@@ -20,6 +20,8 @@ const path = require('path');
 const ICONS_DIR = path.join(__dirname, '..', 'public', 'icons');
 
 const neededIcons = [
+  "download",
+  "receipt",
   'layout-dashboard', 'key-round', 'plug', 'list', 'log-out', 'check', 'x',
   'trash-2', 'plus', 'pencil', 'copy', 'refresh-cw', 'search', 'calendar', 'filter',
   'chevron-down', 'chevron-left', 'chevron-right', 'chevron-up',
