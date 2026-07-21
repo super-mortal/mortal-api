@@ -154,7 +154,10 @@ export async function generateCsvZip(
   const archive = archiver('zip', { zlib: { level: 6 } });
   const chunks: Buffer[] = [];
   archive.on('data', (chunk: Buffer) => chunks.push(chunk));
-  const archiveEnd = new Promise<void>(resolve => archive.on('end', () => resolve()));
+  const archiveEnd = new Promise<void>((resolve, reject) => {
+    archive.on('end', () => resolve());
+    archive.on('error', (err) => reject(err));
+  });
 
   archive.append(rowsToCsv(detail, [
     { key: 'created_at', label: '时间' },
