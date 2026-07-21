@@ -2,7 +2,7 @@
 // Billing export — query + file generation
 // ============================================================
 import { getDb } from './db';
-import archiver from 'archiver';
+import { ZipArchive } from 'archiver';
 import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
 import path from 'path';
@@ -154,7 +154,7 @@ function rowsToCsv(rows: Record<string, any>[], columns: { key: string; label: s
 export async function generateCsvZip(
   detail: DetailRow[], daily: DailySummaryRow[], model: ModelSummaryRow[]
 ): Promise<{ buffer: Buffer; filename: string }> {
-  const archive = archiver('zip', { zlib: { level: 6 } });
+  const archive = new ZipArchive();
   const chunks: Buffer[] = [];
   archive.on('data', (chunk: Buffer) => chunks.push(chunk));
   const archiveEnd = new Promise<void>((resolve, reject) => {
