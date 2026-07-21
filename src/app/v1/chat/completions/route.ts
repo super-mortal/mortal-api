@@ -17,6 +17,7 @@ import { createCallLog } from '@/lib/logs';
 import { calculateCost } from '@/lib/model-pricing';
 import { estimateTokens } from '@/lib/token-counter';
 import { ChatCompletionRequest, ChatCompletionChunk } from '@/lib/types';
+import { getDb } from '@/lib/db';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -64,10 +65,17 @@ export async function POST(request: NextRequest) {
     const picked = filtered[Math.floor(Math.random() * filtered.length)];
     const autoChannel = picked.channel;
     upstreamModelId = picked.modelId;
+    // 解析计费用名称：有别名就用别名，否则用原始 model_id
+    const aliasRow = getDb().prepare(`
+      SELECT ma.alias_name FROM model_aliases ma
+      JOIN channel_models cm ON cm.id = ma.channel_model_id
+      WHERE cm.model_id = ? AND ma.is_active = 1 LIMIT 1
+    `).get(upstreamModelId) as { alias_name: string } | undefined;
+    const billingName = aliasRow?.alias_name || upstreamModelId;
 
     // Pre-request quota check
     const autoEstimatedTokens = estimateTokens(JSON.stringify(body.messages));
-    const autoEstimatedCost = calculateCost(upstreamModelId, autoEstimatedTokens, 0, 0);
+    const autoEstimatedCost = calculateCost(billingName, autoEstimatedTokens, 0, 0);
     const autoQuotaCheck = checkRelayKeyQuota(apiKey, autoEstimatedTokens, autoEstimatedCost);
     if (!autoQuotaCheck.valid) {
       return NextResponse.json({ error: { message: autoQuotaCheck.reason || 'Insufficient quota', type: 'insufficient_quota' } }, { status: 403 });
@@ -114,10 +122,10 @@ export async function POST(request: NextRequest) {
               const { done, value } = await reader.read();
               if (done) {
                 const prompt_tokens = body.messages ? Math.ceil(JSON.stringify(body.messages).length / 2) : 0;
-                const cost = calculateCost(modelName, prompt_tokens, totalCompletionTokens, cachedInputTokens);
+                const cost = calculateCost(billingName, prompt_tokens, totalCompletionTokens, cachedInputTokens);
                 createCallLog({
                   relay_key_id: relayKey.id, relay_key_name: relayKey.name,
-                  model: modelName, channel_id: autoChannel.id, channel_name: autoChannel.name,
+                  model: billingName, channel_id: autoChannel.id, channel_name: autoChannel.name,
                   prompt_tokens,
                   completion_tokens: totalCompletionTokens,
                   cached_input_tokens: cachedInputTokens,
@@ -150,7 +158,7 @@ export async function POST(request: NextRequest) {
           } catch (err) {
             createCallLog({
               relay_key_id: relayKey.id, relay_key_name: relayKey.name,
-              model: modelName, channel_id: autoChannel.id, channel_name: autoChannel.name,
+              model: billingName, channel_id: autoChannel.id, channel_name: autoChannel.name,
               prompt_tokens: 0, completion_tokens: totalCompletionTokens,
               cached_input_tokens: cachedInputTokens,
               cost: 0,
@@ -168,11 +176,11 @@ export async function POST(request: NextRequest) {
       } else {
         const result = await callUpstream(autoChannel, upstreamBody, autoChannelApiKey);
         const { prompt_tokens, completion_tokens, total_tokens } = result.response.usage;
-        const cost = calculateCost(modelName, prompt_tokens, completion_tokens, result.cachedInputTokens || 0);
+        const cost = calculateCost(billingName, prompt_tokens, completion_tokens, result.cachedInputTokens || 0);
 
         createCallLog({
           relay_key_id: relayKey.id, relay_key_name: relayKey.name,
-          model: modelName, channel_id: autoChannel.id, channel_name: autoChannel.name,
+          model: billingName, channel_id: autoChannel.id, channel_name: autoChannel.name,
           prompt_tokens, completion_tokens,
           cached_input_tokens: result.cachedInputTokens,
           cost,
@@ -194,7 +202,7 @@ export async function POST(request: NextRequest) {
       }
       createCallLog({
         relay_key_id: relayKey.id, relay_key_name: relayKey.name,
-        model: modelName, channel_id: autoChannel.id, channel_name: autoChannel.name,
+        model: billingName, channel_id: autoChannel.id, channel_name: autoChannel.name,
         prompt_tokens: 0, completion_tokens: 0,
         cost: 0,
         status: 'fail', error_message: err.body || (err instanceof Error ? err.message : typeof err === 'string' ? err : '未知上游错误(未捕获具体异常)'),
