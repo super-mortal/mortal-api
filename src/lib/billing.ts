@@ -1,11 +1,8 @@
 // ============================================================
-// Billing export — query + file generation
+// Billing export — query + Excel generation
 // ============================================================
 import { getDb } from './db';
-import { ZipArchive } from 'archiver';
 import ExcelJS from 'exceljs';
-import PDFDocument from 'pdfkit';
-import path from 'path';
 
 export interface DetailRow {
   created_at: string;
@@ -129,95 +126,59 @@ export function queryModelSummary(q: ExportQuery): ModelSummaryRow[] {
   return result;
 }
 
-// ---- CSV / Zip ----
-
-function csvEscape(val: string): string {
-  if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-    return `"${val.replace(/"/g, '""')}"`;
-  }
-  return val;
-}
-
-function rowsToCsv(rows: Record<string, any>[], columns: { key: string; label: string }[]): string {
-  const bom = '﻿';
-  const header = columns.map(c => csvEscape(c.label)).join(',');
-  const body = rows.map(row =>
-    columns.map(c => {
-      const v = row[c.key];
-      if (v === null || v === undefined) return '';
-      return csvEscape(String(v));
-    }).join(',')
-  ).join('\n');
-  return bom + header + '\n' + body;
-}
-
-export async function generateCsvZip(
-  detail: DetailRow[], daily: DailySummaryRow[], model: ModelSummaryRow[]
-): Promise<{ buffer: Buffer; filename: string }> {
-  const archive = new ZipArchive();
-  const chunks: Buffer[] = [];
-  archive.on('data', (chunk: Buffer) => chunks.push(chunk));
-  const archiveEnd = new Promise<void>((resolve, reject) => {
-    archive.on('end', () => resolve());
-    archive.on('error', (err) => reject(err));
-  });
-
-  archive.append(rowsToCsv(detail, [
-    { key: 'created_at', label: '时间' },
-    { key: 'relay_key_name', label: '密钥名称' },
-    { key: 'model', label: '模型' },
-    { key: 'channel_name', label: '渠道' },
-    { key: 'prompt_tokens', label: '输入Token' },
-    { key: 'cached_input_tokens', label: '缓存输入Token' },
-    { key: 'completion_tokens', label: '输出Token' },
-    { key: 'total_tokens', label: '总Token' },
-    { key: 'cost', label: '费用(元)' },
-    { key: 'status', label: '状态' },
-    { key: 'ip', label: 'IP' },
-    { key: 'id', label: '日志ID' },
-  ]), { name: 'detail.csv' });
-
-  archive.append(rowsToCsv(daily, [
-    { key: 'date', label: '日期' },
-    { key: 'calls', label: '调用次数' },
-    { key: 'success', label: '成功' },
-    { key: 'fail', label: '失败' },
-    { key: 'tokens', label: '总Token' },
-    { key: 'total_cost', label: '总费用(元)' },
-  ]), { name: 'daily_summary.csv' });
-
-  archive.append(rowsToCsv(model, [
-    { key: 'model', label: '模型ID' },
-    { key: 'model_alias', label: '模型别名' },
-    { key: 'prompt_price', label: '输入单价(元/百万Token)' },
-    { key: 'completion_price', label: '输出单价(元/百万Token)' },
-    { key: 'cached_prompt_price', label: '缓存单价(元/百万Token)' },
-    { key: 'calls', label: '调用次数' },
-    { key: 'tokens', label: '总Token' },
-    { key: 'total_cost', label: '总费用(元)' },
-  ]), { name: 'model_summary.csv' });
-
-  archive.finalize();
-  await archiveEnd;
-  return { buffer: Buffer.concat(chunks), filename: `billing-${Date.now()}.zip` };
-}
-
 // ============================================================
 // Excel generator
 // ============================================================
+
+function computeSummary(detail: DetailRow[]) {
+  const totalInput = detail.reduce((s, r) => s + (r.prompt_tokens || 0), 0);
+  const totalCached = detail.reduce((s, r) => s + (r.cached_input_tokens || 0), 0);
+  const totalOutput = detail.reduce((s, r) => s + (r.completion_tokens || 0), 0);
+  const totalCost = detail.reduce((s, r) => s + (r.cost || 0), 0);
+  const succ = detail.filter(r => r.status === 'success').length;
+  const total = detail.length;
+  const rate = total > 0 ? ((succ / total) * 100).toFixed(1) : '0.0';
+  return { totalInput, totalCached, totalOutput, totalCost, succ, fail: total - succ, total, rate };
+}
+
+/** Columns that should be center-aligned */
+const CENTER_COLS = new Set([
+  'relay_key_name', 'prompt_tokens', 'cached_input_tokens',
+  'completion_tokens', 'total_tokens', 'cost',
+]);
+
+/** Number columns that should be center-aligned in summary sheets */
+const CENTER_NUM_COLS = new Set([
+  'calls', 'success', 'fail', 'tokens', 'total_cost',
+  'prompt_price', 'completion_price', 'cached_prompt_price',
+]);
+
+function applyCenter(ws: ExcelJS.Worksheet, colKeys: string[], startRow: number, endRow: number) {
+  for (let r = startRow; r <= endRow; r++) {
+    const row = ws.getRow(r);
+    colKeys.forEach(key => {
+      const idx = (ws.columns as any[]).findIndex((c: any) => c.key === key);
+      if (idx >= 0) row.getCell(idx + 1).alignment = { horizontal: 'center', vertical: 'middle' };
+    });
+  }
+}
+
+function applyHeaderStyle(row: ExcelJS.Row) {
+  row.font = { bold: true };
+  row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
+}
 
 export async function generateExcel(
   detail: DetailRow[], daily: DailySummaryRow[], model: ModelSummaryRow[]
 ): Promise<{ buffer: Buffer; filename: string }> {
   const wb = new ExcelJS.Workbook();
 
-  // Sheet 1: 明细
+  // ===== Sheet 1: 明细 =====
   const ws1 = wb.addWorksheet('明细');
-  ws1.columns = [
+  const colDef1 = [
     { header: '时间', key: 'created_at', width: 22 },
     { header: '密钥名称', key: 'relay_key_name', width: 20 },
     { header: '模型', key: 'model', width: 24 },
-    { header: '渠道', key: 'channel_name', width: 16 },
     { header: '输入Token', key: 'prompt_tokens', width: 14 },
     { header: '缓存输入Token', key: 'cached_input_tokens', width: 16 },
     { header: '输出Token', key: 'completion_tokens', width: 14 },
@@ -227,14 +188,55 @@ export async function generateExcel(
     { header: 'IP', key: 'ip', width: 16 },
     { header: '日志ID', key: 'id', width: 24 },
   ];
-  ws1.addRows(detail);
-  const hdr1 = ws1.getRow(1);
-  hdr1.font = { bold: true };
-  hdr1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
+  ws1.columns = colDef1;
+  const C = colDef1.length;
+  const lastCol = String.fromCharCode(64 + C);
 
-  // Sheet 2: 按天汇总
+  // Summary block
+  const s = computeSummary(detail);
+
+  ws1.mergeCells(`A1:${lastCol}1`);
+  ws1.getRow(1).height = 28;
+  const t = ws1.getCell('A1');
+  t.value = '汇总统计';
+  t.font = { bold: true, size: 13 };
+  t.alignment = { horizontal: 'center', vertical: 'middle' };
+
+  ws1.mergeCells(`A2:${lastCol}2`);
+  const s1 = ws1.getCell('A2');
+  s1.value = `总输入Token: ${s.totalInput.toLocaleString()}  |  总缓存输入Token: ${s.totalCached.toLocaleString()}  |  总输出Token: ${s.totalOutput.toLocaleString()}  |  总费用: ¥${s.totalCost.toFixed(4)}`;
+  s1.font = { size: 10, color: { argb: 'FF6B7280' } };
+  s1.alignment = { horizontal: 'center', vertical: 'middle' };
+
+  ws1.mergeCells(`A3:${lastCol}3`);
+  const s2 = ws1.getCell('A3');
+  s2.value = `总调用次数: ${s.total.toLocaleString()}  |  成功: ${s.succ.toLocaleString()}  |  失败: ${s.fail.toLocaleString()}  |  成功率: ${s.rate}%`;
+  s2.font = { size: 10, color: { argb: 'FF6B7280' } };
+  s2.alignment = { horizontal: 'center', vertical: 'middle' };
+
+  ws1.getRow(4).height = 6; // gap
+
+  // Header at row 5
+  colDef1.forEach((col, i) => {
+    const cell = ws1.getRow(5).getCell(i + 1);
+    cell.value = col.header;
+  });
+  applyHeaderStyle(ws1.getRow(5));
+
+  // Data rows
+  detail.forEach((row, i) => {
+    const r = ws1.getRow(6 + i);
+    colDef1.forEach((col, j) => {
+      const cell = r.getCell(j + 1);
+      const v = (row as any)[col.key];
+      cell.value = v !== null && v !== undefined ? v : '';
+    });
+  });
+  applyCenter(ws1, [...CENTER_COLS], 5, detail.length + 5);
+
+  // ===== Sheet 2: 按天汇总 =====
   const ws2 = wb.addWorksheet('按天汇总');
-  ws2.columns = [
+  const colDef2 = [
     { header: '日期', key: 'date', width: 14 },
     { header: '调用次数', key: 'calls', width: 12 },
     { header: '成功', key: 'success', width: 10 },
@@ -242,14 +244,25 @@ export async function generateExcel(
     { header: '总Token', key: 'tokens', width: 14 },
     { header: '总费用(元)', key: 'total_cost', width: 16 },
   ];
-  ws2.addRows(daily);
-  const hdr2 = ws2.getRow(1);
-  hdr2.font = { bold: true };
-  hdr2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
+  ws2.columns = colDef2;
+  colDef2.forEach((col, i) => {
+    const cell = ws2.getRow(1).getCell(i + 1);
+    cell.value = col.header;
+  });
+  applyHeaderStyle(ws2.getRow(1));
+  daily.forEach((row, i) => {
+    const r = ws2.getRow(2 + i);
+    colDef2.forEach((col, j) => {
+      const cell = r.getCell(j + 1);
+      const v = (row as any)[col.key];
+      cell.value = v !== null && v !== undefined ? v : '';
+    });
+  });
+  applyCenter(ws2, [...CENTER_NUM_COLS], 1, daily.length + 1);
 
-  // Sheet 3: 按模型汇总
+  // ===== Sheet 3: 按模型汇总 =====
   const ws3 = wb.addWorksheet('按模型汇总');
-  ws3.columns = [
+  const colDef3 = [
     { header: '模型ID', key: 'model', width: 24 },
     { header: '模型别名', key: 'model_alias', width: 20 },
     { header: '输入单价', key: 'prompt_price', width: 14 },
@@ -259,128 +272,22 @@ export async function generateExcel(
     { header: '总Token', key: 'tokens', width: 14 },
     { header: '总费用(元)', key: 'total_cost', width: 16 },
   ];
-  ws3.addRows(model);
-  const hdr3 = ws3.getRow(1);
-  hdr3.font = { bold: true };
-  hdr3.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
+  ws3.columns = colDef3;
+  colDef3.forEach((col, i) => {
+    const cell = ws3.getRow(1).getCell(i + 1);
+    cell.value = col.header;
+  });
+  applyHeaderStyle(ws3.getRow(1));
+  model.forEach((row, i) => {
+    const r = ws3.getRow(2 + i);
+    colDef3.forEach((col, j) => {
+      const cell = r.getCell(j + 1);
+      const v = (row as any)[col.key];
+      cell.value = v !== null && v !== undefined ? v : '';
+    });
+  });
+  applyCenter(ws3, [...CENTER_NUM_COLS], 1, model.length + 1);
 
   const wbBuffer = await wb.xlsx.writeBuffer();
   return { buffer: wbBuffer as unknown as Buffer, filename: `billing-${Date.now()}.xlsx` };
-}
-
-// ============================================================
-// PDF generator
-// ============================================================
-
-const FONT_PATH = path.join(process.cwd(), 'public', 'fonts', 'NotoSansSC-Regular.ttf');
-
-function drawTable(
-  doc: PDFKit.PDFDocument, headers: string[], rows: string[][],
-  startY: number, opts: { colWidths: number[]; fontSize?: number; headerBg?: string }
-): number {
-  const fs = opts.fontSize || 8;
-  const colWidths = opts.colWidths;
-  const leftMargin = 40;
-  let y = startY;
-  const rowHeight = fs + 8;
-  const headerBg = opts.headerBg || '#F3F4F6';
-
-  // Header row
-  doc.font('NotoSansSC').fontSize(fs);
-  let x = leftMargin;
-  doc.rect(leftMargin, y - 4, colWidths.reduce((a, b) => a + b, 0) + (headers.length - 1) * 1, rowHeight)
-     .fill(headerBg).fillColor('#000');
-  doc.fillColor('#000');
-  headers.forEach((h, i) => {
-    doc.text(h, x + 2, y, { width: colWidths[i], align: i === 0 ? 'left' : 'right' });
-    x += colWidths[i] + 1;
-  });
-  y += rowHeight + 2;
-
-  // Data rows
-  doc.font('NotoSansSC').fontSize(fs - 0.5);
-  for (const row of rows) {
-    if (y + rowHeight > doc.page.height - 60) {
-      doc.addPage();
-      y = 40;
-      // Re-draw header on new page
-      doc.font('NotoSansSC').fontSize(fs);
-      x = leftMargin;
-      doc.rect(leftMargin, y - 4, colWidths.reduce((a, b) => a + b, 0) + (headers.length - 1) * 1, rowHeight)
-         .fill(headerBg).fillColor('#000');
-      doc.fillColor('#000');
-      headers.forEach((h, i) => {
-        doc.text(h, x + 2, y, { width: colWidths[i], align: i === 0 ? 'left' : 'right' });
-        x += colWidths[i] + 1;
-      });
-      y += rowHeight + 2;
-      doc.font('NotoSansSC').fontSize(fs - 0.5);
-    }
-    x = leftMargin;
-    row.forEach((cell, i) => {
-      doc.text(cell, x + 2, y, { width: colWidths[i], align: i === 0 ? 'left' : 'right' });
-      x += colWidths[i] + 1;
-    });
-    y += rowHeight;
-  }
-  return y;
-}
-
-export async function generatePdf(
-  daily: DailySummaryRow[], model: ModelSummaryRow[],
-  keyName: string, startDate: string, endDate: string
-): Promise<{ buffer: Buffer; filename: string }> {
-  const doc = new PDFDocument({ margin: 40, size: 'A4' });
-  const chunks: Buffer[] = [];
-  doc.on('data', (chunk: Buffer) => chunks.push(chunk));
-
-  return new Promise((resolve, reject) => {
-    doc.on('end', () => resolve({ buffer: Buffer.concat(chunks), filename: `billing-${Date.now()}.pdf` }));
-    doc.on('error', reject);
-
-    doc.registerFont('NotoSansSC', FONT_PATH);
-    doc.font('NotoSansSC');
-
-    // Title
-    doc.fontSize(18).text('账单导出报告', { align: 'center' });
-    doc.moveDown(0.5);
-    doc.fontSize(9).fillColor('#666');
-    doc.text(`密钥: ${keyName || '全部'}`, { align: 'center' });
-    doc.text(`时间范围: ${startDate} ~ ${endDate}`, { align: 'center' });
-    doc.text(`生成时间: ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}`, { align: 'center' });
-    doc.moveDown(0.8);
-    doc.fillColor('#000');
-
-    // Daily summary table
-    doc.fontSize(12).font('NotoSansSC').text('按天汇总', { underline: true });
-    doc.moveDown(0.3);
-    const dailyHdrs = ['日期', '调用次数', '成功', '失败', '总Token', '总费用(元)'];
-    const dailyRows = daily.map(r => [
-      r.date, r.calls.toLocaleString(), r.success.toLocaleString(),
-      r.fail.toLocaleString(), r.tokens.toLocaleString(), r.total_cost.toFixed(6)
-    ]);
-    drawTable(doc, dailyHdrs, dailyRows, doc.y, { colWidths: [80, 80, 70, 70, 100, 95], fontSize: 9 });
-
-    doc.moveDown(1);
-
-    // Model summary table
-    doc.fontSize(12).font('NotoSansSC').text('按模型汇总', { underline: true });
-    doc.moveDown(0.3);
-    const modelHdrs = ['模型', '调用次数', '总Token', '总费用(元)', '输入单价', '输出单价'];
-    const modelRows = model.map(r => [
-      r.model_alias || r.model, r.calls.toLocaleString(), r.tokens.toLocaleString(),
-      r.total_cost.toFixed(6), r.prompt_price.toFixed(2), r.completion_price.toFixed(2),
-    ]);
-    drawTable(doc, modelHdrs, modelRows, doc.y + 4, { colWidths: [120, 80, 100, 95, 50, 50], fontSize: 9 });
-
-    // Page numbers
-    const totalPages = doc.bufferedPageRange().count;
-    for (let i = 0; i < totalPages; i++) {
-      doc.switchToPage(i);
-      doc.fontSize(7).fillColor('#999');
-      doc.text(`Mortal API - 账单导出报告 - 第 ${i + 1} / ${totalPages} 页`, 40, doc.page.height - 30, { align: 'center' });
-    }
-
-    doc.end();
-  });
 }

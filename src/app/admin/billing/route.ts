@@ -1,11 +1,11 @@
 // ============================================================
-// POST /admin/billing — export billing data (CSV / Excel / PDF)
+// POST /admin/billing — export billing data (Excel only)
 // ============================================================
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-middleware';
 import {
   queryDetail, queryDailySummary, queryModelSummary,
-  generateCsvZip, generateExcel, generatePdf, getRelayKeyName,
+  generateExcel, getRelayKeyName,
   ExportQuery,
 } from '@/lib/billing';
 
@@ -15,11 +15,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { relay_key_id, format } = body as {
+    const { relay_key_id } = body as {
       relay_key_id: string;
       start_date: string;
       end_date: string;
-      format: 'csv' | 'xlsx' | 'pdf';
     };
     const startDate = body.start_date?.replace('T', ' ');
     const endDate = body.end_date?.replace('T', ' ');
@@ -45,38 +44,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '未找到数据' }, { status: 404 });
     }
 
-    switch (format) {
-      case 'csv': {
-        const { buffer, filename } = await generateCsvZip(detail, daily, modelRows);
-        return new Response(new Uint8Array(buffer), {
-          headers: {
-            'Content-Type': 'application/zip',
-            'Content-Disposition': `attachment; filename="${filename}"`,
-          },
-        });
-      }
-      case 'xlsx': {
-        const { buffer, filename } = await generateExcel(detail, daily, modelRows);
-        return new Response(new Uint8Array(buffer), {
-          headers: {
-            'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition': `attachment; filename="${filename}"`,
-          },
-        });
-      }
-      case 'pdf': {
-        const keyName = relay_key_id ? getRelayKeyName(relay_key_id) : '全部 Key';
-        const { buffer, filename } = await generatePdf(daily, modelRows, keyName, startDate, endDate);
-        return new Response(new Uint8Array(buffer), {
-          headers: {
-            'Content-Type': 'application/pdf',
-            'Content-Disposition': `attachment; filename="${filename}"`,
-          },
-        });
-      }
-      default:
-        return NextResponse.json({ error: 'Invalid format' }, { status: 400 });
-    }
+    const { buffer, filename } = await generateExcel(detail, daily, modelRows);
+    return new Response(new Uint8Array(buffer), {
+      headers: {
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+      },
+    });
   } catch (e) {
     console.error('Billing export error:', e);
     return NextResponse.json({ error: String(e) }, { status: 500 });

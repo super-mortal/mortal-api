@@ -7,12 +7,10 @@ import { SelectFilter } from '@/lib/select-filter';
 import { DatePicker } from '@/lib/date-picker';
 
 interface RelayKey { id: string; name: string; }
-type ExportFormat = 'csv' | 'xlsx' | 'pdf';
 
 interface ExportRecord {
   time: string;
   keyName: string;
-  format: ExportFormat;
   period: string;
 }
 
@@ -28,18 +26,11 @@ function fmtDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-const FORMAT_OPTS: { label: string; value: ExportFormat }[] = [
-  { label: 'CSV (.zip)', value: 'csv' },
-  { label: 'Excel (.xlsx)', value: 'xlsx' },
-  { label: 'PDF', value: 'pdf' },
-];
-
 export default function BillingPage() {
   const [keys, setKeys] = useState<RelayKey[]>([]);
   const [selectedKeyId, setSelectedKeyId] = useState('');
   const [startDate, setStartDate] = useState(todayStr());
   const [endDate, setEndDate] = useState(todayStr());
-  const [format, setFormat] = useState<ExportFormat>('xlsx');
   const [exporting, setExporting] = useState(false);
   const [history, setHistory] = useState<ExportRecord[]>([]);
   const [activePreset, setActivePreset] = useState('today');
@@ -57,11 +48,20 @@ export default function BillingPage() {
     } catch { /* ignore */ }
   }, []);
 
-  const saveHistory = useCallback((rec: ExportRecord) => {
-    const updated = [rec, ...history].slice(0, 5);
-    setHistory(updated);
-    try { localStorage.setItem('billing_export_history', JSON.stringify(updated)); } catch { /* ignore */ }
-  }, [history]);
+  const persistHistory = useCallback((h: ExportRecord[]) => {
+    setHistory(h);
+    try { localStorage.setItem('billing_export_history', JSON.stringify(h)); } catch { /* ignore */ }
+  }, []);
+
+  const pushHistory = useCallback((rec: ExportRecord) => {
+    const updated = [rec, ...history].slice(0, 10);
+    persistHistory(updated);
+  }, [history, persistHistory]);
+
+  const deleteHistory = useCallback((idx: number) => {
+    const updated = history.filter((_, i) => i !== idx);
+    persistHistory(updated);
+  }, [history, persistHistory]);
 
   const handlePreset = (preset: 'today' | '7d' | '30d') => {
     setActivePreset(preset);
@@ -92,7 +92,6 @@ export default function BillingPage() {
           relay_key_id: selectedKeyId,
           start_date: startDate + ' 00:00:00',
           end_date: endDate + ' 23:59:59',
-          format,
         }),
       });
       if (!res.ok) {
@@ -105,18 +104,16 @@ export default function BillingPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const disposition = res.headers.get('Content-Disposition') || '';
-      a.download = disposition.match(/filename="(.+)"/)?.[1] || `billing-export.${format}`;
+      a.download = `billing-${Date.now()}.xlsx`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
       const keyName = keys.find(k => k.id === selectedKeyId)?.name || '全部 Key';
-      saveHistory({
+      pushHistory({
         time: new Date().toLocaleString('zh-CN'),
         keyName,
-        format,
         period: `${startDate} ~ ${endDate}`,
       });
     } catch (e) {
@@ -130,7 +127,7 @@ export default function BillingPage() {
     <div className="space-y-4 sm:space-y-5">
       <div>
         <h1 className="text-lg sm:text-xl font-semibold text-gray-900">账单导出</h1>
-        <p className="text-xs sm:text-sm text-gray-500 mt-0.5">按密钥和时间范围导出使用明细与汇总账单</p>
+        <p className="text-xs sm:text-sm text-gray-500 mt-0.5">按密钥和时间范围导出使用明细与汇总账单（Excel）</p>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 shadow-sm space-y-4">
@@ -183,23 +180,6 @@ export default function BillingPage() {
           </div>
         )}
 
-        {/* Format selection */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <label className="text-xs font-medium text-gray-600 w-20 shrink-0">导出格式</label>
-          <div className="flex items-center gap-2">
-            {FORMAT_OPTS.map(opt => (
-              <button key={opt.value} onClick={() => setFormat(opt.value)}
-                className={'px-4 py-2 rounded-lg border text-xs sm:text-sm font-medium transition-all flex items-center gap-2 ' + (
-                  format === opt.value
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                )}>
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Export button */}
         <div className="flex justify-end pt-2">
           <button onClick={handleExport} disabled={exporting}
@@ -226,9 +206,11 @@ export default function BillingPage() {
                   <span className="font-medium text-gray-800">{rec.keyName}</span>
                   <span className="text-gray-400">{rec.period}</span>
                 </div>
-                <span className="text-xs font-medium uppercase text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
-                  {rec.format}
-                </span>
+                <button onClick={() => deleteHistory(i)}
+                  className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                  title="删除记录">
+                  <InlineIcon name="trash2" className="w-3.5 h-3.5" />
+                </button>
               </div>
             ))}
           </div>
