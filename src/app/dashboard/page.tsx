@@ -204,13 +204,17 @@ export default function DashboardPage() {
         {data.dailyStats.length > 0 ? (
           <div className="h-52 sm:h-64">
             <div className="overflow-x-auto w-full">
-              <div style={{ minWidth: Math.max(data.dailyStats.length * 40 + 80, 400) }}>
+              <div style={{ minWidth: Math.max(data.dailyStats.length * 28 + 80, 400) }}>
                 <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={data.dailyStats} maxBarSize={36}>
+                  <BarChart data={data.dailyStats} maxBarSize={24}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                     <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(v) => v.slice(5)} axisLine={{ stroke: '#e2e8f0' }} tickLine={false} />
                     <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={36} />
-                    <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }} />
+                    <Tooltip
+                      contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '11px', padding: '6px 10px' }}
+                      formatter={(value: any, name: any) => [value.toLocaleString(), name]}
+                      labelFormatter={(label: any) => label.slice(5)}
+                    />
                     <Bar dataKey="uncached_tokens" name="未缓存输入" fill="#f59e0b" stackId="a" />
                     <Bar dataKey="cached_tokens" name="缓存输入" fill="#22c55e" stackId="a" />
                     <Bar dataKey="completion_tokens" name="输出" fill="#8b5cf6" stackId="a" radius={[4, 4, 0, 0]} />
@@ -291,11 +295,15 @@ export default function DashboardPage() {
           {data.dailyStats.length > 0 ? (
             <div className="h-44 sm:h-48">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.dailyStats} maxBarSize={36}>
+                <BarChart data={data.dailyStats} maxBarSize={24}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                   <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={(v) => v.slice(5)} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={26} />
-                  <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }} />
+                  <Tooltip
+                    contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '11px', padding: '6px 10px' }}
+                    formatter={(value: any, name: any) => [value.toLocaleString(), name]}
+                    labelFormatter={(label: any) => label.slice(5)}
+                  />
                   <Bar dataKey="uncached_tokens" name="未缓存输入" fill="#f59e0b" stackId="a" />
                   <Bar dataKey="cached_tokens" name="缓存输入" fill="#22c55e" stackId="a" />
                   <Bar dataKey="completion_tokens" name="输出" fill="#a78bfa" stackId="a" radius={[2, 2, 0, 0]} />
