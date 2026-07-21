@@ -337,3 +337,41 @@ function extractModels(data: any): string[] {
   }
   return [];
 }
+
+// ── Pricing Sync ──
+
+export function findChannelsWithSamePricingKey(channelModelId: string): {
+  channels: Array<{ channel_id: string; channel_name: string }>;
+  count: number;
+} {
+  const db = getDb();
+
+  // 1. 获取当前 channel_model
+  const cm = db.prepare('SELECT * FROM channel_models WHERE id = ?').get(channelModelId) as ChannelModel | undefined;
+  if (!cm) return { channels: [], count: 0 };
+
+  // 2. 获取当前 channel_model 的别名
+  const alias = db.prepare('SELECT * FROM model_aliases WHERE channel_model_id = ? AND is_active = 1').get(channelModelId) as ModelAlias | undefined;
+  const aliasName = alias?.alias_name || null;
+
+  // 3. 查找其他 channel 中相同 model_id 的行
+  const sameModelRows = db.prepare(`
+    SELECT cm.id, cm.channel_id FROM channel_models cm
+    WHERE cm.model_id = ? AND cm.id != ?
+  `).all(cm.model_id, channelModelId) as Array<{ id: string; channel_id: string }>;
+
+  // 4. 逐一检查别名是否匹配
+  const matchedChannels: Array<{ channel_id: string; channel_name: string }> = [];
+  for (const row of sameModelRows) {
+    const otherAlias = db.prepare('SELECT * FROM model_aliases WHERE channel_model_id = ? AND is_active = 1').get(row.id) as ModelAlias | undefined;
+    const otherAliasName = otherAlias?.alias_name || null;
+
+    // 别名一致（同为 null 或相同字符串）才算匹配
+    if ((aliasName === null && otherAliasName === null) || (aliasName !== null && otherAliasName === aliasName)) {
+      const ch = db.prepare('SELECT name FROM channels WHERE id = ?').get(row.channel_id) as { name: string } | undefined;
+      if (ch) matchedChannels.push({ channel_id: row.channel_id, channel_name: ch.name });
+    }
+  }
+
+  return { channels: matchedChannels, count: matchedChannels.length };
+}
