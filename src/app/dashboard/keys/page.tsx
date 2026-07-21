@@ -8,7 +8,7 @@ import { ComboBox } from '@/lib/combobox';
 import { Switch } from '@/lib/switch';
 import { ConfirmDialog } from '@/lib/confirm-dialog';
 import { Popover } from '@/lib/popover';
-import { DateTimePicker } from '@/lib/date-picker';
+import { DatePicker } from '@/lib/date-picker';
 
 interface RelayKey {
   id: string; key: string; name: string; spend_limit: number;
@@ -174,7 +174,7 @@ export default function KeysPage() {
       allowed_channels: editAllowedChannels.join(','),
     };
     if (editExpiry === '') body.expires_at = null;
-    else if (editExpiry !== (showEdit.expires_at || '').replace(' ', 'T').slice(0, 16)) body.expires_at = editExpiry;
+    else if (editExpiry !== (showEdit.expires_at || '').replace(' ', 'T').slice(0, 10)) body.expires_at = editExpiry + 'T00:00';
     await apiFetch('/admin/keys', { method: 'PATCH', body: JSON.stringify(body) });
     setShowEdit(null); fetchData();
   };
@@ -367,7 +367,7 @@ export default function KeysPage() {
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1.5">过期时间</label>
-                <DateTimePicker value={editExpiry} onChange={(v) => setEditExpiry(v)}
+                <DatePicker value={editExpiry} onChange={(v) => setEditExpiry(v)}
                   className="w-full" />
                 {showEdit.expires_at && <p className="text-[10px] text-gray-400 mt-1">当前: {toBeijing(showEdit.expires_at)}</p>}
               </div>
@@ -568,7 +568,7 @@ export default function KeysPage() {
                       </button>
                       <button onClick={() => {
                         setShowEdit(k);
-                        setEditExpiry(k.expires_at ? k.expires_at.replace(' ', 'T').slice(0, 16) : '');
+                        setEditExpiry(k.expires_at ? k.expires_at.replace(' ', 'T').slice(0, 10) : '');
                         const channels = k.allowed_channels ? k.allowed_channels.split(',').filter(Boolean) : [];
                         setEditAllowedChannels(channels);
                         const models = k.allowed_models ? k.allowed_models.split(',').filter(Boolean) : [];
