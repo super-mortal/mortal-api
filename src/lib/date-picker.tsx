@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { DayPicker, getDefaultClassNames, useDayPicker } from 'react-day-picker';
 import { format, parse, isValid, addMonths, subMonths, addYears, subYears } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
@@ -53,6 +54,7 @@ export function DatePicker({
   className = '',
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
+  const [dropPos, setDropPos] = useState<{ left: number; top: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
 
@@ -71,6 +73,22 @@ export function DatePicker({
     };
   }, [open]);
 
+  useLayoutEffect(() => {
+    if (!open) { setDropPos(null); return; }
+    const update = () => {
+      const r = btnRef.current?.getBoundingClientRect();
+      if (!r) return;
+      setDropPos({ left: r.left, top: r.bottom + 4 });
+    };
+    update();
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [open]);
+
   const defaultCls = getDefaultClassNames();
 
   return (
@@ -85,8 +103,12 @@ export function DatePicker({
         <span className={value ? 'font-medium' : 'text-gray-400'}>{displayText}</span>
       </button>
 
-      {open && (
-        <div className="absolute z-50 mt-1" style={{ left: 0 }}>
+      {open && dropPos && createPortal(
+        <div
+          className="fixed z-[9999]"
+          style={{ left: dropPos.left, top: dropPos.top }}
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="bg-white border border-gray-200 rounded-xl shadow-lg p-4">
             <DayPicker
               mode="single"
@@ -119,7 +141,8 @@ export function DatePicker({
               }}
             />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
