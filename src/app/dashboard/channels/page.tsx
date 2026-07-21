@@ -559,16 +559,33 @@ export default function ChannelsPage() {
                   {pulledModels[panelEditId]?.length > 0 && (
                     <details className="text-sm text-gray-500 mt-2" open>
                       <summary className="cursor-pointer hover:text-gray-700 font-medium text-xs">上游可用模型（{pulledModels[panelEditId].length} 个）</summary>
-                      <div className="flex flex-wrap gap-2 mt-2">
+                      <div className="grid grid-cols-3 gap-1.5 mt-2">
                         {pulledModels[panelEditId].map(m => {
                           const exists = modelsForChannel(panelEditId).some(mod => mod.model_id === m);
-                          return exists ? (
-                            <span key={m} className="text-xs bg-gray-200 text-gray-500 px-2.5 py-1 rounded-lg cursor-default">{m} ✓</span>
-                          ) : (
-                            <button key={m} onClick={() => {
-                              apiFetch('/admin/channels', { method: 'POST', body: JSON.stringify({ _type: 'channel-model', channel_id: panelEditId, model_id: m }) }).then(() => fetchAll());
-                            }}
-                              className="text-xs bg-white border border-gray-200 px-2.5 py-1 rounded-lg hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 transition-all">{m}</button>
+                          return (
+                            <div key={m}
+                              className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-mono ${
+                                exists
+                                  ? 'bg-gray-100 text-gray-500'
+                                  : 'bg-white border border-gray-200 text-gray-700 hover:border-indigo-300 transition-colors group'
+                              }`}
+                            >
+                              <span className="flex-1 truncate">{m}</span>
+                              {exists ? (
+                                <button onClick={() => {
+                                  const cm = channelModels.find(mod => mod.model_id === m && mod.channel_id === panelEditId);
+                                  if (cm) { apiFetch(`/admin/channels?id=${cm.id}&type=channel-model`, { method: 'DELETE' }).then(() => fetchAll()); }
+                                }}
+                                  className="shrink-0 w-5 h-5 flex items-center justify-center rounded bg-red-100 text-red-500 hover:bg-red-200 transition-colors text-xs font-bold"
+                                >−</button>
+                              ) : (
+                                <button onClick={() => {
+                                  apiFetch('/admin/channels', { method: 'POST', body: JSON.stringify({ _type: 'channel-model', channel_id: panelEditId, model_id: m }) }).then(() => fetchAll());
+                                }}
+                                  className="shrink-0 w-5 h-5 flex items-center justify-center rounded bg-indigo-100 text-indigo-600 hover:bg-indigo-200 transition-colors text-xs font-bold opacity-0 group-hover:opacity-100"
+                                >+</button>
+                              )}
+                            </div>
                           );
                         })}
                       </div>
