@@ -8,6 +8,7 @@ import { ComboBox } from '@/lib/combobox';
 import { Switch } from '@/lib/switch';
 import { ConfirmDialog } from '@/lib/confirm-dialog';
 import { Popover } from '@/lib/popover';
+import { DateTimePicker } from '@/lib/date-picker';
 
 interface RelayKey {
   id: string; key: string; name: string; spend_limit: number;
@@ -366,8 +367,8 @@ export default function KeysPage() {
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1.5">过期时间</label>
-                <input type="datetime-local" value={editExpiry} onChange={(e) => setEditExpiry(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+                <DateTimePicker value={editExpiry} onChange={(v) => setEditExpiry(v)}
+                  className="w-full" />
                 {showEdit.expires_at && <p className="text-[10px] text-gray-400 mt-1">当前: {toBeijing(showEdit.expires_at)}</p>}
               </div>
             </div>
