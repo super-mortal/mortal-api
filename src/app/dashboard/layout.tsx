@@ -12,6 +12,7 @@ const navItems = [
   { href: '/dashboard/channels', label: '渠道管理', icon: 'plug' },
   { href: '/dashboard/models', label: '模型广场', icon: 'bot' },
   { href: '/dashboard/logs', label: '调用日志', icon: 'list' },
+  { href: '/dashboard/billing', label: '账单导出', icon: 'receipt' },
   { href: '/dashboard/backup', label: '备份恢复', icon: 'hard-drive' },
 ];
 
