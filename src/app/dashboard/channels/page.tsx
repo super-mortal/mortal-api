@@ -62,6 +62,7 @@ export default function ChannelsPage() {
     prices?: { prompt_price: string; completion_price: string; cached_prompt_price: string };
     staged: boolean;
     deleted?: boolean;
+    aliasName?: string | null;  // 新增：记录当前别名值（用于确定 pricing key）
   }
   const [pendingModels, setPendingModels] = useState<Record<string, PendingModelChange>>({});
 
@@ -109,7 +110,17 @@ export default function ChannelsPage() {
 
     setPendingModels(prev => {
       const isClear = prev[modelId]?.clearAlias && !alias;
-      return { ...prev, [modelId]: { alias: isClear ? '' : (alias || undefined), prices: hasPrice ? { prompt_price: p, completion_price: c, cached_prompt_price: ch } : undefined, staged: true, deleted: false } };
+      const newAliasName = isClear ? '' : (alias || null); // '' = cleared alias, null = no alias set
+      return {
+        ...prev,
+        [modelId]: {
+          alias: isClear ? '' : (alias || undefined),
+          prices: hasPrice ? { prompt_price: p, completion_price: c, cached_prompt_price: ch } : undefined,
+          staged: true,
+          deleted: false,
+          aliasName: newAliasName,
+        }
+      };
     });
   };
 
@@ -144,7 +155,21 @@ export default function ChannelsPage() {
         }
       }
       if (change.prices) {
-        await apiFetch('/admin/pricing', { method: 'POST', body: JSON.stringify({ model_id: modelId, prompt_price: Number(change.prices.prompt_price), completion_price: Number(change.prices.completion_price), cached_prompt_price: Number(change.prices.cached_prompt_price) }) });
+        // 确定 pricing key：别名存在时用别名，否则用 model_id
+        const pricingKey = change.aliasName || modelId;
+        // 获取 channel_model 的 id（用于后端同步查询）
+        const m = models.find(mm => mm.model_id === modelId);
+        await apiFetch('/admin/pricing', {
+          method: 'POST',
+          body: JSON.stringify({
+            pricing_key: pricingKey,
+            model_id: modelId,  // 保留向后兼容
+            channel_model_id: m?.id || '',
+            prompt_price: Number(change.prices.prompt_price),
+            completion_price: Number(change.prices.completion_price),
+            cached_prompt_price: Number(change.prices.cached_prompt_price),
+          })
+        });
       }
     }
 
