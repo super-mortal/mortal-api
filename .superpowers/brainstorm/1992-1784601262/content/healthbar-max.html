@@ -1,0 +1,94 @@
+<h2>渠道状态监控 — HealthBar 展示效果</h2>
+<p class="subtitle">以下展示 HealthBar 在数据满载时的各种状态组合</p>
+
+<div class="section">
+  <h3>状态点阵说明</h3>
+  <p>HealthBar 由10个小竖条组成，每种颜色代表不同的检测结果：</p>
+  <div style="display:flex;align-items:center;gap:16px;margin-top:8px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:20px;background:#34d399;border-radius:2px"></div><span style="font-size:12px;color:#666">= 正常</span></div>
+    <div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:20px;background:#fbbf24;border-radius:2px"></div><span style="font-size:12px;color:#666">= 额度上限(quota)</span></div>
+    <div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:20px;background:#f87171;border-radius:2px"></div><span style="font-size:12px;color:#666">= 失败</span></div>
+    <div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:20px;background:#f3f4f6;border-radius:2px"></div><span style="font-size:12px;color:#666">= 未检测</span></div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>场景一：渠道完全正常（绿色为主）</h3>
+  <div class="mockup">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="display:flex;gap:2px;align-items:flex-end">
+        <div style="width:8px;height:12px;background:#34d399;border-radius:1px" title="2026-07-21 10:00 · 成功 · 320ms"></div>
+        <div style="width:8px;height:12px;background:#34d399;border-radius:1px" title="成功 · 280ms"></div>
+        <div style="width:8px;height:12px;background:#34d399;border-radius:1px" title="成功 · 340ms"></div>
+        <div style="width:8px;height:12px;background:#34d399;border-radius:1px" title="成功 · 290ms"></div>
+        <div style="width:8px;height:12px;background:#34d399;border-radius:1px" title="成功 · 310ms"></div>
+        <div style="width:8px;height:12px;background:#34d399;border-radius:1px" title="成功 · 275ms"></div>
+        <div style="width:8px;height:12px;background:#34d399;border-radius:1px" title="成功 · 305ms"></div>
+        <div style="width:8px;height:12px;background:#34d399;border-radius:1px" title="成功 · 335ms"></div>
+        <div style="width:8px;height:12px;background:#34d399;border-radius:1px" title="成功 · 260ms"></div>
+        <div style="width:8px;height:12px;background:#34d399;border-radius:1px" title="成功 · 295ms"></div>
+      </div>
+      <span style="font-size:10px;color:#666;white-space:nowrap">100% · 320ms</span>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>场景二：混合状态（包含错误和额度问题）</h3>
+  <div class="mockup">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="display:flex;gap:2px;align-items:flex-end">
+        <div style="width:8px;height:12px;background:#34d399;border-radius:1px" title="成功 · 320ms"></div>
+        <div style="width:8px;height:12px;background:#34d399;border-radius:1px" title="成功 · 280ms"></div>
+        <div style="width:8px;height:12px;background:#f87171;border-radius:1px" title="失败 · 500超时"></div>
+        <div style="width:8px;height:12px;background:#34d399;border-radius:1px" title="成功 · 340ms"></div>
+        <div style="width:8px;height:12px;background:#fbbf24;border-radius:1px" title="额度上限: API 配额用尽"></div>
+        <div style="width:8px;height:12px;background:#fbbf24;border-radius:1px" title="额度上限"></div>
+        <div style="width:8px;height:12px;background:#f87171;border-radius:1px" title="失败 · 连接拒绝"></div>
+        <div style="width:8px;height:12px;background:#34d399;border-radius:1px" title="成功 · 290ms"></div>
+        <div style="width:8px;height:12px;background:#34d399;border-radius:1px" title="成功 · 310ms"></div>
+        <div style="width:8px;height:12px;background:#f3f4f6;border-radius:1px" title="暂无数据"></div>
+      </div>
+      <span style="font-size:10px;color:#666;white-space:nowrap">60% · 520ms</span>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>场景三：渠道异常（红色为主，持续错误）</h3>
+  <div class="mockup">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="display:flex;gap:2px;align-items:flex-end">
+        <div style="width:8px;height:12px;background:#f87171;border-radius:1px" title="失败 · 500 超时"></div>
+        <div style="width:8px;height:12px;background:#f87171;border-radius:1px" title="失败 · 连接超时"></div>
+        <div style="width:8px;height:12px;background:#f87171;border-radius:1px" title="失败 · 500 服务器错误"></div>
+        <div style="width:8px;height:12px;background:#34d399;border-radius:1px" title="成功 · 400ms"></div>
+        <div style="width:8px;height:12px;background:#f87171;border-radius:1px" title="失败 · 502 Bad Gateway"></div>
+        <div style="width:8px;height:12px;background:#f87171;border-radius:1px" title="失败 · 连接拒绝"></div>
+        <div style="width:8px;height:12px;background:#f87171;border-radius:1px" title="失败 · 超时"></div>
+        <div style="width:8px;height:12px;background:#f87171;border-radius:1px" title="失败 · 500"></div>
+        <div style="width:8px;height:12px;background:#f87171;border-radius:1px" title="失败 · 服务不可用"></div>
+        <div style="width:8px;height:12px;background:#f87171;border-radius:1px" title="失败 · 超时"></div>
+      </div>
+      <span style="font-size:10px;color:#666;white-space:nowrap">10% · 2340ms</span>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:12px;margin-top:8px">
+  <h3 style="display:flex;align-items:center;gap:4px;color:#b91c1c">
+    <span>⚠️</span> 注意：健康检测点阵最多会显示 <strong>10 个竖条</strong>
+  </h3>
+  <p style="font-size:12px;color:#991b1b;margin-top:4px">
+    每个竖条代表一次健康检测记录。超过10条时只保留最近的10条。<br>
+    右侧显示：<strong>可用率% · 平均延迟ms</strong>
+  </p>
+  <p style="font-size:12px;color:#666;margin-top:8px">
+    它的宽度是固定的（10个竖条+文字），<strong>不会超出渠道卡片的范围</strong>，<br>
+    在渠道卡片上位于"模型 N 个"的右侧，桌面端可见，移动端隐藏。
+  </p>
+</div>
+
+<h2 style="margin-top:24px">总结：这就是 HealthBar 的最大显示情况</h2>
+<p class="subtitle">最多10个彩色竖条 + 可用率 + 平均延迟，宽度有限不会溢出卡片。</p>
+<p style="font-size:12px;color:#666">现在请告诉我下一步你想确认什么？我们继续讨论其他优化项。</p>

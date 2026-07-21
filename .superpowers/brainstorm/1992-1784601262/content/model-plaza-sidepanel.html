@@ -1,0 +1,152 @@
+<h2>展示 1：侧边栏宽度调整</h2>
+<p class="subtitle">当前 min-w-[480px] → 调整后 min-w-[500px]（+20px）</p>
+
+<div style="display:flex;gap:16px;flex-wrap:wrap">
+  <!-- 当前宽度 -->
+  <div style="flex:1;min-width:200px">
+    <div style="font-size:11px;color:#666;margin-bottom:6px;font-weight:500">当前 480px</div>
+    <div style="background:#f3f4f6;border-radius:8px;padding:10px;border:1px dashed #d1d5db">
+      <div style="width:480px;height:60px;background:#fff;border-radius:4px;border:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;font-size:10px;color:#9ca3af">
+        侧边栏内容区域 width=480px
+      </div>
+    </div>
+  </div>
+  <!-- 新宽度 -->
+  <div style="flex:1;min-width:200px">
+    <div style="font-size:11px;color:#666;margin-bottom:6px;font-weight:500">调整后 500px</div>
+    <div style="background:#ecfdf5;border-radius:8px;padding:10px;border:1px solid #a7f3d0">
+      <div style="width:500px;height:60px;background:#fff;border-radius:4px;border:2px solid #34d399;display:flex;align-items:center;justify-content:center;font-size:10px;color:#065f46">
+        侧边栏内容区域 width=500px (+20px)
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin:20px 0;border-top:2px dashed #e5e7eb"></div>
+
+<h2>展示 2：模型广场去重方案</h2>
+<p class="subtitle">同名模型只显示一张卡片，右侧箭头悬浮显示所有渠道</p>
+
+<!-- 卡片网格 -->
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:8px">
+  <!-- 卡片 1：deepseek-chat（多渠道） -->
+  <div style="background:#fff;border-radius:12px;border:1px solid #e5e7eb;padding:16px;position:relative;transition:all 0.15s;cursor:default">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <code style="font-size:14px;font-weight:600;color:#111827;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">deepseek-chat</code>
+          <span style="font-size:10px;padding:2px 6px;border-radius:999px;background:#f9fafb;color:#6b7280;border:1px solid #e5e7eb;flex-shrink:0">原生</span>
+          <!-- 复制按钮 -->
+          <button style="margin-left:auto;padding:4px;border-radius:4px;color:#d1d5db;background:transparent;border:none;cursor:pointer" title="复制模型名">📋</button>
+        </div>
+        <!-- 渠道列表（最多显示3个） -->
+        <div style="display:flex;flex-direction:column;gap:4px;margin-top:4px">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="width:8px;height:8px;border-radius:50%;background:#34d399;display:inline-block"></span>
+            <span style="font-size:12px;color:#6b7280">DeepSeek 官方</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="width:8px;height:8px;border-radius:50%;background:#34d399;display:inline-block"></span>
+            <span style="font-size:12px;color:#6b7280">DeepSeek 备用</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="width:8px;height:8px;border-radius:50%;background:#f87171;display:inline-block"></span>
+            <span style="font-size:12px;color:#6b7280">火山引擎</span>
+          </div>
+        </div>
+      </div>
+      <!-- 右侧箭头（悬浮展示 Popover） -->
+      <div style="position:relative;flex-shrink:0;margin-top:2px" class="hover-group">
+        <div style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#9ca3af;background:#f3f4f6;cursor:pointer" title="查看所有渠道">
+          <span style="transform:rotate(0deg);display:inline-block">➡</span>
+        </div>
+        <!-- 悬浮 Popover -->
+        <div style="position:absolute;right:0;top:32px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);width:180px;z-index:10;display:block">
+          <div style="font-size:10px;color:#9ca3af;font-weight:500;margin-bottom:6px">该模型可用渠道</div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#374151">
+              <span style="width:6px;height:6px;border-radius:50%;background:#34d399;display:inline-block"></span>
+              DeepSeek 官方
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#374151">
+              <span style="width:6px;height:6px;border-radius:50%;background:#34d399;display:inline-block"></span>
+              DeepSeek 备用
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#374151">
+              <span style="width:6px;height:6px;border-radius:50%;background:#f87171;display:inline-block"></span>
+              火山引擎
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#374151">
+              <span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block"></span>
+              硅基流动
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#374151">
+              <span style="width:6px;height:6px;border-radius:50%;background:#34d399;display:inline-block"></span>
+              API2D
+            </div>
+          </div>
+          <div style="border-top:1px solid #f3f4f6;margin-top:6px;padding-top:4px">
+            <span style="font-size:9px;color:#9ca3af">共 5 个渠道</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 卡片 2：glm-5（单渠道） -->
+  <div style="background:#fff;border-radius:12px;border:1px solid #e5e7eb;padding:16px;transition:all 0.15s">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <code style="font-size:14px;font-weight:600;color:#111827;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">glm-5-0520</code>
+          <span style="font-size:10px;padding:2px 6px;border-radius:999px;background:#fef3c7;color:#d97706;border:1px solid #fde68a;flex-shrink:0">别名</span>
+          <button style="margin-left:auto;padding:4px;border-radius:4px;color:#d1d5db;border:none;cursor:pointer">📋</button>
+        </div>
+        <div style="font-size:10px;color:#9ca3af;margin-top:2px;font-family:monospace">
+          <span style="color:#d1d5db">实际请求: </span>glm-4-plus
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+          <span style="width:8px;height:8px;border-radius:50%;background:#34d399;display:inline-block"></span>
+          <span style="font-size:12px;color:#6b7280">智谱 AI</span>
+        </div>
+      </div>
+      <div style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#9ca3af;flex-shrink:0;margin-top:2px">⚡</div>
+    </div>
+  </div>
+
+  <!-- 卡片 3：qwen-plus（双渠道） -->
+  <div style="background:#fff;border-radius:12px;border:1px solid #e5e7eb;padding:16px;transition:all 0.15s">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <code style="font-size:14px;font-weight:600;color:#111827;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">qwen-plus</code>
+          <span style="font-size:10px;padding:2px 6px;border-radius:999px;background:#f9fafb;color:#6b7280;border:1px solid #e5e7eb;flex-shrink:0">原生</span>
+          <button style="margin-left:auto;padding:4px;border-radius:4px;color:#d1d5db;border:none;cursor:pointer">📋</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;margin-top:4px">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="width:8px;height:8px;border-radius:50%;background:#34d399;display:inline-block"></span>
+            <span style="font-size:12px;color:#6b7280">阿里云百炼</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="width:8px;height:8px;border-radius:50%;background:#34d399;display:inline-block"></span>
+            <span style="font-size:12px;color:#6b7280">硅基流动</span>
+          </div>
+        </div>
+      </div>
+      <div style="position:relative;flex-shrink:0;margin-top:2px">
+        <div style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#9ca3af;cursor:pointer">➡</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-top:24px">
+  <h3 style="font-size:13px;margin:0 0 8px">关于渠道筛选的兼容</h3>
+  <p style="font-size:11px;color:#6b7280;margin:0">
+    右上角渠道筛选选择某个渠道后 → 显示该渠道有提供的模型卡片。<br>
+    卡片内的渠道列表会<strong>高亮标记</strong>当前筛选的渠道，其他渠道正常显示。<br>
+    如果选择「全部渠道」，则显示所有模型，卡片内列出全部拥有该模型的渠道。
+  </p>
+  <p style="font-size:11px;color:#6b7280;margin:4px 0 0">停用渠道的模型会标记为灰色 + "停用"标签。</p>
+</div>

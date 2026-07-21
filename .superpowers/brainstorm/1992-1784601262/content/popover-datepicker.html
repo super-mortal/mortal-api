@@ -1,0 +1,63 @@
+<h2>✅ 模型限制弹窗 — 最终方案</h2>
+
+<div class="mockup" style="max-width:400px;margin-top:8px">
+  <!-- 触发按钮 -->
+  <div style="display:inline-flex;align-items:center;gap:4px;padding:4px 8px;background:#f3f4f6;border-radius:999px;font-size:10px;color:#4b5563;cursor:pointer;margin-bottom:12px">
+    🤖 15 个模型 ▼
+  </div>
+
+  <!-- Popover (自适应宽度) -->
+  <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px;box-shadow:0 4px 12px rgba(0,0,0,0.08);width:fit-content;max-width:400px">
+    <div style="font-size:10px;color:#9ca3af;font-weight:500;margin-bottom:8px">限制模型</div>
+
+    <!-- ≤10个模型：单列显示 -->
+    <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block"></span><code style="font-size:11px;color:#374151;font-family:monospace">deepseek-chat</code></div>
+      <div style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block"></span><code style="font-size:11px;color:#374151;font-family:monospace">glm-5-flash</code></div>
+      <div style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block"></span><code style="font-size:11px;color:#374151;font-family:monospace">qwen-plus</code></div>
+    </div>
+    <div style="border-top:1px dashed #e5e7eb;padding-top:8px">
+      <span style="font-size:10px;color:#9ca3af">3 个模型 · 单列显示</span>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:20px;font-size:13px">---</div>
+
+<div class="mockup" style="max-width:500px;margin-top:8px">
+  <!-- Popover (>10个模型：双列显示) -->
+  <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px;box-shadow:0 4px 12px rgba(0,0,0,0.08);width:fit-content;max-width:500px">
+    <div style="font-size:10px;color:#9ca3af;font-weight:500;margin-bottom:8px">限制模型</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;max-height:320px;overflow-y:auto">
+      <div style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block"></span><code style="font-size:11px;color:#374151;font-family:monospace">deepseek-chat</code></div>
+      <div style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block"></span><code style="font-size:11px;color:#374151;font-family:monospace">deepseek-reasoner</code></div>
+      <div style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block"></span><code style="font-size:11px;color:#374151;font-family:monospace">glm-5-flash</code></div>
+      <div style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block"></span><code style="font-size:11px;color:#374151;font-family:monospace">glm-5-0520</code></div>
+      <div style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block"></span><code style="font-size:11px;color:#374151;font-family:monospace">qwen-plus</code></div>
+      <div style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block"></span><code style="font-size:11px;color:#374151;font-family:monospace">qwen-turbo</code></div>
+      <div style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block"></span><code style="font-size:11px;color:#374151;font-family:monospace">qwen-max</code></div>
+      <div style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block"></span><code style="font-size:11px;color:#374151;font-family:monospace">claude-sonnet-5</code></div>
+      <div style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block"></span><code style="font-size:11px;color:#374151;font-family:monospace">claude-haiku</code></div>
+      <div style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block"></span><code style="font-size:11px;color:#374151;font-family:monospace">gpt-4o</code></div>
+      <div style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block"></span><code style="font-size:11px;color:#374151;font-family:monospace">gpt-4o-mini</code></div>
+      <div style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block"></span><code style="font-size:11px;color:#374151;font-family:monospace">o1-mini</code></div>
+      <div style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block"></span><code style="font-size:11px;color:#374151;font-family:monospace">o3-mini</code></div>
+      <div style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block"></span><code style="font-size:11px;color:#374151;font-family:monospace">gemini-2.0-flash</code></div>
+      <div style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:#fbbf24;display:inline-block"></span><code style="font-size:11px;color:#374151;font-family:monospace">gemini-2.0-pro</code></div>
+    </div>
+    <div style="border-top:1px dashed #e5e7eb;padding-top:6px;margin-top:6px">
+      <span style="font-size:10px;color:#9ca3af">15 个模型 · 双列显示</span>
+    </div>
+  </div>
+</div>
+
+<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:12px;margin-top:16px">
+  <p style="font-size:12px;color:#065f46">✅ 规则：≤10个单列，＞10个双列 + 最大高度可滚动</p>
+</div>
+
+<h2 style="margin-top:24px">第3项 — 编辑 Key 的过期时间日期选择器</h2>
+<p class="subtitle">当前编辑 Key 弹窗的「过期时间」使用的是原生 <code style="font-size:11px;padding:2px 4px;background:#f3f4f6;border-radius:4px">&lt;input type="datetime-local"&gt;</code>，样式与其他日期组件不统一。</p>
+<p style="font-size:12px;color:#666;margin-top:8px">
+你是否希望把编辑 Key 的过期时间也改成用仪表盘筛选那里的 <strong>DatePicker 组件</strong>（统一的日历样式）？
+</p>

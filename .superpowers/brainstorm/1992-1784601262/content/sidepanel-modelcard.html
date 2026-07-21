@@ -1,0 +1,271 @@
+<h2>展示 1：渠道编辑侧边栏 — 实际页面模拟（宽度 +20px）</h2>
+<p class="subtitle">比较当前 480px 与调整后 500px 的实际内容展示差异</p>
+
+<div style="display:flex;gap:20px;flex-wrap:wrap">
+  <!-- 当前宽度 480px -->
+  <div style="flex:1;min-width:350px">
+    <div style="font-size:10px;color:#9ca3af;margin-bottom:6px;font-weight:500">当前 min-w-[480px]</div>
+    <div style="width:480px;background:#fff;border:2px solid #d1d5db;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.06);font-family:system-ui,-apple-system,sans-serif">
+      <!-- 半透明背景模拟 -->
+      <div style="background:rgba(0,0,0,0.2);padding:1px">
+        <!-- Panel -->
+        <div style="background:#fff;margin:0">
+          <!-- Header -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid #f3f4f6">
+            <div>
+              <div style="font-size:14px;font-weight:600;color:#111827">编辑渠道</div>
+              <div style="font-size:10px;color:#9ca3af;margin-top:2px">DeepSeek 官方</div>
+            </div>
+            <button style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#9ca3af;border:none;background:none;cursor:pointer">✕</button>
+          </div>
+          <!-- Content -->
+          <div style="padding:16px 20px;overflow-y:auto;max-height:400px">
+            <!-- 基本信息 -->
+            <div style="margin-bottom:20px">
+              <div style="font-size:10px;font-weight:600;color:#6b7280;display:flex;align-items:center;gap:4px;margin-bottom:12px">
+                📄 基本信息
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div>
+                  <div style="font-size:10px;color:#6b7280;margin-bottom:4px">名称</div>
+                  <input value="DeepSeek 官方" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e5e7eb;font-size:12px;background:#fff;box-sizing:border-box" />
+                </div>
+                <div>
+                  <div style="font-size:10px;color:#6b7280;margin-bottom:4px">优先级</div>
+                  <input type="number" value="1" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e5e7eb;font-size:12px;background:#fff;box-sizing:border-box" />
+                </div>
+              </div>
+              <div style="margin-top:10px">
+                <div style="font-size:10px;color:#6b7280;margin-bottom:4px">Base URL</div>
+                <input value="https://api.deepseek.com" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e5e7eb;font-size:11px;font-family:monospace;background:#fff;box-sizing:border-box" />
+              </div>
+              <div style="margin-top:10px">
+                <div style="font-size:10px;color:#6b7280;margin-bottom:4px">API Key <span style="color:#9ca3af">（加密存储）</span></div>
+                <input type="password" value="sk-************************************************" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e5e7eb;font-size:11px;font-family:monospace;background:#fff;box-sizing:border-box" />
+              </div>
+              <div style="margin-top:10px">
+                <div style="font-size:10px;color:#6b7280;margin-bottom:4px">备注</div>
+                <input value="DeepSeek 主账号" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e5e7eb;font-size:12px;background:#fff;box-sizing:border-box" />
+              </div>
+            </div>
+            <!-- 模型与别名 -->
+            <div style="margin-bottom:16px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                <div style="font-size:10px;font-weight:600;color:#6b7280;display:flex;align-items:center;gap:4px">🤖 模型与别名</div>
+                <div style="display:flex;gap:6px">
+                  <button style="font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid #e5e7eb;color:#6b7280;background:#fff;cursor:pointer">🔄 拉取</button>
+                  <button style="font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid #c7d2fe;color:#4f46e5;background:#eef2ff;cursor:pointer">＋ 添加</button>
+                </div>
+              </div>
+              <!-- Model Card 1 -->
+              <div style="border:1px solid #e5e7eb;border-radius:10px;margin-bottom:8px;overflow:hidden">
+                <div style="display:flex;align-items:center;gap:6px;padding:10px 14px;cursor:pointer">
+                  <code style="font-size:12px;font-weight:600;color:#1f2937;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">deepseek-chat</code>
+                  <span style="color:#d1d5db;font-size:10px">──→</span>
+                  <code style="font-size:12px;font-weight:600;color:#b45309;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">deepseek-v4-pro</code>
+                  <span style="margin-left:auto;display:flex;align-items:center;gap:4px">
+                    <span style="font-size:9px;padding:2px 6px;border-radius:999px;background:#d1fae5;color:#059669;border:1px solid #a7f3d0">¥</span>
+                    <span style="font-size:10px;color:#9ca3af">▼</span>
+                  </span>
+                </div>
+              </div>
+              <!-- Model Card 2 (collapsed) -->
+              <div style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden">
+                <div style="display:flex;align-items:center;gap:6px;padding:10px 14px;cursor:pointer">
+                  <code style="font-size:12px;font-weight:600;color:#1f2937;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">deepseek-reasoner</code>
+                  <span style="color:#d1d5db;font-size:10px">──→</span>
+                  <span style="font-size:10px;color:#9ca3af;font-style:italic">未设置别名</span>
+                  <span style="margin-left:auto;display:flex;align-items:center;gap:4px">
+                    <span style="font-size:9px;padding:2px 6px;border-radius:999px;background:#fef3c7;color:#d97706;border:1px solid #fde68a">未定价</span>
+                    <span style="font-size:10px;color:#9ca3af">▼</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Footer -->
+          <div style="padding:14px 20px;border-top:1px solid #f3f4f6">
+            <div style="display:flex;gap:10px">
+              <button style="flex:1;padding:8px;border-radius:8px;background:#4f46e5;color:#fff;font-size:12px;font-weight:500;border:none;cursor:pointer">💾 保存</button>
+              <button style="padding:8px 16px;border-radius:8px;border:1px solid #e5e7eb;font-size:12px;color:#6b7280;background:#fff;cursor:pointer">取消</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新宽度 500px -->
+  <div style="flex:1;min-width:350px">
+    <div style="font-size:10px;color:#059669;margin-bottom:6px;font-weight:500">调整后 min-w-[500px]（+20px）</div>
+    <div style="width:500px;background:#fff;border:2px solid #34d399;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.06);font-family:system-ui,-apple-system,sans-serif">
+      <div style="background:rgba(0,0,0,0.2);padding:1px">
+        <div style="background:#fff;margin:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px 12px;border-bottom:1px solid #f3f4f6">
+            <div>
+              <div style="font-size:14px;font-weight:600;color:#111827">编辑渠道</div>
+              <div style="font-size:10px;color:#9ca3af;margin-top:2px">DeepSeek 官方</div>
+            </div>
+            <button style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#9ca3af;border:none;background:none;cursor:pointer">✕</button>
+          </div>
+          <div style="padding:16px 24px;overflow-y:auto;max-height:400px">
+            <div style="margin-bottom:20px">
+              <div style="font-size:10px;font-weight:600;color:#6b7280;display:flex;align-items:center;gap:4px;margin-bottom:12px">📄 基本信息</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div>
+                  <div style="font-size:10px;color:#6b7280;margin-bottom:4px">名称</div>
+                  <input value="DeepSeek 官方" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e5e7eb;font-size:12px;background:#fff;box-sizing:border-box" />
+                </div>
+                <div>
+                  <div style="font-size:10px;color:#6b7280;margin-bottom:4px">优先级</div>
+                  <input type="number" value="1" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e5e7eb;font-size:12px;background:#fff;box-sizing:border-box" />
+                </div>
+              </div>
+              <div style="margin-top:12px">
+                <div style="font-size:10px;color:#6b7280;margin-bottom:4px">Base URL</div>
+                <input value="https://api.deepseek.com" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e5e7eb;font-size:11px;font-family:monospace;background:#fff;box-sizing:border-box" />
+              </div>
+              <div style="margin-top:12px">
+                <div style="font-size:10px;color:#6b7280;margin-bottom:4px">API Key <span style="color:#9ca3af">（加密存储）</span></div>
+                <input type="password" value="sk-************************************************" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e5e7eb;font-size:11px;font-family:monospace;background:#fff;box-sizing:border-box" />
+              </div>
+              <div style="margin-top:12px">
+                <div style="font-size:10px;color:#6b7280;margin-bottom:4px">备注</div>
+                <input value="DeepSeek 主账号" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #e5e7eb;font-size:12px;background:#fff;box-sizing:border-box" />
+              </div>
+            </div>
+            <div style="margin-bottom:16px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                <div style="font-size:10px;font-weight:600;color:#6b7280;display:flex;align-items:center;gap:4px">🤖 模型与别名</div>
+                <div style="display:flex;gap:6px">
+                  <button style="font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid #e5e7eb;color:#6b7280;background:#fff;cursor:pointer">🔄 拉取</button>
+                  <button style="font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid #c7d2fe;color:#4f46e5;background:#eef2ff;cursor:pointer">＋ 添加</button>
+                </div>
+              </div>
+              <div style="border:1px solid #e5e7eb;border-radius:10px;margin-bottom:8px;overflow:hidden">
+                <div style="display:flex;align-items:center;gap:6px;padding:10px 14px;cursor:pointer">
+                  <code style="font-size:12px;font-weight:600;color:#1f2937;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">deepseek-chat</code>
+                  <span style="color:#d1d5db;font-size:10px">──→</span>
+                  <code style="font-size:12px;font-weight:600;color:#b45309;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">deepseek-v4-pro</code>
+                  <span style="margin-left:auto;display:flex;align-items:center;gap:4px">
+                    <span style="font-size:9px;padding:2px 6px;border-radius:999px;background:#d1fae5;color:#059669;border:1px solid #a7f3d0">¥</span>
+                    <span style="font-size:10px;color:#9ca3af">▼</span>
+                  </span>
+                </div>
+              </div>
+              <div style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden">
+                <div style="display:flex;align-items:center;gap:6px;padding:10px 14px;cursor:pointer">
+                  <code style="font-size:12px;font-weight:600;color:#1f2937;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">deepseek-reasoner</code>
+                  <span style="color:#d1d5db;font-size:10px">──→</span>
+                  <span style="font-size:10px;color:#9ca3af;font-style:italic">未设置别名</span>
+                  <span style="margin-left:auto;display:flex;align-items:center;gap:4px">
+                    <span style="font-size:9px;padding:2px 6px;border-radius:999px;background:#fef3c7;color:#d97706;border:1px solid #fde68a">未定价</span>
+                    <span style="font-size:10px;color:#9ca3af">▼</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="padding:14px 24px;border-top:1px solid #f3f4f6">
+            <div style="display:flex;gap:10px">
+              <button style="flex:1;padding:8px;border-radius:8px;background:#4f46e5;color:#fff;font-size:12px;font-weight:500;border:none;cursor:pointer">💾 保存</button>
+              <button style="padding:8px 16px;border-radius:8px;border:1px solid #e5e7eb;font-size:12px;color:#6b7280;background:#fff;cursor:pointer">取消</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;padding:14px;margin-top:20px">
+  <p style="font-size:12px;color:#0369a1;margin:0">左侧=当前 480px 右侧=调整后 500px。主要变化是内容区域左右 padding 从 20px 增加到 24px，整体透气性更好。</p>
+</div>
+
+<div style="margin:20px 0;border-top:2px dashed #e5e7eb"></div>
+
+<h2>展示 2：模型卡片渠道显示方案</h2>
+<p class="subtitle">同名模型合并后，卡片内渠道信息如何展示？给你几个选项</p>
+
+<div class="section">
+  <h3>当前情况</h3>
+  <p style="font-size:12px;color:#666">现在每个模型卡片下方只显示<b>一个渠道</b>的名字，没有区分哪个渠道的可用率更高。</p>
+</div>
+
+<div class="section">
+  <h3>方案 A：显示可用率最高的渠道（你提的）</h3>
+  <p style="font-size:12px;color:#666">对同名模型，取 <code style="padding:2px 4px;background:#f3f4f6;border-radius:4px">uptime_pct</code> 最高的渠道显示在卡片上，「调用成功率最高」</p>
+  <div style="background:#f9fafb;border-radius:8px;padding:10px;border:1px solid #e5e7eb;margin-top:6px">
+    <code style="font-size:12px;font-weight:600;color:#111827;font-family:monospace">deepseek-chat</code>
+    <div style="margin-top:6px">
+      <span style="width:8px;height:8px;border-radius:50%;background:#34d399;display:inline-block"></span>
+      <span style="font-size:11px;color:#6b7280">DeepSeek 官方</span>
+      <span style="font-size:9px;color:#059669;margin-left:4px">(98% 可用率 — 最高)</span>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:16px">
+  <h3>方案 B：全部渠道用紧凑小标签展示（推荐）</h3>
+  <p style="font-size:12px;color:#666">模型名下直接显示所有渠道的紧凑标签，一眼看到有哪些渠道</p>
+  <div style="background:#f9fafb;border-radius:8px;padding:10px;border:1px solid #e5e7eb;margin-top:6px">
+    <code style="font-size:12px;font-weight:600;color:#111827;font-family:monospace">deepseek-chat</code>
+    <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">
+      <span style="display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;background:#ecfdf5;font-size:10px;color:#065f46">
+        <span style="width:4px;height:4px;border-radius:50%;background:#34d399;display:inline-block"></span>DeepSeek 官方
+      </span>
+      <span style="display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;background:#ecfdf5;font-size:10px;color:#065f46">
+        <span style="width:4px;height:4px;border-radius:50%;background:#34d399;display:inline-block"></span>DeepSeek 备用
+      </span>
+      <span style="display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;background:#fef2f2;font-size:10px;color:#991b1b">
+        <span style="width:4px;height:4px;border-radius:50%;background:#f87171;display:inline-block"></span>火山引擎
+      </span>
+      <span style="display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;background:#fffbeb;font-size:10px;color:#92400e">
+        <span style="width:4px;height:4px;border-radius:50%;background:#fbbf24;display:inline-block"></span>硅基流动
+      </span>
+      <span style="font-size:9px;color:#9ca3af;padding:2px 4px">+1 更多</span>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:16px">
+  <h3>方案 C：混合 — 显示成功率最高的 + 标签数统计</h3>
+  <p style="font-size:12px;color:#666">名字下方显示成功率最高的渠道，右侧加一个「+N 个渠道」徽标</p>
+  <div style="background:#f9fafb;border-radius:8px;padding:10px;border:1px solid #e5e7eb;margin-top:6px">
+    <code style="font-size:12px;font-weight:600;color:#111827;font-family:monospace">deepseek-chat</code>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+      <div>
+        <span style="width:8px;height:8px;border-radius:50%;background:#34d399;display:inline-block"></span>
+        <span style="font-size:11px;color:#6b7280">DeepSeek 官方</span>
+        <span style="font-size:9px;color:#9ca3af;margin-left:4px">98% 可用率</span>
+      </div>
+      <span style="display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:4px;background:#f3f4f6;font-size:9px;color:#6b7280;cursor:pointer">
+        +4 个渠道 ➡
+      </span>
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top:12px">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>显示成功率最高的渠道</h3>
+      <p>取 uptime_pct 最高的渠道名显示</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>全部渠道紧凑标签展示</h3>
+      <p>所有渠道平铺显示，超出的 +N</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>成功率最高 + 渠道计数</h3>
+      <p>显示最优渠道，附加渠道总数</p>
+    </div>
+  </div>
+</div>

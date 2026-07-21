@@ -438,14 +438,14 @@ export default function ChannelsPage() {
                     const isExpanded = expandedModelId === m.id;
 
                     return (
-                      <div key={m.id} className={`border border-gray-200 rounded-xl overflow-hidden mb-2 ${pendingModels[m.id]?.deleted ? 'opacity-50' : ''}`}>
+                      <div key={m.id} className={`border border-gray-200 rounded-xl overflow-hidden mb-2 ${pendingModels[m.model_id]?.deleted ? 'opacity-50' : ''}`}>
                         {/* Collapsed header */}
                         <div
                           className="flex items-center gap-2 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
                           onClick={() => setExpandedModelId(isExpanded ? null : m.id)}
                         >
                           <code className="text-sm font-semibold text-gray-800 font-mono truncate">{m.model_id}</code>
-                          {pendingModels[m.id]?.deleted && (
+                          {pendingModels[m.model_id]?.deleted && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200 shrink-0">待删除</span>
                           )}
                           <span className="text-gray-300 text-xs shrink-0">──→</span>
@@ -474,7 +474,7 @@ export default function ChannelsPage() {
                                 <input
                                   defaultValue={alias?.alias_name || ''}
                                   placeholder="输入别名..."
-                                  id={`alias-input-${m.id}`}
+                                  id={`alias-input-${m.model_id}`}
                                   className="flex-1 px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
                                 />
                               </div>
@@ -489,7 +489,7 @@ export default function ChannelsPage() {
                                   <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white">
                                     <input type="text" inputMode="decimal"
                                       defaultValue={pricingMap[m.model_id]?.prompt_price ?? ''}
-                                      id={`price-prompt-${m.id}`}
+                                      id={`price-prompt-${m.model_id}`}
                                       className="w-full px-2 py-1.5 text-sm font-mono text-right border-0 focus:outline-none focus:ring-0 [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:hidden [&::-webkit-outer-spin-button]:hidden" />
                                     <span className="text-[10px] text-gray-400 bg-gray-50 px-2 py-1.5 shrink-0">元/M</span>
                                   </div>
@@ -499,7 +499,7 @@ export default function ChannelsPage() {
                                   <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white">
                                     <input type="text" inputMode="decimal"
                                       defaultValue={pricingMap[m.model_id]?.completion_price ?? ''}
-                                      id={`price-completion-${m.id}`}
+                                      id={`price-completion-${m.model_id}`}
                                       className="w-full px-2 py-1.5 text-sm font-mono text-right border-0 focus:outline-none focus:ring-0 [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:hidden [&::-webkit-outer-spin-button]:hidden" />
                                     <span className="text-[10px] text-gray-400 bg-gray-50 px-2 py-1.5 shrink-0">元/M</span>
                                   </div>
@@ -509,7 +509,7 @@ export default function ChannelsPage() {
                                   <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white">
                                     <input type="text" inputMode="decimal"
                                       defaultValue={pricingMap[m.model_id]?.cached_prompt_price ?? ''}
-                                      id={`price-cached-${m.id}`}
+                                      id={`price-cached-${m.model_id}`}
                                       className="w-full px-2 py-1.5 text-sm font-mono text-right border-0 focus:outline-none focus:ring-0 [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:hidden [&::-webkit-outer-spin-button]:hidden" />
                                     <span className="text-[10px] text-gray-400 bg-gray-50 px-2 py-1.5 shrink-0">元/M</span>
                                   </div>

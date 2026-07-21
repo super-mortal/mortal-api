@@ -1,0 +1,66 @@
+<h2>✅ 已确认 5 项</h2>
+
+<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:14px;margin-bottom:20px">
+  <p style="font-size:13px;color:#065f46;margin:0">✅ HealthBar — 24点·2行·%+ms</p>
+  <p style="font-size:13px;color:#065f46;margin:4px 0 0">✅ 模型限制弹窗 — 自适应·≤10单列＞10双列</p>
+  <p style="font-size:13px;color:#065f46;margin:4px 0 0">✅ 编辑 Key 过期时间 — DateTimePicker</p>
+  <p style="font-size:13px;color:#065f46;margin:4px 0 0">✅ 侧边栏宽度 — min-w-[520px] max-w-[680px]</p>
+  <p style="font-size:13px;color:#065f46;margin:4px 0 0">✅ API Key 字段 — *** + 眼睛切换</p>
+</div>
+
+<h2>第6项 — 价格输入框的箭头按钮 + 小数校验</h2>
+<p class="subtitle">渠道编辑侧边栏中，模型展开后的三个价格输入框</p>
+
+<div class="mockup" style="max-width:500px;margin:12px 0">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+    <div>
+      <div style="font-size:10px;color:#9ca3af;margin-bottom:4px">标准输入</div>
+      <div style="display:flex;border:1px solid #d1d5db;border-radius:8px;overflow:hidden;background:#fff">
+        <input type="number" step="0.001" value="28"
+          style="width:100%;padding:6px 8px;font-size:13px;font-family:monospace;text-align:right;border:0;outline:none;background:transparent" />
+        <span style="font-size:10px;color:#9ca3af;background:#f9fafb;padding:6px 8px;flex-shrink:0">元/M</span>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:10px;color:#9ca3af;margin-bottom:4px">输出</div>
+      <div style="display:flex;border:1px solid #d1d5db;border-radius:8px;overflow:hidden;background:#fff">
+        <input type="number" step="0.001" value="112"
+          style="width:100%;padding:6px 8px;font-size:13px;font-family:monospace;text-align:right;border:0;outline:none;background:transparent" />
+        <span style="font-size:10px;color:#9ca3af;background:#f9fafb;padding:6px 8px;flex-shrink:0">元/M</span>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:10px;color:#9ca3af;margin-bottom:4px">缓存输入</div>
+      <div style="display:flex;border:1px solid #d1d5db;border-radius:8px;overflow:hidden;background:#fff">
+        <input type="number" step="0.001" value="14"
+          style="width:100%;padding:6px 8px;font-size:13px;font-family:monospace;text-align:right;border:0;outline:none;background:transparent" />
+        <span style="font-size:10px;color:#9ca3af;background:#f9fafb;padding:6px 8px;flex-shrink:0">元/M</span>
+      </div>
+    </div>
+  </div>
+  <p style="font-size:10px;color:#ef4444;margin-top:4px">⚠️ 28 应写成 28.0，需要包含小数点</p>
+</div>
+
+<p style="font-size:12px;color:#666">
+你要求去掉输入框右侧的上下箭头（spinner），并且必须输入包含小数点的数字。<br>
+我理解是：<code>type="text"</code> + 输入后校验（必须包含小数点，必须是合法数字）<br>
+错误示例：28 ✗  →  28.0 ✓  |  0 ✗  →  0.0 ✓  |  100 ✗  →  100.0 ✓
+</p>
+
+<h2 style="margin-top:24px">第7项 — 模型广场去重</h2>
+<p class="subtitle">不同渠道有相同模型名时合并显示</p>
+<p style="font-size:12px;color:#666;margin-top:8px">
+你希望同一模型名跨渠道只显示一次，点击展开查看支持哪些渠道。<br>
+关于右上角的渠道筛选，目前的筛选是按渠道名过滤显示条目。如果合并后一个模型对应多个渠道，那么这个渠道筛选要怎么处理？<br>
+A. 保持渠道筛选，筛选后只显示该渠道有的模型<br>
+B. 渠道筛选改为「全部渠道 + 有该模型的渠道列表」，选中后模型卡片高亮显示该渠道<br>
+C. 你还有别的想法
+</p>
+
+<h2 style="margin-top:24px">第8项 — 调用日志字体缩小</h2>
+<p style="font-size:12px;color:#666;margin-top:8px">
+表格整体字号缩小，包括表头信息。目前主要用的是 <code>text-[10px] sm:text-xs</code>，你希望整体再小一号？大概缩小到多少？比如：<br>
+A. 全部改用 <code>text-[10px]</code>（不再有 sm:text-xs）<br>
+B. 在现有基础上减 1px（比如 text-xs 改成 text-[11px]）<br>
+C. 你觉得现在看起来大是因为什么？有具体想调的地方吗？
+</p>
