@@ -96,14 +96,19 @@ export default function DashboardPage() {
   const successRate = data.stats.total_calls > 0
     ? ((data.stats.success_calls / data.stats.total_calls) * 100).toFixed(1) : '0';
 
+  const todayCost = data.dailyStats.length > 0
+    ? '¥' + (data.dailyStats[data.dailyStats.length - 1].cost?.toFixed(4) || '0.0000')
+    : '¥0.0000';
+
   const statCards = [
     { label: '总调用次数', value: data.stats.total_calls.toLocaleString(), sub: `成功率 ${successRate}%`, color: 'text-gray-900', icon: 'activity' },
     { label: '成功', value: data.stats.success_calls.toLocaleString(), sub: '调用', color: 'text-emerald-600', icon: 'check' },
     { label: '失败', value: data.stats.fail_calls.toLocaleString(), sub: '调用', color: data.stats.fail_calls > 0 ? 'text-red-500' : 'text-gray-900', icon: 'x' },
-    { label: '总 Tokens', value: data.stats.total_tokens.toLocaleString(), sub: `费用 ${data.stats.total_cost.toFixed(4)}`, color: 'text-indigo-600', icon: 'database' },
+    { label: '今日消费', value: todayCost, sub: '今日', color: 'text-emerald-600', icon: 'dollar-sign' },
     { label: '输出 Tokens', value: data.stats.total_completion_tokens.toLocaleString(), sub: 'Completion', color: 'text-purple-500', icon: 'checkCheck' },
     { label: '命中缓存', value: data.stats.total_cached_input_tokens.toLocaleString(), sub: '缓存输入 Tokens', color: 'text-emerald-500', icon: 'zap' },
     { label: '未命中缓存', value: data.stats.total_uncached_input_tokens.toLocaleString(), sub: '未缓存输入 Tokens', color: 'text-amber-500', icon: 'flame' },
+    { label: '总 Tokens', value: data.stats.total_tokens.toLocaleString(), sub: `费用 ${data.stats.total_cost.toFixed(4)}`, color: 'text-indigo-600', icon: 'database' },
   ];
 
   const pieData = data.modelStats.map((m, i) => ({ name: m.model, value: m.calls, color: COLORS[i % COLORS.length] }));
@@ -161,15 +166,6 @@ export default function DashboardPage() {
             </div>
           </div>
         ))}
-        <div className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4 hover:shadow-sm transition-shadow">
-          <div className="text-lg sm:text-xl font-semibold text-emerald-600 truncate">
-            ¥{data.dailyStats.length > 0 ? data.dailyStats[data.dailyStats.length - 1].cost?.toFixed(4) || '0.0000' : '0.0000'}
-          </div>
-          <div className="text-[10px] sm:text-xs text-gray-400 mt-0.5 flex items-center gap-1">
-            <InlineIcon name="dollar-sign" className="w-3 h-3" />
-            今日消费
-          </div>
-        </div>
       </div>
 
       {/* Row 1: Daily Call Trends — full width */}
