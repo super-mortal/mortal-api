@@ -56,6 +56,14 @@ export default function ChannelsPage() {
   const [modelErrModal, setModelErrModal] = useState(false);
   const [pricingMap, setPricingMap] = useState<Record<string, { prompt_price: number; completion_price: number; cached_prompt_price: number }>>({});
 
+  interface PendingModelChange {
+    alias?: string;
+    prices?: { prompt_price: string; completion_price: string; cached_prompt_price: string };
+    staged: boolean;
+    deleted?: boolean;
+  }
+  const [pendingModels, setPendingModels] = useState<Record<string, PendingModelChange>>({});
+
   // Modal state (independent from side panel)
   const [chModal, setChModal] = useState(false);
   const [modalForm, setModalForm] = useState({ name: '', base_url: '', api_key: '', priority: 0, notes: '' });
@@ -81,12 +89,65 @@ export default function ChannelsPage() {
   const modelsForChannel = (chId: string) => channelModels.filter(m => m.channel_id === chId);
   const aliasesForModel = (cmId: string) => aliases.filter(a => a.channel_model_id === cmId);
 
+  const handleModelSave = (modelId: string) => {
+    const getVal = (id: string) => (document.getElementById(id) as HTMLInputElement)?.value || '';
+    const alias = getVal(`alias-input-${modelId}`);
+    const p = getVal(`price-prompt-${modelId}`);
+    const c = getVal(`price-completion-${modelId}`);
+    const ch = getVal(`price-cached-${modelId}`);
+
+    const hasPrice = p || c || ch;
+    const validateDecimal = (v: string, label: string): boolean => {
+      if (v === '' || v === '0') return true;
+      if (!/^\d+\.\d+$/.test(v)) { alert(`${label} 价格必须包含小数点，如 28.0`); return false; }
+      return true;
+    };
+    if (hasPrice) {
+      if (!validateDecimal(p, '标准输入') || !validateDecimal(c, '输出') || !validateDecimal(ch, '缓存输入')) return;
+    }
+
+    setPendingModels(prev => ({ ...prev, [modelId]: { alias: alias || undefined, prices: hasPrice ? { prompt_price: p, completion_price: c, cached_prompt_price: ch } : undefined, staged: true, deleted: false } }));
+  };
+
+  const handleModelDelete = (modelId: string) => {
+    if (!confirm('确定删除此模型？')) return;
+    setPendingModels(prev => ({ ...prev, [modelId]: { ...(prev[modelId] || {}), deleted: true, staged: true, alias: undefined, prices: undefined } }));
+  };
+
   const saveChannel = async () => {
     const isEdit = !!panelEditId;
     const body: Record<string, any> = isEdit ? { id: panelEditId, ...panelForm } : panelForm;
     if (isEdit && (!body.api_key || body.api_key === '••••••••••••••••••')) delete body.api_key;
     const res = await apiFetch('/admin/channels', { method: isEdit ? 'PATCH' : 'POST', body: JSON.stringify(body) });
-    if (res.ok) { setShowApiKey(false); setSidePanelOpen(false); fetchAll(); }
+    if (!res.ok) return;
+
+    // Commit pending model changes
+    const models = modelsForChannel(panelEditId || '');
+    for (const [modelId, change] of Object.entries(pendingModels)) {
+      if (!change.staged) continue;
+      if (change.deleted) {
+        const m = models.find(mm => mm.model_id === modelId);
+        if (m) await apiFetch(`/admin/channels?id=${m.id}&type=channel-model`, { method: 'DELETE' });
+        continue;
+      }
+      if (change.alias !== undefined) {
+        const m = models.find(mm => mm.model_id === modelId);
+        if (!m) continue;
+        const als = aliasesForModel(m.id);
+        if (als[0]) await apiFetch(`/admin/channels?id=${als[0].id}&type=alias`, { method: 'DELETE' });
+        if (change.alias) {
+          await apiFetch('/admin/channels', { method: 'POST', body: JSON.stringify({ _type: 'alias', alias_name: change.alias, channel_model_id: m.id }) });
+        }
+      }
+      if (change.prices) {
+        await apiFetch('/admin/pricing', { method: 'POST', body: JSON.stringify({ model_id: modelId, prompt_price: Number(change.prices.prompt_price), completion_price: Number(change.prices.completion_price), cached_prompt_price: Number(change.prices.cached_prompt_price) }) });
+      }
+    }
+
+    setPendingModels({});
+    setShowApiKey(false);
+    setSidePanelOpen(false);
+    fetchAll();
   };
 
   const saveModalChannel = async () => {
@@ -163,7 +224,7 @@ export default function ChannelsPage() {
   };
 
   useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setSidePanelOpen(false); };
+    const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') { setPendingModels({}); setSidePanelOpen(false); } };
     if (sidePanelOpen) window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
   }, [sidePanelOpen]);
@@ -273,7 +334,7 @@ export default function ChannelsPage() {
       {/* Side Panel */}
       {sidePanelOpen && (
         <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => { setShowApiKey(false); setSidePanelOpen(false); }} />
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => { setPendingModels({}); setShowApiKey(false); setSidePanelOpen(false); }} />
           <div className="absolute right-0 top-0 bottom-0 w-1/2 min-w-[500px] max-w-[660px] bg-white shadow-2xl flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-gray-100 shrink-0">
@@ -281,7 +342,7 @@ export default function ChannelsPage() {
                 <h3 className="text-base font-semibold text-gray-900">{panelEditId ? '编辑渠道' : '新建渠道'}</h3>
                 <p className="text-xs text-gray-400 mt-0.5">{panelForm.name || '未命名'}</p>
               </div>
-              <button onClick={() => { setShowApiKey(false); setSidePanelOpen(false); }} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+              <button onClick={() => { setPendingModels({}); setShowApiKey(false); setSidePanelOpen(false); }} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
                 <InlineIcon name="x" className="w-4 h-4" />
               </button>
             </div>
@@ -377,13 +438,16 @@ export default function ChannelsPage() {
                     const isExpanded = expandedModelId === m.id;
 
                     return (
-                      <div key={m.id} className="border border-gray-200 rounded-xl overflow-hidden mb-2">
+                      <div key={m.id} className={`border border-gray-200 rounded-xl overflow-hidden mb-2 ${pendingModels[m.id]?.deleted ? 'opacity-50' : ''}`}>
                         {/* Collapsed header */}
                         <div
                           className="flex items-center gap-2 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
                           onClick={() => setExpandedModelId(isExpanded ? null : m.id)}
                         >
                           <code className="text-sm font-semibold text-gray-800 font-mono truncate">{m.model_id}</code>
+                          {pendingModels[m.id]?.deleted && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200 shrink-0">待删除</span>
+                          )}
                           <span className="text-gray-300 text-xs shrink-0">──→</span>
                           {alias ? (
                             <code className="text-sm font-semibold text-amber-700 font-mono truncate">{alias.alias_name}</code>
@@ -413,33 +477,7 @@ export default function ChannelsPage() {
                                   id={`alias-input-${m.id}`}
                                   className="flex-1 px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
                                 />
-                                <button
-                                  onClick={async () => {
-                                    const input = document.getElementById(`alias-input-${m.id}`) as HTMLInputElement;
-                                    const name = input?.value?.trim();
-                                    if (!name) return;
-                                    if (alias) {
-                                      await apiFetch(`/admin/channels?id=${alias.id}&type=alias`, { method: 'DELETE' });
-                                    }
-                                    await apiFetch('/admin/channels', {
-                                      method: 'POST',
-                                      body: JSON.stringify({ _type: 'alias', alias_name: name, channel_model_id: m.id }),
-                                    });
-                                    fetchAll();
-                                  }}
-                                  className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition-colors"
-                                >
-                                  {alias ? '更新' : '创建'}
-                                </button>
                               </div>
-                              {alias && (
-                                <button
-                                  onClick={async () => { await apiFetch(`/admin/channels?id=${alias.id}&type=alias`, { method: 'DELETE' }); fetchAll(); }}
-                                  className="mt-1 text-[10px] text-red-400 hover:text-red-600"
-                                >
-                                  删除别名
-                                </button>
-                              )}
                             </div>
 
                             {/* Pricing editor */}
@@ -477,43 +515,26 @@ export default function ChannelsPage() {
                                   </div>
                                 </div>
                               </div>
-                              <button
-                                onClick={async () => {
-                                  const getVal = (id: string) => (document.getElementById(id) as HTMLInputElement)?.value || '';
-                                  const validateDecimal = (v: string, label: string): boolean => {
-                                    if (v === '' || v === '0') return true;
-                                    if (!/^\d+\.\d+$/.test(v)) {
-                                      alert(`${label} 价格必须包含小数点，如 28.0`);
-                                      return false;
-                                    }
-                                    return true;
-                                  };
-                                  const p = getVal(`price-prompt-${m.id}`);
-                                  const c = getVal(`price-completion-${m.id}`);
-                                  const ch = getVal(`price-cached-${m.id}`);
-                                  if (!validateDecimal(p, '标准输入') || !validateDecimal(c, '输出') || !validateDecimal(ch, '缓存输入')) return;
-                                  await apiFetch('/admin/pricing', {
-                                    method: 'POST',
-                                    body: JSON.stringify({
-                                      model_id: m.model_id,
-                                      prompt_price: Number(p),
-                                      completion_price: Number(c),
-                                      cached_prompt_price: Number(ch),
-                                    }),
-                                  });
-                                  fetchAll();
-                                }}
-                                className="mt-2 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition-colors"
-                              >
-                                保存价格
-                              </button>
                             </div>
 
-                            {/* Delete model */}
-                            <button onClick={() => deleteModel(m.id)}
-                              className="text-xs text-red-400 hover:text-red-600 flex items-center gap-1">
-                              <InlineIcon name="trash2" className="w-3 h-3" /> 删除此模型
-                            </button>
+                            {/* Unified save/delete buttons */}
+                            <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                              <button onClick={() => handleModelDelete(m.model_id)}
+                                className="text-xs text-red-400 hover:text-red-600 flex items-center gap-1">
+                                <InlineIcon name="trash2" className="w-3 h-3" /> 删除
+                              </button>
+                              <div className="flex items-center gap-2">
+                                {pendingModels[m.model_id]?.staged && (
+                                  <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                    ✓ 已暂存
+                                  </span>
+                                )}
+                                <button onClick={() => handleModelSave(m.model_id)}
+                                  className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition-colors">
+                                  保存
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -550,7 +571,7 @@ export default function ChannelsPage() {
                   className="flex-1 px-4 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors">
                   {panelEditId ? '💾 保存' : '创建'}
                 </button>
-                <button onClick={() => { setShowApiKey(false); setSidePanelOpen(false); }}
+                <button onClick={() => { setPendingModels({}); setShowApiKey(false); setSidePanelOpen(false); }}
                   className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
                   取消
                 </button>
