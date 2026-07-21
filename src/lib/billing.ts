@@ -286,7 +286,7 @@ function drawTable(
   const headerBg = opts.headerBg || '#F3F4F6';
 
   // Header row
-  doc.font('Helvetica-Bold').fontSize(fs);
+  doc.font('NotoSansSC').fontSize(fs);
   let x = leftMargin;
   doc.rect(leftMargin, y - 4, colWidths.reduce((a, b) => a + b, 0) + (headers.length - 1) * 1, rowHeight)
      .fill(headerBg).fillColor('#000');
@@ -298,13 +298,13 @@ function drawTable(
   y += rowHeight + 2;
 
   // Data rows
-  doc.font('Helvetica').fontSize(fs - 0.5);
+  doc.font('NotoSansSC').fontSize(fs - 0.5);
   for (const row of rows) {
     if (y + rowHeight > doc.page.height - 60) {
       doc.addPage();
       y = 40;
       // Re-draw header on new page
-      doc.font('Helvetica-Bold').fontSize(fs);
+      doc.font('NotoSansSC').fontSize(fs);
       x = leftMargin;
       doc.rect(leftMargin, y - 4, colWidths.reduce((a, b) => a + b, 0) + (headers.length - 1) * 1, rowHeight)
          .fill(headerBg).fillColor('#000');
@@ -314,7 +314,7 @@ function drawTable(
         x += colWidths[i] + 1;
       });
       y += rowHeight + 2;
-      doc.font('Helvetica').fontSize(fs - 0.5);
+      doc.font('NotoSansSC').fontSize(fs - 0.5);
     }
     x = leftMargin;
     row.forEach((cell, i) => {
