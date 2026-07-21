@@ -206,12 +206,36 @@ export default function ModelsPage() {
                     ) : (
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-50 text-gray-500 border border-gray-200 shrink-0">原生</span>
                     )}
-                    <button onClick={() => copyToClipboard(group.displayName, copyKey)}
-                      className="ml-auto p-1 rounded text-gray-300 hover:text-indigo-500 hover:bg-indigo-50 opacity-0 group-hover:opacity-100 transition-all shrink-0" title="复制模型名">
-                      {copied === copyKey
-                        ? <InlineIcon name="check" className="w-3.5 h-3.5 text-emerald-500" />
-                        : <InlineIcon name="copy" className="w-3.5 h-3.5" />}
-                    </button>
+                    <div className="ml-auto flex items-center gap-0.5 shrink-0">
+                      <button onClick={() => copyToClipboard(group.displayName, copyKey)}
+                        className="p-1 rounded text-gray-300 hover:text-indigo-500 hover:bg-indigo-50 opacity-0 group-hover:opacity-100 transition-all" title="复制模型名">
+                        {copied === copyKey
+                          ? <InlineIcon name="check" className="w-3.5 h-3.5 text-emerald-500" />
+                          : <InlineIcon name="copy" className="w-3.5 h-3.5" />}
+                      </button>
+                      {group.channels.length > 1 ? (
+                        <Popover side="left" trigger={
+                          <span className="p-1 rounded text-gray-300 hover:text-indigo-500 hover:bg-indigo-50 opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
+                            <InlineIcon name="arrowLeft" className="w-3.5 h-3.5" />
+                          </span>
+                        }>
+                          <div className="space-y-1 min-w-[160px]">
+                            <p className="text-[10px] text-gray-400 font-medium mb-1.5">该模型可用渠道</p>
+                            {group.channels.map(ch => (
+                              <div key={ch.name} className="flex items-center gap-1.5">
+                                {healthDot(ch.health)}
+                                <span className="text-xs text-gray-700">{ch.name}</span>
+                                <span className="text-[10px] text-gray-400 ml-auto">{ch.uptimePct}%</span>
+                              </div>
+                            ))}
+                          </div>
+                        </Popover>
+                      ) : (
+                        <span className="p-1 rounded text-gray-300">
+                          <InlineIcon name={group.type === 'alias' ? 'arrowLeft' : 'zap'} className="w-3.5 h-3.5" />
+                        </span>
+                      )}
+                    </div>
                   </div>
                   {group.type === 'alias' && (
                     <div className="text-[10px] text-gray-400 mt-0.5 font-mono">
@@ -226,29 +250,6 @@ export default function ModelsPage() {
                     <span className="text-[10px] text-gray-400">{bestChannel.uptimePct}% 可用率</span>
                   </div>
                 </div>
-                {/* 左侧箭头（多渠道时显示 Popover） */}
-                {group.channels.length > 1 ? (
-                  <Popover side="left"
-                    trigger={
-                      <span className="p-1 rounded text-gray-300 hover:text-indigo-500 hover:bg-indigo-50 opacity-0 group-hover:opacity-100 transition-all cursor-pointer shrink-0 mt-1">
-                        <InlineIcon name="arrowLeft" className="w-3.5 h-3.5" />
-                      </span>
-                    }
-                  >
-                    <div className="space-y-1 min-w-[160px]">
-                      <p className="text-[10px] text-gray-400 font-medium mb-1.5">该模型可用渠道</p>
-                      {group.channels.map(ch => (
-                        <div key={ch.name} className="flex items-center gap-1.5">
-                          {healthDot(ch.health)}
-                          <span className="text-xs text-gray-700">{ch.name}</span>
-                          <span className="text-[10px] text-gray-400 ml-auto">{ch.uptimePct}%</span>
-                        </div>
-                      ))}
-                    </div>
-                  </Popover>
-                ) : (
-                  <InlineIcon name={group.type === 'alias' ? 'arrowLeft' : 'zap'} className="w-3.5 h-3.5 text-gray-300 shrink-0 mt-1" />
-                )}
               </div>
             </div>
             );
