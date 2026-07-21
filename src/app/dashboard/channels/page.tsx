@@ -58,6 +58,7 @@ export default function ChannelsPage() {
 
   interface PendingModelChange {
     alias?: string;
+    clearAlias?: boolean;
     prices?: { prompt_price: string; completion_price: string; cached_prompt_price: string };
     staged: boolean;
     deleted?: boolean;
@@ -106,7 +107,10 @@ export default function ChannelsPage() {
       if (!validateDecimal(p, '标准输入') || !validateDecimal(c, '输出') || !validateDecimal(ch, '缓存输入')) return;
     }
 
-    setPendingModels(prev => ({ ...prev, [modelId]: { alias: alias || undefined, prices: hasPrice ? { prompt_price: p, completion_price: c, cached_prompt_price: ch } : undefined, staged: true, deleted: false } }));
+    setPendingModels(prev => {
+      const isClear = prev[modelId]?.clearAlias && !alias;
+      return { ...prev, [modelId]: { alias: isClear ? '' : (alias || undefined), prices: hasPrice ? { prompt_price: p, completion_price: c, cached_prompt_price: ch } : undefined, staged: true, deleted: false } };
+    });
   };
 
   const handleModelDelete = (modelId: string) => {
@@ -467,12 +471,26 @@ export default function ChannelsPage() {
                               <div className="flex items-center gap-2">
                                 <code className="text-xs text-gray-500 bg-white border border-gray-200 rounded px-2 py-1.5 font-mono">{m.model_id}</code>
                                 <span className="text-gray-300">→</span>
-                                <input
-                                  defaultValue={alias?.alias_name || ''}
-                                  placeholder="输入别名..."
-                                  id={`alias-input-${m.model_id}`}
-                                  className="flex-1 px-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
-                                />
+                                <div className="flex-1 relative">
+                                  <input
+                                    defaultValue={alias?.alias_name || ''}
+                                    placeholder="输入别名..."
+                                    id={`alias-input-${m.model_id}`}
+                                    className="w-full px-3 py-1.5 pr-7 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const input = document.getElementById(`alias-input-${m.model_id}`) as HTMLInputElement;
+                                      if (input) input.value = '';
+                                      setPendingModels(prev => ({ ...prev, [m.model_id]: { ...(prev[m.model_id] || {}), clearAlias: true } }));
+                                    }}
+                                    className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded text-gray-400 hover:text-red-500 transition-colors"
+                                    title="清除别名"
+                                  >
+                                    <InlineIcon name="x" className="w-3 h-3" />
+                                  </button>
+                                </div>
                               </div>
                             </div>
 
