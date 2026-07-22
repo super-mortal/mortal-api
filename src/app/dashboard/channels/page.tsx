@@ -53,6 +53,7 @@ export default function ChannelsPage() {
   const [showApiKey, setShowApiKey] = useState(false);
 
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string } | null>(null);
+  const [deleteModelConfirm, setDeleteModelConfirm] = useState<string | null>(null);
   const [modelErrModal, setModelErrModal] = useState(false);
   const [pricingMap, setPricingMap] = useState<Record<string, { prompt_price: number; completion_price: number; cached_prompt_price: number }>>({});
 
@@ -126,8 +127,12 @@ export default function ChannelsPage() {
   };
 
   const handleModelDelete = (modelId: string) => {
-    if (!confirm('确定删除此模型？')) return;
-    setPendingModels(prev => ({ ...prev, [modelId]: { ...(prev[modelId] || {}), deleted: true, staged: true, alias: undefined, prices: undefined } }));
+    setDeleteModelConfirm(modelId);
+  };
+  const confirmDeleteModel = () => {
+    if (!deleteModelConfirm) return;
+    setPendingModels(prev => ({ ...prev, [deleteModelConfirm]: { ...(prev[deleteModelConfirm] || {}), deleted: true, staged: true, alias: undefined, prices: undefined } }));
+    setDeleteModelConfirm(null);
   };
 
   const saveChannel = async () => {
@@ -712,6 +717,15 @@ export default function ChannelsPage() {
         message="模型已存在或创建失败。"
         confirmText="知道了"
         variant="info"
+      />
+      <ConfirmDialog
+        open={!!deleteModelConfirm}
+        onClose={() => setDeleteModelConfirm(null)}
+        onConfirm={confirmDeleteModel}
+        title="确认删除"
+        message="确定删除此模型？此操作不可撤销。"
+        confirmText="确认删除"
+        variant="danger"
       />
       {syncFeedback && (
         <div className="fixed top-4 right-4 z-[100] bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-lg text-sm font-medium animate-in slide-in-from-top-2">
