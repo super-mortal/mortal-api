@@ -252,7 +252,7 @@ export async function POST(request: NextRequest) {
       // Check channel restriction
       if (hasChannelRestriction && !keyAllowedChannels.includes(resolved.channelId)) break;
       // Check model restriction
-      if (hasModelRestriction && !keyAllowedModels.includes(modelName)) break;
+      if (hasModelRestriction && !keyAllowedModels.includes(modelName) && !keyAllowedModels.includes(resolved.upstreamModelId)) break;
 
       channel = getChannelById(resolved.channelId);
       if (!channel || !channel.is_active) {
