@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { InlineIcon } from '@/lib/icon';
 import { apiFetch } from '@/lib/fetch-with-auth';
 import { Switch } from '@/lib/switch';
@@ -347,7 +346,7 @@ export default function ChannelsPage() {
         if (models.length === 0) {
           setPullEmptyDialog('上游返回了空模型列表，请检查 API Key 和 URL');
         } else {
-          setPulledModels(function(p) { var o: Record<string, string[]> = {}; o[id] = models; return Object.assign({}, p, o); });
+          setPulledModels((p) => ({ ...p, [id]: models }));
         }
       } else {
         const text = await res.text();
@@ -371,30 +370,40 @@ export default function ChannelsPage() {
     return () => window.removeEventListener('keydown', handleEsc);
   }, [sidePanelOpen]);
 
+  const channelsRef = useRef(channels);
+  channelsRef.current = channels;
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    const current = channelsRef.current;
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const oldIndex = channels.findIndex((ch) => ch.id === active.id);
-    const newIndex = channels.findIndex((ch) => ch.id === over.id);
+    const oldIndex = current.findIndex((ch) => ch.id === active.id);
+    const newIndex = current.findIndex((ch) => ch.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
 
-    const reordered = arrayMove(channels, oldIndex, newIndex);
+    const reordered = arrayMove(current, oldIndex, newIndex);
     setChannels(reordered);
 
-    // Persist new priority order (outside updater — no side effects inside setChannels)
-    reordered.forEach((ch, idx) => {
-      apiFetch('/admin/channels', {
-        method: 'PATCH',
-        body: JSON.stringify({ id: ch.id, priority: idx }),
-      });
-    });
-  }, [channels]);
+    // Persist new priority order
+    const results = await Promise.allSettled(
+      reordered.map((ch, idx) =>
+        apiFetch('/admin/channels', {
+          method: 'PATCH',
+          body: JSON.stringify({ id: ch.id, priority: idx }),
+        })
+      )
+    );
+    const failures = results.filter(r => r.status === 'rejected');
+    if (failures.length > 0) {
+      console.error(`${failures.length} PATCH calls failed during drag persistence`);
+    }
+  }, []); // stable — no longer depends on channels
 
   if (loading) return <div className="flex items-center justify-center h-64"><Spinner /></div>;
 
@@ -466,7 +475,6 @@ export default function ChannelsPage() {
                           <HealthBar recent_checks={ch.recent_checks || []} uptime_pct={ch.uptime_pct ?? 100} avg_latency_ms={ch.avg_latency_ms ?? 0} />
                         </div>
                       <div className="flex items-center gap-0.5 shrink-0">
-                        {/* ✏️ edit button - NEW */}
                         <span className="group relative">
                           <button onClick={() => { setModalForm({ name: ch.name, base_url: ch.base_url, api_key: '', priority: ch.priority, notes: ch.notes }); setModalEditId(ch.id); setChModal(true); }}
                             className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all border border-transparent hover:border-blue-200"><InlineIcon name="pencil" className="w-4 h-4" /></button>
@@ -478,7 +486,6 @@ export default function ChannelsPage() {
                             className="p-2 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all border border-transparent hover:border-emerald-200"><InlineIcon name="activity" className="w-4 h-4" /></button>
                           <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">连通检测</span>
                         </span>
-                        {/* ▼ side panel button — NEW (repurposed from config) */}
                         <span className="group relative">
                           <button onClick={() => { setPanelForm({ name: ch.name, base_url: ch.base_url, api_key: ch.api_key ? '••••••••••••••••••' : '', priority: ch.priority, notes: ch.notes }); setPanelEditId(ch.id); setModelChannelId(ch.id); setSidePanelOpen(true); }}
                             className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all border border-transparent hover:border-indigo-200"><InlineIcon name="chevronDown" className="w-4 h-4" /></button>
