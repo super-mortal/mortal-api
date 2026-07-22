@@ -380,23 +380,21 @@ export default function ChannelsPage() {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    setChannels((prev) => {
-      const oldIndex = prev.findIndex((ch) => ch.id === active.id);
-      const newIndex = prev.findIndex((ch) => ch.id === over.id);
-      if (oldIndex === -1 || newIndex === -1) return prev;
-      const reordered = arrayMove(prev, oldIndex, newIndex);
+    const oldIndex = channels.findIndex((ch) => ch.id === active.id);
+    const newIndex = channels.findIndex((ch) => ch.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
 
-      // Persist new priority order
-      reordered.forEach((ch, idx) => {
-        apiFetch('/admin/channels', {
-          method: 'PATCH',
-          body: JSON.stringify({ id: ch.id, priority: idx }),
-        });
+    const reordered = arrayMove(channels, oldIndex, newIndex);
+    setChannels(reordered);
+
+    // Persist new priority order (outside updater — no side effects inside setChannels)
+    reordered.forEach((ch, idx) => {
+      apiFetch('/admin/channels', {
+        method: 'PATCH',
+        body: JSON.stringify({ id: ch.id, priority: idx }),
       });
-
-      return reordered;
     });
-  }, []);
+  }, [channels]);
 
   if (loading) return <div className="flex items-center justify-center h-64"><Spinner /></div>;
 
