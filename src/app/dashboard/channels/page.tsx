@@ -9,6 +9,23 @@ import { ConfirmDialog } from '@/lib/confirm-dialog';
 import { Spinner, EmptyState } from '@/lib/ui';
 import { HealthBadge, HealthBar } from '@/lib/health-badge';
 import { Modal } from '@/lib/modal';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface Channel {
   id: string; name: string; base_url: string; api_key: string;
@@ -25,6 +42,44 @@ interface ChannelModel {
 interface ModelAlias {
   id: string; alias_name: string; channel_model_id: string;
   is_active: number; model_id?: string; channel_name?: string;
+}
+
+function SortableChannelCard({ ch, children }: { ch: Channel; children: React.ReactNode }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: ch.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : undefined,
+    position: isDragging ? 'relative' as const : undefined,
+    zIndex: isDragging ? 50 : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className={isDragging ? 'relative z-50' : ''}>
+      <div className="flex items-stretch">
+        {/* Drag handle */}
+        <button
+          className="flex items-center justify-center w-8 shrink-0 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 transition-colors rounded-l-xl hover:bg-gray-50 border-r border-transparent hover:border-gray-200"
+          {...attributes}
+          {...listeners}
+          title="拖拽排序"
+        >
+          <InlineIcon name="grip-vertical" className="w-4 h-4" />
+        </button>
+        <div className="flex-1 min-w-0">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function ChannelsPage() {
@@ -316,6 +371,33 @@ export default function ChannelsPage() {
     return () => window.removeEventListener('keydown', handleEsc);
   }, [sidePanelOpen]);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    setChannels((prev) => {
+      const oldIndex = prev.findIndex((ch) => ch.id === active.id);
+      const newIndex = prev.findIndex((ch) => ch.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      const reordered = arrayMove(prev, oldIndex, newIndex);
+
+      // Persist new priority order
+      reordered.forEach((ch, idx) => {
+        apiFetch('/admin/channels', {
+          method: 'PATCH',
+          body: JSON.stringify({ id: ch.id, priority: idx }),
+        });
+      });
+
+      return reordered;
+    });
+  }, []);
+
   if (loading) return <div className="flex items-center justify-center h-64"><Spinner /></div>;
 
   return (
@@ -360,60 +442,67 @@ export default function ChannelsPage() {
       </Modal>
 
       {/* Channel Cards */}
-      {channels.map(ch => {
-        const models = modelsForChannel(ch.id);
-        return (
-          <div key={ch.id} className="bg-white rounded-xl border border-gray-100 hover:shadow-sm transition-shadow">
-            <div className="p-4 sm:p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <h3 className="font-semibold text-gray-900 text-sm sm:text-base">{ch.name}</h3>
-                    <HealthBadge health_status={ch.health_status} is_active={ch.is_active} cooldown_until={ch.cooldown_until} />
-                  </div>
-                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-gray-500 mt-0.5">
-                    <code className="text-gray-400 font-mono text-[10px]">{ch.base_url}</code>
-                    {ch.notes && <span>· {ch.notes}</span>}
-                    <span>· 优先 {ch.priority}</span>
-                    <span>· 模型: {models.length} 个</span>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={channels.map(ch => ch.id)} strategy={verticalListSortingStrategy}>
+          {channels.map(ch => {
+            const models = modelsForChannel(ch.id);
+            return (
+              <SortableChannelCard key={ch.id} ch={ch}>
+                <div className="bg-white border border-gray-100 hover:shadow-sm transition-shadow h-full"
+                  style={{ borderRadius: '0 0.75rem 0.75rem 0' }}>
+                  <div className="p-4 sm:p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <h3 className="font-semibold text-gray-900 text-sm sm:text-base">{ch.name}</h3>
+                          <HealthBadge health_status={ch.health_status} is_active={ch.is_active} cooldown_until={ch.cooldown_until} />
+                        </div>
+                        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-gray-500 mt-0.5">
+                          <code className="text-gray-400 font-mono text-[10px]">{ch.base_url}</code>
+                          {ch.notes && <span>· {ch.notes}</span>}
+                          <span>· 优先 {ch.priority}</span>
+                          <span>· 模型: {models.length} 个</span>
+                        </div>
+                      </div>
+                        <div className="mt-2 md:mt-0 md:mx-3 md:flex-1 hidden md:block">
+                          <HealthBar recent_checks={ch.recent_checks || []} uptime_pct={ch.uptime_pct ?? 100} avg_latency_ms={ch.avg_latency_ms ?? 0} />
+                        </div>
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        {/* ✏️ edit button - NEW */}
+                        <span className="group relative">
+                          <button onClick={() => { setModalForm({ name: ch.name, base_url: ch.base_url, api_key: '', priority: ch.priority, notes: ch.notes }); setModalEditId(ch.id); setChModal(true); }}
+                            className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all border border-transparent hover:border-blue-200"><InlineIcon name="pencil" className="w-4 h-4" /></button>
+                          <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">编辑</span>
+                        </span>
+                        {/* 连通检测 — unchanged */}
+                        <span className="group relative">
+                          <button onClick={() => openCheckModal(ch)}
+                            className="p-2 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all border border-transparent hover:border-emerald-200"><InlineIcon name="activity" className="w-4 h-4" /></button>
+                          <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">连通检测</span>
+                        </span>
+                        {/* ▼ side panel button — NEW (repurposed from config) */}
+                        <span className="group relative">
+                          <button onClick={() => { setPanelForm({ name: ch.name, base_url: ch.base_url, api_key: ch.api_key ? '••••••••••••••••••' : '', priority: ch.priority, notes: ch.notes }); setPanelEditId(ch.id); setModelChannelId(ch.id); setSidePanelOpen(true); }}
+                            className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all border border-transparent hover:border-indigo-200"><InlineIcon name="chevronDown" className="w-4 h-4" /></button>
+                          <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">展开</span>
+                        </span>
+                        <Switch
+                          checked={!!ch.is_active}
+                          onChange={() => toggleChannel(ch.id, ch.is_active)}
+                        />
+                        <span className="group relative">
+                          <button onClick={() => deleteChannel(ch.id)} className="p-2 rounded-lg text-red-300 hover:text-red-500 hover:bg-red-50 transition-all border border-transparent hover:border-red-200"><InlineIcon name="trash2" className="w-4 h-4" /></button>
+                          <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">删除</span>
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                  <div className="mt-2 md:mt-0 md:mx-3 md:flex-1 hidden md:block">
-                    <HealthBar recent_checks={ch.recent_checks || []} uptime_pct={ch.uptime_pct ?? 100} avg_latency_ms={ch.avg_latency_ms ?? 0} />
-                  </div>
-                <div className="flex items-center gap-0.5 shrink-0">
-                  {/* ✏️ edit button - NEW */}
-                  <span className="group relative">
-                    <button onClick={() => { setModalForm({ name: ch.name, base_url: ch.base_url, api_key: '', priority: ch.priority, notes: ch.notes }); setModalEditId(ch.id); setChModal(true); }}
-                      className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all border border-transparent hover:border-blue-200"><InlineIcon name="pencil" className="w-4 h-4" /></button>
-                    <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">编辑</span>
-                  </span>
-                  {/* 连通检测 — unchanged */}
-                  <span className="group relative">
-                    <button onClick={() => openCheckModal(ch)}
-                      className="p-2 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all border border-transparent hover:border-emerald-200"><InlineIcon name="activity" className="w-4 h-4" /></button>
-                    <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">连通检测</span>
-                  </span>
-                  {/* ▼ side panel button — NEW (repurposed from config) */}
-                  <span className="group relative">
-                    <button onClick={() => { setPanelForm({ name: ch.name, base_url: ch.base_url, api_key: ch.api_key ? '••••••••••••••••••' : '', priority: ch.priority, notes: ch.notes }); setPanelEditId(ch.id); setModelChannelId(ch.id); setSidePanelOpen(true); }}
-                      className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all border border-transparent hover:border-indigo-200"><InlineIcon name="chevronDown" className="w-4 h-4" /></button>
-                    <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">展开</span>
-                  </span>
-                  <Switch
-                    checked={!!ch.is_active}
-                    onChange={() => toggleChannel(ch.id, ch.is_active)}
-                  />
-                  <span className="group relative">
-                    <button onClick={() => deleteChannel(ch.id)} className="p-2 rounded-lg text-red-300 hover:text-red-500 hover:bg-red-50 transition-all border border-transparent hover:border-red-200"><InlineIcon name="trash2" className="w-4 h-4" /></button>
-                    <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">删除</span>
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })}
+              </SortableChannelCard>
+            );
+          })}
+        </SortableContext>
+      </DndContext>
       {channels.length === 0 && (
         <div className="py-16"><EmptyState icon="plug" text="暂无渠道" iconClassName="w-10 h-10 mx-auto mb-3 text-gray-200" /></div>
       )}
