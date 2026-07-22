@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
   const seen = new Set<string>();
 
   for (const a of aliases) {
-    if (allowedModels.length > 0 && !allowedModels.includes(a.alias_name)) continue;
+    if (allowedModels.length > 0 && !allowedModels.includes(a.alias_name) && !allowedModels.includes(a.model_id)) continue;
     if (seen.has(a.alias_name)) continue;
     allModels.push({ id: a.alias_name, object: 'model', created: Math.floor(Date.now() / 1000), owned_by: 'mortal' });
     seen.add(a.alias_name);
