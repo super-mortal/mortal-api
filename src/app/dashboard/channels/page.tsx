@@ -56,6 +56,9 @@ export default function ChannelsPage() {
   const [deleteModelConfirm, setDeleteModelConfirm] = useState<string | null>(null);
   const [modelErrModal, setModelErrModal] = useState(false);
   const [pricingMap, setPricingMap] = useState<Record<string, { prompt_price: number; completion_price: number; cached_prompt_price: number }>>({});
+  const [pullEmptyDialog, setPullEmptyDialog] = useState<string | null>(null);
+  const [pullFailDialog, setPullFailDialog] = useState<string | null>(null);
+  const [pullErrDialog, setPullErrDialog] = useState<string | null>(null);
 
   interface PendingModelChange {
     alias?: string;
@@ -282,18 +285,21 @@ export default function ChannelsPage() {
   const doPullModels = async (id: string) => {
     setPullingId(id);
     try {
-      var res = await apiFetch('/admin/channels', { method: 'PUT', body: JSON.stringify({ id, _action: 'pull-models' }) });
+      const res = await apiFetch('/admin/channels', { method: 'PUT', body: JSON.stringify({ id, _action: 'pull-models' }) });
       if (res.ok) {
-        var d = await res.json();
-        var models = d.models || [];
-        if (models.length === 0) { alert('上游返回了空模型列表，请检查 API Key 和 URL'); }
-        else { setPulledModels(function(p) { var o: Record<string, string[]> = {}; o[id] = models; return Object.assign({}, p, o); }); }
+        const d = await res.json();
+        const models = d.models || [];
+        if (models.length === 0) {
+          setPullEmptyDialog('上游返回了空模型列表，请检查 API Key 和 URL');
+        } else {
+          setPulledModels(function(p) { var o: Record<string, string[]> = {}; o[id] = models; return Object.assign({}, p, o); });
+        }
       } else {
-        var text = await res.text();
-        alert('拉取失败 (HTTP ' + res.status + '):\n' + (text || '').slice(0, 300));
+        const text = await res.text();
+        setPullFailDialog('拉取失败 (HTTP ' + res.status + '):\n' + (text || '').slice(0, 300));
       }
     } catch (e) {
-      alert('拉取异常: ' + String(e instanceof Error ? e.message : e).slice(0, 300));
+      setPullErrDialog('拉取异常: ' + String(e instanceof Error ? e.message : e).slice(0, 300));
     }
     setPullingId(null);
   };
@@ -772,6 +778,33 @@ export default function ChannelsPage() {
           {syncFeedback}
         </div>
       )}
+      <ConfirmDialog
+        open={!!pullEmptyDialog}
+        onClose={() => setPullEmptyDialog(null)}
+        onConfirm={() => setPullEmptyDialog(null)}
+        title="提示"
+        message={pullEmptyDialog || ''}
+        confirmText="知道了"
+        variant="info"
+      />
+      <ConfirmDialog
+        open={!!pullFailDialog}
+        onClose={() => setPullFailDialog(null)}
+        onConfirm={() => setPullFailDialog(null)}
+        title="拉取失败"
+        message={pullFailDialog || ''}
+        confirmText="知道了"
+        variant="danger"
+      />
+      <ConfirmDialog
+        open={!!pullErrDialog}
+        onClose={() => setPullErrDialog(null)}
+        onConfirm={() => setPullErrDialog(null)}
+        title="请求异常"
+        message={pullErrDialog || ''}
+        confirmText="知道了"
+        variant="danger"
+      />
     </div>
   );
 }
