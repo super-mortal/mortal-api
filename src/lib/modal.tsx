@@ -11,9 +11,10 @@ interface ModalProps {
   children: React.ReactNode;
   portal?: boolean;
   zIndex?: number;
+  size?: 'md' | 'lg';
 }
 
-export function Modal({ open, onClose, title, children, portal, zIndex }: ModalProps) {
+export function Modal({ open, onClose, title, children, portal, zIndex, size = 'md' }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,7 +44,7 @@ export function Modal({ open, onClose, title, children, portal, zIndex }: ModalP
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-lg overflow-hidden animate-in slide-in-from-bottom-4 duration-200"
+        className={`bg-white rounded-2xl shadow-2xl border border-gray-100 w-full ${size === 'lg' ? 'max-w-2xl' : 'max-w-lg'} overflow-hidden animate-in slide-in-from-bottom-4 duration-200`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
