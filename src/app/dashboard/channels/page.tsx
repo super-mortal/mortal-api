@@ -93,7 +93,7 @@ export default function ChannelsPage() {
   const modelsForChannel = (chId: string) => channelModels.filter(m => m.channel_id === chId);
   const aliasesForModel = (cmId: string) => aliases.filter(a => a.channel_model_id === cmId);
 
-  const handleModelSave = (modelId: string) => {
+  const handleModelSave = async (modelId: string) => {
     const getVal = (id: string) => (document.getElementById(id) as HTMLInputElement)?.value || '';
     const alias = getVal(`alias-input-${modelId}`);
     const p = getVal(`price-prompt-${modelId}`);
@@ -110,20 +110,60 @@ export default function ChannelsPage() {
       if (!validateDecimal(p, '标准输入') || !validateDecimal(c, '输出') || !validateDecimal(ch, '缓存输入')) return;
     }
 
-    setPendingModels(prev => {
-      const isClear = prev[modelId]?.clearAlias && !alias;
-      const newAliasName = isClear ? '' : (alias || null); // '' = cleared alias, null = no alias set
-      return {
-        ...prev,
-        [modelId]: {
-          alias: isClear ? '' : (alias || undefined),
-          prices: hasPrice ? { prompt_price: p, completion_price: c, cached_prompt_price: ch } : undefined,
-          staged: true,
-          deleted: false,
-          aliasName: newAliasName,
+    // Direct API commit — no longer two-step via pendingModels
+    const models = modelsForChannel(panelEditId || '');
+    const m = models.find(mm => mm.model_id === modelId);
+    if (!m) { alert('模型不存在'); return; }
+
+    try {
+      // 1. Handle alias: delete old, create new
+      const als = aliasesForModel(m.id);
+      if (als[0]) {
+        const delRes = await apiFetch(`/admin/channels?id=${als[0].id}&type=alias`, { method: 'DELETE' });
+        if (!delRes.ok) { alert('删除旧别名失败'); return; }
+      }
+      if (alias) {
+        const createRes = await apiFetch('/admin/channels', {
+          method: 'POST',
+          body: JSON.stringify({ _type: 'alias', alias_name: alias, channel_model_id: m.id })
+        });
+        if (!createRes.ok) { alert('创建别名失败'); return; }
+      }
+
+      // 2. Handle prices
+      if (hasPrice) {
+        const pricingKey = alias || modelId;
+        const priceRes = await apiFetch('/admin/pricing', {
+          method: 'POST',
+          body: JSON.stringify({
+            pricing_key: pricingKey,
+            model_id: modelId,
+            channel_model_id: m.id,
+            prompt_price: Number(p),
+            completion_price: Number(c),
+            cached_prompt_price: Number(ch),
+          })
+        });
+        if (priceRes.ok) {
+          const data = await priceRes.json();
+          if (data.syncedCount > 0) {
+            setSyncFeedback(`价格已同步至 ${data.syncedCount} 个渠道（${data.syncedChannels.map((ch: any) => ch.channel_name).join('、')}）`);
+          } else {
+            setSyncFeedback(`价格已保存`);
+          }
+          setTimeout(() => setSyncFeedback(null), 3000);
+        } else {
+          alert('保存价格失败');
+          return;
         }
-      };
-    });
+      }
+
+      // 3. Clear from pending (it's already committed) and refresh
+      setPendingModels(prev => { const n = { ...prev }; delete n[modelId]; return n; });
+      fetchAll();
+    } catch (e) {
+      alert('保存失败: ' + (e instanceof Error ? e.message : String(e)));
+    }
   };
 
   const handleModelDelete = (modelId: string) => {
