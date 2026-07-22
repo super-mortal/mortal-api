@@ -52,13 +52,23 @@ export function HealthBadge({ health_status, is_active, cooldown_until }: Health
 export function HealthBar({ recent_checks, uptime_pct, avg_latency_ms }: HealthBarProps) {
   if (recent_checks.length === 0) {
     return (
-      <div className="flex items-center gap-2">
-        <div className="flex gap-0.5">
-          {Array.from({ length: 10 }, (_, i) => (
-            <div key={i} className="w-2 h-3 rounded-[2px] bg-gray-100" />
-          ))}
+      <div className="flex flex-col gap-0.5">
+        <div className="flex items-center gap-2">
+          <div className="flex gap-0.5">
+            {Array.from({ length: 20 }, (_, i) => (
+              <div key={i} className="w-2 h-3 rounded-[2px] bg-gray-100" />
+            ))}
+          </div>
+          <span className="text-[10px] text-gray-400 whitespace-nowrap">0%</span>
         </div>
-        <span className="text-[10px] text-gray-400">暂无数据</span>
+        <div className="flex items-center gap-2">
+          <div className="flex gap-0.5">
+            {Array.from({ length: 20 }, (_, i) => (
+              <div key={i} className="w-2 h-3 rounded-[2px] bg-gray-100" />
+            ))}
+          </div>
+          <span className="text-[10px] text-gray-400 whitespace-nowrap">—</span>
+        </div>
       </div>
     );
   }
