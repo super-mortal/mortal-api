@@ -5,84 +5,90 @@
 
 ## 概述
 
-本文档统一"原始模型 ID"与"别名"在整个项目中的使用规则，并移除 `model="auto"` 随机路由功能。核心路由策略（健康度排序、cooldown、429 vs failure、重试 3 次、excluded 渠道列表）**原样保留**；仅修改"用哪个名字"的字段来源。
+本文档统一"原始模型 ID"与"别名"在整个项目中的使用规则，并移除 `model="auto"` 随机路由功能。
 
 ## 核心规则
 
-- **设了别名 → 永远用别名**（作为对外名 `public_name`）
-- **没设别名 → 永远用原 ID**（`public_name = model_id`）
-- 整个项目对外（包括客户端调用、`/v1/models`、日志、计费、Key 限制）只看到 `public_name`
-- 只有管理员编辑页面能看到原 ID（作为 hint）
+- `public_name` = 设了别名 → 别名；没设 → 原 ID
+- **客户端**（下游用户）：永远只能看到/使用 `public_name`
+- **管理员端 dashboard**：继续显示原 ID，必要时附别名
+- **核心路由策略**（健康度、cooldown、429 vs failure、重试 3 次、excluded 渠道列表）：**不变**
 
-## 范围
+## 改动清单（最终确认）
 
-| 类别 | 状态 |
-|---|---|
-| 路由策略（健康度、cooldown、429、retry、excluded） | **不变** |
-| `model="auto"` 随机路由功能 | **移除** |
-| `model_pricing.model_id` 主键 | 改为 public_name（数据库迁移） |
-| 客户端（`/v1/*`、日志、计费）字段 | 统一为 public_name |
-| **管理员端（dashboard）展示原 ID** | **保持原样不动** |
+| # | 位置 | 改动 |
+|---|---|---|
+| ① | 后台 → 渠道管理 → 编辑 → 顶部「拉取」列表 | **不动**（现状显示原 ID） |
+| ② | 后台 → 渠道管理 → 编辑 → 模型列表行 | **不动**（已显示原 ID → 别名） |
+| ③ | 后台 → Key 管理 → 编辑 → 允许的模型下拉 | **不动**（已显示原 ID (别名)） |
+| ④ | 后台 → Key 管理 → 列表 → 模型限制 Popover | **不动** |
+| ⑤ | 后台 → 日志 → 模型列 | **改**（底层写入字段改 public_name；UI 代码不动） |
+| ⑥ | 客户端 → POST /v1/chat/completions | **改**（必须传 public_name；auto 移除） |
+| ⑦ | 客户端 → GET /v1/models | **改**（输出 public_name 去重） |
+| ⑧ | 计费 → model_pricing 表 | **改**（主键改 public_name，迁移 v6） |
 
-## 展示规则
+## ⑤ 后台日志（细节）
 
-- **客户端**（下游用户）：永远只能看到/使用 `public_name`（设了别名 = 别名，没设 = 原 ID）
-- **管理员端**（dashboard 全部页面）：继续展示原 ID，必要时旁附别名（方便管理映射关系）
+**为什么乱**：当前代码写入 `call_log.model` 时存在 3 种来源：
+- auto 路径写 `billingName`（alias_name）
+- 正常路径写 `modelName`（用户传入）
+- 结果：同一个上游模型在日志里出现两种名（codex / gpt-4o）
 
-## 改动详情
+**改后**：删除 auto 路径（约 170 行），正常路径写入 `publicName`，整个项目只有 1 个写入点。后台日志 UI 列表代码完全不动——它本来就直接展示 `call_log.model` 字段，字段值统一了展示就统一了。
 
-| # | 位置 | 现在 | 改后 |
-|---|---|---|---|
-| 1 | 路由查 channel<br>`channels.ts:192-255`<br>`route.ts:55-222` | 3 个独立 SQL 分支（allowed 查 alias / 全局查 alias / channel_models 直匹配），加上 auto 路径另一套 `getModelsForAuto`。重试循环每次重新查 DB，约 170 行 auto 代码独立存在。 | 合并为 1 个 SQL：`SELECT FROM (alias ∪ direct) WHERE public_name = ?`。auto 路径整段删除。`public_name` = 别名（设了）或原 ID（没设）。 |
-| 2 | Key 的 allowed_models 检查<br>`route.ts:255` | `if (!includes(modelName) && !includes(upstreamModelId))` 同时比对用户传入名和解析后的 upstream 名。逻辑分散，两个名都能过。 | `if (!includes(publicName))` 一个判断、一个名，永远比对「对外名」。 |
-| 3 | `/v1/models` 对外列表<br>`v1/models/route.ts` | 输出不统一。下游拿到的列表里同一个上游模型可能既有别名又有原 ID，容易混淆。 | 输出 `public_name`。设了别名的输出别名，没设的输出原 ID。每个 upstream model_id 只出现一次。 |
-| 4 | 客户端调用<br>`POST /v1/chat/completions` | 接受原 ID 或别名（auto 路径同时存在）。 | 必须传 `public_name`。`model="auto"` 报 400。 |
-| 5 | 日志 model 字段<br>`route.ts createCallLog` 多处 | auto 路径写 `billingName`（来自 alias），其他路径写 `modelName`（用户传入）。同一个上游模型在日志里可能两种名。 | 删除 auto 路径后只剩一处，统一写 `public_name`。 |
-| 6 | 计费 `model_pricing`<br>`model-pricing.ts`<br>`findChannelsWithSamePricingKey` | 主键是 model_id，但 `findChannelsWithSamePricingKey` 用 alias_name 对齐，跨表混用 key。auto 走 alias 查 pricing，非 auto 走 modelName 查，可能命中不同行。 | 主键改为 `public_name`。计费时 `getModelPricing(public_name)`，永远查同一行。需数据库迁移。 |
+**改的代码**：
+- `route.ts:128`（auto 路径）→ 整段删除
+- `route.ts:312`（正常路径）→ `model: modelName` 改为 `model: publicName`
 
-## 保持不动（管理员端展示原 ID）
+## ⑥ 客户端 POST 请求
 
-以下位置全部在 dashboard 管理员端，**当前已经正确展示原 ID（必要时附别名）**，保持不动：
+**改前**：客户端可传 `model="codex"`、`model="gpt-4o"`、`model="auto"`
 
-- `src/app/dashboard/channels/page.tsx` 渠道编辑侧栏模型列表（`gpt-4o ──→ codex` 格式）
-- `src/app/dashboard/keys/page.tsx` ComboBox（`gpt-4o (codex)` 格式）
-- `src/app/dashboard/logs/page.tsx` 日志展示（按 `public_name` 展示，因为日志 model 字段已改为 public_name）
+**改后**：
+- 必须传 `public_name`
+- `model="auto"` → 返回 400
+- 客户端之前用原 ID 调用、现在该模型设了别名 → 必须改用别名
 
-## 改动文件
+## ⑦ 客户端 GET /v1/models
 
-### 后端
+**改前**：
+```json
+{
+  "data": [
+    {"id": "codex"},
+    {"id": "gpt-4o"},        // ← 跟 codex 同一个上游
+    {"id": "deepseek-v4-pro"}
+  ]
+}
+```
 
-- `src/lib/channels.ts`：`resolveModel` 合并 3 SQL → 1 SQL；删除 `getModelsForAuto`
-- `src/lib/model-pricing.ts`：主键改为 `public_name`
-- `src/app/v1/chat/completions/route.ts`：删除 auto 分支（~170 行）；统一使用 `public_name`
-- `src/app/v1/models/route.ts`：输出 `public_name` 去重
-- `src/app/admin/channels/route.ts`：返回字段加 `public_name`
+**改后**：
+```json
+{
+  "data": [
+    {"id": "codex"},            // public_name
+    {"id": "deepseek-v4-pro"}   // public_name
+  ]
+}
+```
 
-### 前端
+每个 upstream model_id 只出现一次。
 
-- `src/app/v1/models/route.ts`：输出 public_name 去重（**唯一修改的客户端可见文件**）
-- dashboard 页面（channels/keys/logs）**保持不动**，管理员继续看到原 ID
+## ⑧ 计费 model_pricing（数据库迁移 v6）
 
-### 数据库
+**改前**：主键是上游 model_id，auto 走 alias 查 pricing、非 auto 走 modelName 查，可能命中不同行。
 
-- `src/lib/db.ts`：加 v6 迁移（见下方）
+**改后**：主键改为 public_name，永远命中唯一行。
 
-## 数据库迁移 v6
-
-目标：将现有 `model_pricing.model_id` 重写为 `public_name`。规则：
-- 若该 model_id 已有别名 → 改写为别名
-- 若该 model_id 没有别名 → 保留原 ID
-
-迁移逻辑（在 `initSchema` 中加 `v6_pricing_public_name`）：
-
+**迁移 SQL**：
 ```sql
--- 1. 备份原表
+-- 1. 备份
 CREATE TABLE model_pricing_backup AS SELECT * FROM model_pricing;
 
--- 2. 删除原主键约束，重建
+-- 2. 重建表
 DROP TABLE model_pricing;
 CREATE TABLE model_pricing (
-  model_id TEXT PRIMARY KEY,  -- 语义变为 public_name
+  model_id TEXT PRIMARY KEY,  -- 语义改为 public_name
   prompt_price REAL NOT NULL DEFAULT 0,
   completion_price REAL NOT NULL DEFAULT 0,
   cached_prompt_price REAL NOT NULL DEFAULT 0,
@@ -98,7 +104,7 @@ FROM model_pricing_backup p
 JOIN channel_models cm ON cm.model_id = p.model_id
 LEFT JOIN model_aliases ma ON ma.channel_model_id = cm.id AND ma.is_active = 1;
 
--- 4. 兜底：未匹配到的原 model_id 保留（兼容旧数据）
+-- 4. 兜底：未匹配到的原 model_id 保留
 INSERT OR IGNORE INTO model_pricing (model_id, prompt_price, completion_price, cached_prompt_price, updated_at)
 SELECT model_id, prompt_price, completion_price, cached_prompt_price, updated_at
 FROM model_pricing_backup
@@ -109,14 +115,48 @@ DROP TABLE model_pricing_backup;
 INSERT INTO _migrations (name) VALUES ('v6_pricing_public_name');
 ```
 
-**注意**：如果同一个 model_id 在多个渠道有不同别名，迁移后会有多个 pricing 行；前端按 `public_name` 查询时会取第一个（SQLite 默认顺序）。建议在迁移前提示管理员手动确认无歧义。
+## 内部实现：路由 SQL 合并
+
+`channels.ts:192-255` 现有 3 个 SQL 分支（allowed 查 alias / 全局查 alias / channel_models 直匹配）合并为 1 个：
+
+```sql
+SELECT ma.alias_name AS public_name, cm.model_id AS upstream_model_id, cm.channel_id
+FROM model_aliases ma
+JOIN channel_models cm ON cm.id = ma.channel_model_id
+JOIN channels c ON c.id = cm.channel_id
+WHERE ma.alias_name = ? AND ma.is_active = 1 AND <AVAILABLE_CHANNEL_SQL>
+  AND (? IS NULL OR cm.channel_id IN (...))
+  AND (? IS NULL OR c.id NOT IN (...))
+UNION
+SELECT cm.model_id AS public_name, cm.model_id AS upstream_model_id, cm.channel_id
+FROM channel_models cm
+JOIN channels c ON c.id = cm.channel_id
+WHERE cm.model_id = ? AND cm.is_active = 1 AND <AVAILABLE_CHANNEL_SQL>
+  AND NOT EXISTS (SELECT 1 FROM model_aliases ma WHERE ma.channel_model_id = cm.id AND ma.is_active = 1)
+ORDER BY CASE c.health_status WHEN 'healthy' THEN 1 WHEN 'unknown' THEN 2 WHEN 'cooling_down' THEN 3 ELSE 4 END ASC
+LIMIT 1
+```
+
+返回 `{ publicName, channelId, upstreamModelId }` 给调用方。
+
+`getModelsForAuto()` 删除。
+
+## 改动文件
+
+| 文件 | 改动 |
+|---|---|
+| `src/lib/channels.ts` | resolveModel 合并 3 SQL → 1 SQL；删除 getModelsForAuto |
+| `src/lib/model-pricing.ts` | 主键语义改 public_name；calculateCost(public_name, …) |
+| `src/app/v1/chat/completions/route.ts` | 删除 auto 分支（~170 行）；统一写 publicName 到日志 |
+| `src/app/v1/models/route.ts` | 输出 public_name 去重 |
+| `src/lib/db.ts` | v6 迁移 |
 
 ## 兼容性
 
-- **客户端用 `model="auto"`**：改后 400 报错。需在更新日志写明。
-- **客户端用 `model="别名"`（已设别名）**：继续可用，无影响。
-- **客户端用 `model="原 ID"`（没设别名）**：继续可用，无影响。
-- **客户端既用别名又用原 ID 调同一模型**：原本两种都能调，改后只能调别名，告知用户改用别名。
+- 客户端用 `model="auto"` → 400 报错（需更新日志写明）
+- 客户端用 `model="别名"`（已设别名）→ 继续可用
+- 客户端用 `model="原 ID"`（没设别名）→ 继续可用
+- 客户端既用别名又用原 ID 调同一模型 → 改后只能调别名
 
 ## 测试
 
