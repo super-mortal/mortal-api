@@ -21,7 +21,13 @@
 | 路由策略（健康度、cooldown、429、retry、excluded） | **不变** |
 | `model="auto"` 随机路由功能 | **移除** |
 | `model_pricing.model_id` 主键 | 改为 public_name（数据库迁移） |
-| 7 个位置的字段使用 | 见下方表格 |
+| 客户端（`/v1/*`、日志、计费）字段 | 统一为 public_name |
+| **管理员端（dashboard）展示原 ID** | **保持原样不动** |
+
+## 展示规则
+
+- **客户端**（下游用户）：永远只能看到/使用 `public_name`（设了别名 = 别名，没设 = 原 ID）
+- **管理员端**（dashboard 全部页面）：继续展示原 ID，必要时旁附别名（方便管理映射关系）
 
 ## 改动详情
 
@@ -30,10 +36,17 @@
 | 1 | 路由查 channel<br>`channels.ts:192-255`<br>`route.ts:55-222` | 3 个独立 SQL 分支（allowed 查 alias / 全局查 alias / channel_models 直匹配），加上 auto 路径另一套 `getModelsForAuto`。重试循环每次重新查 DB，约 170 行 auto 代码独立存在。 | 合并为 1 个 SQL：`SELECT FROM (alias ∪ direct) WHERE public_name = ?`。auto 路径整段删除。`public_name` = 别名（设了）或原 ID（没设）。 |
 | 2 | Key 的 allowed_models 检查<br>`route.ts:255` | `if (!includes(modelName) && !includes(upstreamModelId))` 同时比对用户传入名和解析后的 upstream 名。逻辑分散，两个名都能过。 | `if (!includes(publicName))` 一个判断、一个名，永远比对「对外名」。 |
 | 3 | `/v1/models` 对外列表<br>`v1/models/route.ts` | 输出不统一。下游拿到的列表里同一个上游模型可能既有别名又有原 ID，容易混淆。 | 输出 `public_name`。设了别名的输出别名，没设的输出原 ID。每个 upstream model_id 只出现一次。 |
-| 4 | 渠道"拉取模型"展示<br>`channels/page.tsx` | 显示上游原 model_id（gpt-4o）。即使该模型已经设了别名（codex），列表里还是 gpt-4o。 | 后端注入 aliasMap，前端把 model_id 翻译成 `public_name` 显示（codex）。原 ID 作 tooltip 或小灰字 hint。 |
-| 5 | Key 编辑 allowed_models 下拉<br>`keys/page.tsx` ComboBox | 下拉显示 channel_models 全量，按 model_id 列出，没突出哪些已设别名。 | 下拉项显示 `public_name`：主文本 `codex`（已设别名）或 `gpt-4o`（没设），旁边小灰字 `gpt-4o` 作 hint。存的就是 `public_name`。 |
-| 6 | 日志 model 字段<br>`route.ts createCallLog` 多处 | auto 路径写 `billingName`（来自 alias），其他路径写 `modelName`（用户传入）。同一个上游模型在日志里可能两种名。 | 删除 auto 路径后只剩一处，统一写 `public_name`。 |
-| 7 | 计费 `model_pricing`<br>`model-pricing.ts`<br>`findChannelsWithSamePricingKey` | 主键是 model_id，但 `findChannelsWithSamePricingKey` 用 alias_name 对齐，跨表混用 key。auto 走 alias 查 pricing，非 auto 走 modelName 查，可能命中不同行。 | 主键改为 `public_name`。计费时 `getModelPricing(public_name)`，永远查同一行。需数据库迁移。 |
+| 4 | 客户端调用<br>`POST /v1/chat/completions` | 接受原 ID 或别名（auto 路径同时存在）。 | 必须传 `public_name`。`model="auto"` 报 400。 |
+| 5 | 日志 model 字段<br>`route.ts createCallLog` 多处 | auto 路径写 `billingName`（来自 alias），其他路径写 `modelName`（用户传入）。同一个上游模型在日志里可能两种名。 | 删除 auto 路径后只剩一处，统一写 `public_name`。 |
+| 6 | 计费 `model_pricing`<br>`model-pricing.ts`<br>`findChannelsWithSamePricingKey` | 主键是 model_id，但 `findChannelsWithSamePricingKey` 用 alias_name 对齐，跨表混用 key。auto 走 alias 查 pricing，非 auto 走 modelName 查，可能命中不同行。 | 主键改为 `public_name`。计费时 `getModelPricing(public_name)`，永远查同一行。需数据库迁移。 |
+
+## 保持不动（管理员端展示原 ID）
+
+以下位置全部在 dashboard 管理员端，**当前已经正确展示原 ID（必要时附别名）**，保持不动：
+
+- `src/app/dashboard/channels/page.tsx` 渠道编辑侧栏模型列表（`gpt-4o ──→ codex` 格式）
+- `src/app/dashboard/keys/page.tsx` ComboBox（`gpt-4o (codex)` 格式）
+- `src/app/dashboard/logs/page.tsx` 日志展示（按 `public_name` 展示，因为日志 model 字段已改为 public_name）
 
 ## 改动文件
 
@@ -47,9 +60,8 @@
 
 ### 前端
 
-- `src/app/dashboard/channels/page.tsx`：拉取列表展示 `public_name`
-- `src/app/dashboard/keys/page.tsx`：ComboBox 显示 `public_name` + 原 ID hint
-- `src/app/dashboard/logs/page.tsx`（如有 model 列）：用 `public_name`
+- `src/app/v1/models/route.ts`：输出 public_name 去重（**唯一修改的客户端可见文件**）
+- dashboard 页面（channels/keys/logs）**保持不动**，管理员继续看到原 ID
 
 ### 数据库
 
