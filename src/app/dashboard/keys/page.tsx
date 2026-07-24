@@ -52,6 +52,8 @@ export default function KeysPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string } | null>(null);
   const [refreshConfirm, setRefreshConfirm] = useState<{ id: string; name: string } | null>(null);
   const [refreshResult, setRefreshResult] = useState<{ name: string; newKey: string } | null>(null);
+  const [resetAccessPwdConfirm, setResetAccessPwdConfirm] = useState<{ id: string; name: string } | null>(null);
+  const [resetAccessPwdResult, setResetAccessPwdResult] = useState<{ name: string; ok: boolean } | null>(null);
 
   // Channel picker modal for create
   const [chPickerOpen, setChPickerOpen] = useState(false);
@@ -211,6 +213,25 @@ export default function KeysPage() {
       const failedKey = keys.find(k => k.id === id);
       setRefreshResult({ name: failedKey?.name || 'Key', newKey: '⚠️ 刷新失败，请重试' });
       setTimeout(() => setRefreshResult(null), 5000);
+    }
+  };
+
+  const handleResetAccessPwd = async (id: string) => {
+    setResetAccessPwdConfirm(null);
+    const key = keys.find(k => k.id === id);
+    const name = key?.name || 'Key';
+    try {
+      const res = await apiFetch('/admin/keys', {
+        method: 'PATCH',
+        body: JSON.stringify({ action: 'reset_access_password', id }),
+      });
+      const data = await res.json();
+      setResetAccessPwdResult({ name, ok: !!data.success });
+      setTimeout(() => setResetAccessPwdResult(null), 5000);
+    } catch (err) {
+      console.error('Reset access password failed:', err);
+      setResetAccessPwdResult({ name, ok: false });
+      setTimeout(() => setResetAccessPwdResult(null), 5000);
     }
   };
 
@@ -579,6 +600,13 @@ export default function KeysPage() {
                       >
                         <InlineIcon name="refresh-cw" className="w-3.5 h-3.5" />
                       </button>
+                      <button
+                        onClick={() => setResetAccessPwdConfirm({ id: k.id, name: k.name })}
+                        className="p-1.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                        title="重置访问密码"
+                      >
+                        <InlineIcon name="key-round" className="w-3.5 h-3.5" />
+                      </button>
                       <button onClick={() => {
                         setShowEdit(k);
                         setEditExpiry(k.expires_at ? k.expires_at.replace(' ', 'T').slice(0, 10) : '');
@@ -619,6 +647,23 @@ export default function KeysPage() {
         confirmText="确认刷新"
         variant="info"
       />
+
+      <ConfirmDialog
+        open={!!resetAccessPwdConfirm}
+        onClose={() => setResetAccessPwdConfirm(null)}
+        onConfirm={() => handleResetAccessPwd(resetAccessPwdConfirm!.id)}
+        title="重置访问密码"
+        message={`将 Key「${resetAccessPwdConfirm?.name}」的访问密码重置为默认值 @123456789123Pk,并立即撤销该 Key 所有已登录会话,确定继续?`}
+      />
+
+      {resetAccessPwdResult && (
+        <div className={`${resetAccessPwdResult.ok ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-800'} border rounded-xl px-4 py-3 flex items-start gap-3 animate-in fade-in`}>
+          <InlineIcon name={resetAccessPwdResult.ok ? 'check' : 'x'} className="w-4 h-4 mt-0.5 shrink-0" />
+          <p className="text-xs">
+            Key「{resetAccessPwdResult.name}」访问密码{resetAccessPwdResult.ok ? '已重置为默认值 @123456789123Pk' : '重置失败'}
+          </p>
+        </div>
+      )}
 
       <ConfirmDialog
         open={!!deleteConfirm}
