@@ -134,12 +134,11 @@ export default function ChannelsPage() {
 
   const refreshPricingMap = useCallback(async () => {
     const r = await apiFetch('/admin/pricing');
-    if (r.ok) {
-      const d = await r.json();
-      const map: Record<string, any> = {};
-      d.pricing.forEach((p: any) => { map[p.model_id] = p; });
-      setPricingMap(map);
-    }
+    if (!r.ok) throw new Error(`价格接口请求失败 (HTTP ${r.status})`);
+    const d = await r.json();
+    const map: Record<string, any> = {};
+    d.pricing.forEach((p: any) => { map[p.model_id] = p; });
+    setPricingMap(map);
   }, []);
 
   const fetchAll = useCallback(async () => {
@@ -213,7 +212,11 @@ export default function ChannelsPage() {
             setSyncFeedback(`价格已保存`);
           }
           setTimeout(() => setSyncFeedback(null), 3000);
-          refreshPricingMap();
+          try {
+            await refreshPricingMap();
+          } catch {
+            setModelValidationError('价格刷新失败，请刷新页面');
+          }
         } else {
           setModelValidationError('保存价格失败');
           return;
@@ -254,6 +257,7 @@ export default function ChannelsPage() {
 
     // Commit pending model changes
     const models = modelsForChannel(panelEditId || '');
+    let anyPriceWritten = false;
     for (const [modelId, change] of Object.entries(pendingModels)) {
       if (!change.staged) continue;
       if (change.deleted) {
@@ -287,6 +291,7 @@ export default function ChannelsPage() {
           })
         });
         if (res.ok) {
+          anyPriceWritten = true;
           const data = await res.json();
           if (data.syncedCount > 0) {
             setSyncFeedback(`价格已同步至 ${data.syncedCount} 个渠道（${data.syncedChannels.map((c: any) => c.channel_name).join('、')}）`);
@@ -295,8 +300,15 @@ export default function ChannelsPage() {
           }
           // 3 秒后自动清除
           setTimeout(() => setSyncFeedback(null), 3000);
-          refreshPricingMap();
         }
+      }
+    }
+
+    if (anyPriceWritten) {
+      try {
+        await refreshPricingMap();
+      } catch {
+        setModelValidationError('价格刷新失败，请刷新页面');
       }
     }
 
