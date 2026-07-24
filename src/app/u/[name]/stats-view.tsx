@@ -38,6 +38,12 @@ export default function StatsView({
     router.push(`/u/${encodeURIComponent(keyName)}?${p.toString()}`);
   };
 
+  const FILTER_OPTIONS = [
+    { label: '今天', value: 1 },
+    { label: '7天', value: 7 },
+    { label: '30天', value: 30 },
+  ] as const;
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200">
@@ -57,29 +63,40 @@ export default function StatsView({
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {/* 第一行: 2 格统计 + 筛选 */}
+        <section className="flex items-start justify-between gap-3">
+          <div className="grid grid-cols-2 gap-3 flex-1">
+            <Tile label="总调用次数" value={fmt(summary.totalCalls)} />
+            <Tile label="总费用 (¥)" value={summary.totalCost.toFixed(2)}
+              sub={summary.lastCallAt ? `最近: ${summary.lastCallAt}` : '尚无调用'} />
+          </div>
+          <div className="flex gap-1 shrink-0 mt-1">
+            {FILTER_OPTIONS.map(({ label, value }) => (
+              <button
+                key={value}
+                onClick={() => setDays(value)}
+                className={`px-2.5 py-1 rounded text-xs ${
+                  days === value
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* 第二行: Token 明细 */}
         <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <Tile label="总调用次数" value={fmt(summary.totalCalls)} />
-          <Tile label="Prompt Tokens" value={fmt(summary.promptTokens)} />
-          <Tile label="Completion Tokens" value={fmt(summary.completionTokens)} />
-          <Tile label="总费用 (¥)" value={summary.totalCost.toFixed(2)}
-            sub={summary.lastCallAt ? `最近: ${summary.lastCallAt}` : '尚无调用'} />
+          <Tile label="缓存输入" value={fmt(summary.cachedInputTokens)} />
+          <Tile label="未缓存输入" value={fmt(summary.promptTokens - summary.cachedInputTokens)} />
+          <Tile label="输出" value={fmt(summary.completionTokens)} />
+          <Tile label="总 Tokens" value={fmt(summary.totalTokens)} />
         </section>
 
         <section className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-gray-900">调用趋势</h2>
-            <div className="flex gap-1">
-              {[7, 30].map((d) => (
-                <button
-                  key={d}
-                  onClick={() => setDays(d)}
-                  className={`px-2.5 py-1 rounded text-xs ${days === d ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                >
-                  {d} 天
-                </button>
-              ))}
-            </div>
-          </div>
+          <h2 className="text-sm font-semibold text-gray-900 mb-3">调用趋势</h2>
           <TrendChart data={trend} />
         </section>
 
