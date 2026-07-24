@@ -173,6 +173,13 @@
 - 关闭弹窗后再次打开 → 显示"•••"占位符（前端清空）
 - 切回 password 后 input value 还原为占位符
 - 在 `chModal`（小模态）也能看到眼睛
+- 错误情况：删除 `id` 或无权限时 → 401/404，前端 eye 状态保持 false，不显示明文
+
+### 安全/防滥用
+- 接口鉴权：复用现有 `requireAdmin` Bearer Token 校验（不新增 token 类型）
+- 不入 session/cookie，不入 localStorage；前端不缓存明文（关闭弹窗即清空 DOM）
+- 日志记录：在 `admin/channels/route.ts` 给该路径加 `console.log('[api-key-view]', { channel_id, admin: ..., at: now })`，方便审计"谁在什么时间看了哪个渠道的 key"
+- 不加独立限流（已有 admin token 鉴权 + 单渠道查看场景，admin 用户数极少，不增加复杂度）
 
 ---
 
