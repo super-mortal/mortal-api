@@ -310,6 +310,7 @@ export async function generateExcel(
   // Smart model-id display: show alias when set, otherwise the raw model id
   const modelData = model.map(m => ({
     display_id: m.model_alias || m.model,
+    isAlias: Boolean(m.model_alias),
     calls: m.calls,
     tokens: m.tokens.toLocaleString(),
     total_cost: `¥ ${m.total_cost.toFixed(4)}`,
@@ -321,6 +322,11 @@ export async function generateExcel(
       const cell = r.getCell(j + 1);
       const v = (row as any)[col.key];
       cell.value = v !== null && v !== undefined ? v : '';
+      if (col.key === 'display_id') {
+        cell.font = row.isAlias
+          ? { color: { argb: 'FFD97706' }, bold: true, name: 'Consolas' }
+          : { color: { argb: 'FF6B7280' }, name: 'Consolas' };
+      }
     });
   });
   // Center every cell in this sheet (header + all data columns)
