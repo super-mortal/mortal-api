@@ -238,9 +238,11 @@ function initSchema(db: Database.Database) {
       JOIN channel_models cm ON cm.model_id = p.model_id
       LEFT JOIN model_aliases ma ON ma.channel_model_id = cm.id AND ma.is_active = 1;
       INSERT OR IGNORE INTO model_pricing (model_id, prompt_price, completion_price, cached_prompt_price, updated_at)
-      SELECT model_id, prompt_price, completion_price, cached_prompt_price, updated_at
-      FROM model_pricing_backup
-      WHERE model_id NOT IN (SELECT model_id FROM model_pricing);
+      SELECT p.model_id, p.prompt_price, p.completion_price, p.cached_prompt_price, p.updated_at
+      FROM model_pricing_backup p
+      WHERE NOT EXISTS (
+        SELECT 1 FROM channel_models cm WHERE cm.model_id = p.model_id
+      );
       DROP TABLE model_pricing_backup;
       INSERT INTO _migrations (name) VALUES ('v6_pricing_public_name');
     `);
