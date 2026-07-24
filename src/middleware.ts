@@ -19,7 +19,7 @@ export function middleware(request: NextRequest) {
   let normalized = pathname;
 
   // 1. Strip /api prefix
-  if (normalized.startsWith('/api/')) {
+  if (normalized.startsWith('/api/') && !normalized.startsWith('/api/u/')) {
     normalized = normalized.slice(4); // remove '/api'
   } else if (normalized === '/api') {
     normalized = '/';
