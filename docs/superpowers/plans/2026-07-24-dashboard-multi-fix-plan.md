@@ -514,7 +514,7 @@ const [showApiKey, setShowApiKey] = useState(false);
 const [modalShowApiKey, setModalShowApiKey] = useState(false);
 ```
 
-### Step 7.2: 改 modalForm api_key 初始化
+### Step 7.2: 改 modalForm api_key 初始化 + saveModalChannel 占位符跳过
 
 line 479 附近：
 
@@ -522,7 +522,21 @@ line 479 附近：
 setModalForm({ name: ch.name, base_url: ch.base_url, api_key: '', priority: ch.priority, notes: ch.notes });
 ```
 
-把 `api_key: ''` 改为 `api_key: '••••••••••••••••••'`（与 sidePanel 一致）。
+把 `api_key: ''` 改为 `api_key: '••••••••••••••••••'`（与 sidePanel 一致，让眼睛 toggle 后能恢复占位符）。
+
+**重要**：line 298 的 `saveModalChannel` 只跳过空字符串，没跳过占位符。把：
+
+```typescript
+if (isEdit && !body.api_key) delete body.api_key;
+```
+
+改为：
+
+```typescript
+if (isEdit && (!body.api_key || body.api_key === '••••••••••••••••••')) delete body.api_key;
+```
+
+否则保存时会把"•••" 当作新 API key 发给后端。
 
 ### Step 7.3: 改 chModal input
 
