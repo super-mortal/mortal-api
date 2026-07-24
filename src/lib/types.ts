@@ -71,6 +71,7 @@ export interface CallLog {
   cached_input_tokens: number;
   total_tokens: number;
   cost?: number;
+  latency_ms: number;
   status: string;
   error_message: string | null;
   ip: string;

@@ -14,6 +14,7 @@ export interface DetailRow {
   completion_tokens: number;
   total_tokens: number;
   cost: number | null;
+  latency_ms: number;
   status: string;
   ip: string | null;
   id: string;
@@ -61,7 +62,7 @@ export function queryDetail(q: ExportQuery): DetailRow[] {
   return db.prepare(`
     SELECT created_at, relay_key_name, model, channel_name,
            prompt_tokens, cached_input_tokens, completion_tokens, total_tokens,
-           cost, status, ip, id
+           cost, latency_ms, status, ip, id
     FROM call_logs WHERE ${wheres.join(' AND ')}
     ORDER BY created_at ASC
   `).all(...params) as DetailRow[];
@@ -144,7 +145,7 @@ function computeSummary(detail: DetailRow[]) {
 /** Columns that should be center-aligned */
 const CENTER_COLS = new Set([
   'relay_key_name', 'prompt_tokens', 'cached_input_tokens',
-  'completion_tokens', 'total_tokens', 'cost',
+  'completion_tokens', 'total_tokens', 'cost', 'latency_ms',
 ]);
 
 /** Number columns that should be center-aligned in summary sheets */
@@ -184,6 +185,7 @@ export async function generateExcel(
     { header: '输出Token', key: 'completion_tokens', width: 14 },
     { header: '总Token', key: 'total_tokens', width: 12 },
     { header: '费用(元)', key: 'cost', width: 14 },
+    { header: '延迟 (ms)', key: 'latency_ms', width: 12 },
     { header: '状态', key: 'status', width: 10 },
     { header: 'IP', key: 'ip', width: 16 },
     { header: '日志ID', key: 'id', width: 24 },

@@ -22,6 +22,8 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
+  const t0 = Date.now();
+
   // 1. Authenticate
   const authHeader = request.headers.get('authorization') || '';
   const apiKey = authHeader.replace(/^Bearer\s+/i, '').trim();
@@ -147,6 +149,7 @@ export async function POST(request: NextRequest) {
                   completion_tokens: totalCompletionTokens,
                   cached_input_tokens: cachedInputTokens,
                   cost,
+                  latency_ms: Date.now() - t0,
                   status: 'success',
                   ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
                 });
@@ -179,6 +182,7 @@ export async function POST(request: NextRequest) {
               prompt_tokens: 0, completion_tokens: totalCompletionTokens,
               cached_input_tokens: cachedInputTokens,
               cost: 0,
+              latency_ms: Date.now() - t0,
               status: 'fail', error_message: err instanceof Error ? err.message : typeof err === 'string' ? err : '流式连接中断',
               ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
             });
@@ -201,6 +205,7 @@ export async function POST(request: NextRequest) {
           prompt_tokens, completion_tokens,
           cached_input_tokens: result.cachedInputTokens,
           cost,
+          latency_ms: Date.now() - t0,
           status: 'success',
           ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
         });
@@ -247,6 +252,7 @@ export async function POST(request: NextRequest) {
     model: publicName, channel_id: channel?.id || '', channel_name: channel?.name || (lastError ? 'unknown' : '无可用渠道'),
     prompt_tokens: 0, completion_tokens: 0,
     cost: 0,
+    latency_ms: Date.now() - t0,
     status: 'fail', error_message: errorMsg,
     ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
   });

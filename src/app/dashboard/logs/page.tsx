@@ -28,6 +28,7 @@ interface CallLog {
   id: string; relay_key_name: string; relay_key_id: string; model: string; channel_name: string;
   prompt_tokens: number; completion_tokens: number; cached_input_tokens: number; total_tokens: number;
   cost: number; status: string; error_message: string | null;
+  latency_ms: number;
   ip: string; created_at: string;
 }
 interface RelayKey { id: string; name: string; }
@@ -375,6 +376,7 @@ export default function LogsPage() {
                 <th className="text-left px-3 sm:px-4 py-3 font-medium text-gray-500 text-[9px] sm:text-[11px]">模型</th>
                 <th className="text-right px-3 sm:px-4 py-3 font-medium text-gray-500 text-[9px] sm:text-[11px] hidden sm:table-cell">渠道</th>
                 <th className="text-right px-3 sm:px-4 py-3 font-medium text-gray-500 text-[9px] sm:text-[11px]">Token</th>
+                <th className="text-right px-3 sm:px-4 py-3 font-medium text-gray-500 text-[9px] sm:text-[11px] hidden sm:table-cell">延迟 (ms)</th>
                 <th className="px-2.5 sm:px-3 py-2.5 text-[9px] font-medium text-gray-400 uppercase tracking-wider text-right hidden md:table-cell">费用(元)</th>
                 <th className="text-center px-3 sm:px-4 py-3 font-medium text-gray-500 text-[9px] sm:text-[11px] hidden sm:table-cell">状态</th>
                 <th className="text-center px-3 sm:px-4 py-3 font-medium text-gray-500 text-[9px] sm:text-[11px] w-10">操作</th>
@@ -382,9 +384,9 @@ export default function LogsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <TableEmpty colSpan={9} loading />
+                <TableEmpty colSpan={10} loading />
               ) : logs.length === 0 ? (
-                <TableEmpty colSpan={9} icon="list" text="暂无调用记录" />
+                <TableEmpty colSpan={10} icon="list" text="暂无调用记录" />
               ) : logs.map((log) => (
                 <Fragment key={log.id}>
                   <tr className={`border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer ${
@@ -406,6 +408,7 @@ export default function LogsPage() {
                     <td className="px-3 sm:px-4 py-3"><code className="text-[9px] sm:text-[11px] text-indigo-600 bg-indigo-50/80 px-1.5 py-0.5 rounded">{log.model}</code></td>
                     <td className="px-3 sm:px-4 py-3 text-right text-[9px] sm:text-[11px] text-gray-500 hidden sm:table-cell truncate max-w-[80px]">{log.channel_name || '-'}</td>
                     <td className="px-3 sm:px-4 py-3 text-right text-[9px] sm:text-[11px] text-gray-800 font-medium">{log.total_tokens.toLocaleString()}</td>
+                    <td className="px-3 sm:px-4 py-3 text-right text-[9px] sm:text-[11px] text-gray-500 hidden sm:table-cell tabular-nums">{log.latency_ms}</td>
                     <td className="px-2.5 sm:px-3 py-2.5 hidden md:table-cell">
                       <span className="text-[11px] text-gray-600 tabular-nums">
                         {log.cost ? `¥${log.cost.toFixed(6)}` : '-'}
@@ -432,7 +435,7 @@ export default function LogsPage() {
                   </tr>
                   {expandedLogId === log.id && (
                     <tr key={`detail-${log.id}`} className="bg-gray-50/50 border-b border-gray-100">
-                      <td colSpan={9} className="px-4 sm:px-6 py-4">
+                      <td colSpan={10} className="px-4 sm:px-6 py-4">
                         <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-3">
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             <DetailField label="时间" value={toBeijingFull(log.created_at)} />
@@ -451,6 +454,7 @@ export default function LogsPage() {
                             <TokenBadge label="未缓存输入" value={Math.max(0, log.prompt_tokens - (log.cached_input_tokens || 0))} color="amber" />
                             <TokenBadge label="总 Token" value={log.total_tokens} color="indigo" />
                             <TokenBadge label="费用" value={log.cost || 0} color="purple" />
+                            <TokenBadge label="延迟" value={`${log.latency_ms} ms`} color="bg-cyan-50 text-cyan-700 border-cyan-200" />
                           </div>
                           {log.status === 'fail' && log.error_message && (
                             <div className="bg-red-50 border border-red-200 rounded-lg p-3">
@@ -530,7 +534,7 @@ function DetailField({ label, value }: { label: string; value: string }) {
   );
 }
 
-function TokenBadge({ label, value, color = 'gray' }: { label: string; value: number; color?: string }) {
+function TokenBadge({ label, value, color = 'gray' }: { label: string; value: number | string; color?: string }) {
   const colorMap: Record<string, string> = {
     gray: 'bg-gray-50 text-gray-600 border-gray-200',
     emerald: 'bg-emerald-50 text-emerald-600 border-emerald-200',
@@ -538,10 +542,12 @@ function TokenBadge({ label, value, color = 'gray' }: { label: string; value: nu
     indigo: 'bg-indigo-50 text-indigo-600 border-indigo-200',
     purple: 'bg-purple-50 text-purple-600 border-purple-200',
   };
+  const colorClass = colorMap[color] || color;
+  const display = typeof value === 'number' ? value.toLocaleString() : value;
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md border text-[9px] font-medium ${colorMap[color] || colorMap.gray}`}>
+    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md border text-[9px] font-medium ${colorClass}`}>
       <span className="opacity-60">{label}:</span>
-      <span>{value.toLocaleString()}</span>
+      <span>{display}</span>
     </span>
   );
 }

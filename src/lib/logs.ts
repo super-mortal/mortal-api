@@ -15,6 +15,7 @@ export function createCallLog(data: {
   completion_tokens: number;
   cached_input_tokens?: number;
   cost?: number;
+  latency_ms?: number;
   status: string;
   error_message?: string | null;
   ip?: string;
@@ -23,10 +24,11 @@ export function createCallLog(data: {
   const id = nanoid(16);
   const total = data.prompt_tokens + data.completion_tokens;
   const cachedInput = data.cached_input_tokens || 0;
+  const latencyMs = data.latency_ms ?? 0;
   db.prepare(`
     INSERT INTO call_logs (id, relay_key_id, relay_key_name, model, channel_id, channel_name,
-      prompt_tokens, completion_tokens, cached_input_tokens, total_tokens, cost, status, error_message, ip, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+8 hours'))
+      prompt_tokens, completion_tokens, cached_input_tokens, total_tokens, cost, latency_ms, status, error_message, ip, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+8 hours'))
   `).run(
     id,
     data.relay_key_id,
@@ -39,6 +41,7 @@ export function createCallLog(data: {
     cachedInput,
     total,
     data.cost,
+    latencyMs,
     data.status,
     data.error_message || null,
     data.ip || null
