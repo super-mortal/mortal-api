@@ -1011,7 +1011,9 @@ export default function ChannelsPage() {
       />
       {syncFeedback && (
         <div className="fixed top-4 right-4 z-[100] bg-white border border-emerald-200 px-4 py-3 rounded-xl shadow-lg text-sm flex items-center gap-2 animate-in slide-in-from-top-2">
-          <span className="inline-flex w-5 h-5 bg-emerald-100 text-emerald-600 rounded-full items-center justify-center text-xs font-bold">✓</span>
+          <span className="inline-flex w-5 h-5 bg-emerald-100 text-emerald-600 rounded-full items-center justify-center">
+            <InlineIcon name="check" className="w-3 h-3" />
+          </span>
           <span className="text-gray-700">{syncFeedback}</span>
         </div>
       )}
