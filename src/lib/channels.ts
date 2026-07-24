@@ -1,5 +1,6 @@
 // ============================================================
 // Channel + Model + Alias management (new simplified schema)
+// Routing: resolveRoute() returns { publicName, channelId, upstreamModelId }
 // ============================================================
 import { getDb } from './db';
 import { Channel, ChannelModel, ModelAlias } from './types';
@@ -189,79 +190,94 @@ export function deleteModelAlias(id: string): boolean {
 
 // ── Routing ──
 
-export function resolveModel(
-  modelName: string,
-  allowedChannelIds?: string[],
-  excludeChannelIds?: string[],
-): { channelId: string; upstreamModelId: string } | null {
-  const db = getDb();
-
-  // Build exclude clause
-  let excludeClause = '';
-  let excludeParams: string[] = [];
-  if (excludeChannelIds && excludeChannelIds.length > 0) {
-    const placeholders = excludeChannelIds.map(() => '?').join(',');
-    excludeClause = ` AND c.id NOT IN (${placeholders})`;
-    excludeParams = excludeChannelIds;
-  }
-
-  // 1. Check aliases — prioritized by allowed channels if provided
-  if (allowedChannelIds && allowedChannelIds.length > 0) {
-    const placeholders = allowedChannelIds.map(() => '?').join(',');
-    const alias = db.prepare(`
-      SELECT ma.*, cm.model_id, cm.channel_id FROM model_aliases ma
-      LEFT JOIN channel_models cm ON cm.id = ma.channel_model_id
-      LEFT JOIN channels c ON c.id = cm.channel_id
-      WHERE ma.alias_name = ? AND ma.is_active = 1 AND ${AVAILABLE_CHANNEL_SQL}
-        AND cm.channel_id IN (${placeholders})${excludeClause}
-      ORDER BY
-        CASE c.health_status
-          WHEN 'healthy' THEN 1
-          WHEN 'unknown' THEN 2
-          WHEN 'cooling_down' THEN 3
-          ELSE 4
-        END ASC
-    `).get(modelName, ...allowedChannelIds, ...excludeParams) as any;
-    if (alias) return { channelId: alias.channel_id, upstreamModelId: alias.model_id };
-  }
-
-  // 2. Check aliases — fallback to any channel
-  const alias = db.prepare(`
-    SELECT ma.*, cm.model_id, cm.channel_id FROM model_aliases ma
-    LEFT JOIN channel_models cm ON cm.id = ma.channel_model_id
-    LEFT JOIN channels c ON c.id = cm.channel_id
-    WHERE ma.alias_name = ? AND ma.is_active = 1 AND ${AVAILABLE_CHANNEL_SQL}${excludeClause}
-      ORDER BY
-        CASE c.health_status
-          WHEN 'healthy' THEN 1
-          WHEN 'unknown' THEN 2
-          WHEN 'cooling_down' THEN 3
-          ELSE 4
-        END ASC
-    `).get(modelName, ...excludeParams) as any;
-  if (alias) return { channelId: alias.channel_id, upstreamModelId: alias.model_id };
-
-  // 3. Check direct model_id match (only if channel is active, NO alias exists)
-  const model = db.prepare(`
-    SELECT cm.*, c.is_active as ch_active FROM channel_models cm
-    LEFT JOIN channels c ON c.id = cm.channel_id
-    LEFT JOIN model_aliases ma ON ma.channel_model_id = cm.id AND ma.is_active = 1
-    WHERE cm.model_id = ? AND cm.is_active = 1 AND ${AVAILABLE_CHANNEL_SQL}
-      AND ma.id IS NULL${excludeClause}
-  `).get(modelName, ...excludeParams) as any;
-  if (model) return { channelId: model.channel_id, upstreamModelId: model.model_id };
-
-  return null;
+export interface ResolvedRoute {
+  publicName: string;       // 对外名：别名（设了）或原 ID（没设）
+  channelId: string;
+  upstreamModelId: string;  // 转发给上游用的真实 model_id
 }
 
-export function getModelsForAuto(): { modelId: string; channel: Channel }[] {
+/**
+ * Resolve a model name (as user provided it) to a concrete route.
+ * Returns null if no available channel can serve it.
+ *
+ * - If user input has an alias → public_name = alias, routes to that alias's channel
+ * - If user input has no alias but matches a channel_model.model_id → public_name = that id
+ * - excludes/excludedChannels applied at channel level
+ */
+export function resolveRoute(
+  modelName: string,
+  allowedChannelIds?: string[],
+  excludedChannelIds?: string[],
+): ResolvedRoute | null {
   const db = getDb();
-  const rows = db.prepare(`
-    SELECT cm.model_id, c.* FROM channel_models cm
-    LEFT JOIN channels c ON c.id = cm.channel_id
-    WHERE cm.is_active = 1 AND ${AVAILABLE_CHANNEL_SQL}
-  `).all() as any[];
-  return rows.map(r => ({ modelId: r.model_id, channel: r as Channel }));
+
+  // Build exclude clause (applied to both branches)
+  let excludeClause = '';
+  let excludeParams: string[] = [];
+  if (excludedChannelIds && excludedChannelIds.length > 0) {
+    const placeholders = excludedChannelIds.map(() => '?').join(',');
+    excludeClause = ` AND c.id NOT IN (${placeholders})`;
+    excludeParams = excludedChannelIds;
+  }
+
+  // Build allowed clause
+  let allowedClause = '';
+  let allowedParams: string[] = [];
+  if (allowedChannelIds && allowedChannelIds.length > 0) {
+    const placeholders = allowedChannelIds.map(() => '?').join(',');
+    allowedClause = ` AND cm.channel_id IN (${placeholders})`;
+    allowedParams = allowedChannelIds;
+  }
+
+  // Single SQL: alias match + direct model_id match in one go (UNION)
+  // Prioritize: alias matches first (they shadow the raw model_id)
+  const sql = `
+    SELECT * FROM (
+      SELECT
+        ma.alias_name AS public_name,
+        cm.model_id AS upstream_model_id,
+        cm.channel_id AS channel_id,
+        c.health_status AS health_status,
+        1 AS source_priority
+      FROM model_aliases ma
+      JOIN channel_models cm ON cm.id = ma.channel_model_id
+      JOIN channels c ON c.id = cm.channel_id
+      WHERE ma.alias_name = ? AND ma.is_active = 1
+        AND cm.is_active = 1 AND ${AVAILABLE_CHANNEL_SQL}${allowedClause}${excludeClause}
+
+      UNION ALL
+
+      SELECT
+        cm.model_id AS public_name,
+        cm.model_id AS upstream_model_id,
+        cm.channel_id AS channel_id,
+        c.health_status AS health_status,
+        2 AS source_priority
+      FROM channel_models cm
+      JOIN channels c ON c.id = cm.channel_id
+      WHERE cm.model_id = ? AND cm.is_active = 1 AND ${AVAILABLE_CHANNEL_SQL}${allowedClause}${excludeClause}
+        AND NOT EXISTS (
+          SELECT 1 FROM model_aliases ma
+          WHERE ma.channel_model_id = cm.id AND ma.is_active = 1
+        )
+    )
+    ORDER BY source_priority ASC,
+      CASE health_status
+        WHEN 'healthy' THEN 1
+        WHEN 'unknown' THEN 2
+        WHEN 'cooling_down' THEN 3
+        ELSE 4
+      END ASC
+    LIMIT 1
+  `;
+
+  const row = db.prepare(sql).get(modelName, ...allowedParams, ...excludeParams, modelName, ...allowedParams, ...excludeParams) as any;
+  if (!row) return null;
+  return {
+    publicName: row.public_name,
+    channelId: row.channel_id,
+    upstreamModelId: row.upstream_model_id,
+  };
 }
 
 // ── Pull models from endpoint ──
