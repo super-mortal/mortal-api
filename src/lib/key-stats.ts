@@ -35,10 +35,10 @@ export interface DailyBucket {
 }
 
 export function getKeyDailyTrend(relayKeyId: string, days: number): DailyBucket[] {
-  // 北京时区(+8)按日聚合
+  // created_at 已经是北京时间,无需再 +8 小时
   const rows = getDb().prepare(`
     SELECT
-      date(created_at, '+8 hours') AS date,
+      date(created_at) AS date,
       COUNT(*) AS calls,
       COALESCE(SUM(total_tokens), 0) AS tokens,
       COALESCE(SUM(COALESCE(cost, 0)), 0) AS cost
@@ -49,13 +49,16 @@ export function getKeyDailyTrend(relayKeyId: string, days: number): DailyBucket[
     ORDER BY date ASC
   `).all(relayKeyId, `-${days} days`) as DailyBucket[];
 
-  // 补齐缺失日期(0 值)
+  // 补齐缺失日期(0 值),使用北京时区的今日日期
   const map = new Map(rows.map(r => [r.date, r]));
   const out: DailyBucket[] = [];
-  const today = new Date();
+  const nowBeijing = new Date(Date.now() + 8 * 3600 * 1000);
+  const todayBeijingISO = nowBeijing.toISOString().slice(0, 10);
+  // 把 YYYY-MM-DD 字符串当作 UTC 午夜来减天数,避免本地时区再次偏移
   for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today.getTime() - i * 86400000);
-    const ds = d.toISOString().slice(0, 10);
+    const base = new Date(todayBeijingISO + 'T00:00:00Z');
+    base.setUTCDate(base.getUTCDate() - i);
+    const ds = base.toISOString().slice(0, 10);
     out.push(map.get(ds) || { date: ds, calls: 0, tokens: 0, cost: 0 });
   }
   return out;
