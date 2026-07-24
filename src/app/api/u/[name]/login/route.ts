@@ -27,6 +27,12 @@ export async function POST(
   if (!key.access_password_enc) {
     return NextResponse.json({ error: '尚未设置访问密码' }, { status: 409 });
   }
+  if (key.must_reset_password === 1) {
+    return NextResponse.json(
+      { error: '密码已被重置,请先通过设置新密码页修改后再登录' },
+      { status: 409 }
+    );
+  }
   if (!verifyAccessPassword(name, body.password)) {
     return NextResponse.json({ error: '密码错误' }, { status: 401 });
   }
