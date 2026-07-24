@@ -485,9 +485,9 @@ export default function ChannelsPage() {
                 <div className="bg-white border border-gray-100 hover:shadow-sm transition-shadow h-full"
                   style={{ borderRadius: '0 0.75rem 0.75rem 0' }}>
                   <div className="p-4 sm:p-5 relative">
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                       {/* Block A — name + meta (left, flex:1) */}
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 order-1">
                         <div className="flex items-center gap-2 mb-0.5">
                           <h3 className="font-semibold text-gray-900 text-sm sm:text-base">{ch.name}</h3>
                         </div>
@@ -500,7 +500,7 @@ export default function ChannelsPage() {
                       </div>
 
                       {/* Block B — badge + 24 dots + 96%|320ms (absolute, centered) */}
-                      <div className="hidden md:flex items-center gap-3 absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2">
+                      <div className="hidden md:flex md:order-2 items-center gap-3 absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2">
                         <HealthBadge health_status={ch.health_status} is_active={ch.is_active} cooldown_until={ch.cooldown_until} />
                         <div className="flex gap-[2px]">
                           {[...(ch.recent_checks || []).slice(-24), ...Array.from({ length: Math.max(0, 24 - (ch.recent_checks || []).length) }, () => ({ ok: null, kind: null }))].slice(0, 24).map((c, i) => (
@@ -518,8 +518,16 @@ export default function ChannelsPage() {
                         </div>
                       </div>
 
+                      {/* Mobile-only compact status */}
+                      <div className="flex md:hidden basis-full order-2 items-center gap-2 mt-2 text-[10px]">
+                        <HealthBadge health_status={ch.health_status} is_active={ch.is_active} cooldown_until={ch.cooldown_until} />
+                        <span className="text-gray-600">{ch.uptime_pct ?? 100}%</span>
+                        <span className="text-gray-300">|</span>
+                        <span className="text-gray-600">{ch.avg_latency_ms ? `${ch.avg_latency_ms}ms` : '—'}</span>
+                      </div>
+
                       {/* Block C — action buttons (right, ml-auto) */}
-                      <div className="flex items-center gap-0.5 shrink-0 ml-auto">
+                      <div className="flex items-center gap-0.5 shrink-0 ml-auto order-3">
                         <span className="group relative">
                           <button onClick={() => { setModalForm({ name: ch.name, base_url: ch.base_url, api_key: '••••••••••••••••••', priority: ch.priority, notes: ch.notes }); setModalEditId(ch.id); setChModal(true); }}
                             className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all border border-transparent hover:border-blue-200"><InlineIcon name="pencil" className="w-4 h-4" /></button>

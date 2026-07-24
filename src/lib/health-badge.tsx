@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 interface HealthBadgeProps {
   health_status: string;
   is_active: number;
@@ -21,22 +23,46 @@ interface HealthBarProps {
 }
 
 const badgeConfig: Record<string, { cls: string; label: string; tooltip: string }> = {
-  healthy:       { cls: 'bg-emerald-50 text-emerald-600',        label: '正常',      tooltip: '最近请求成功，渠道正常工作中' },
-  cooling_down:  { cls: 'bg-amber-50 text-amber-600',            label: '额度冷却',  tooltip: '因额度/限流原因暂不可用，按冷却时间自动恢复' },
-  unhealthy:     { cls: 'bg-red-50 text-red-500',                label: '异常',      tooltip: '渠道出现故障，正在按退避策略重试' },
-  unknown:       { cls: 'bg-gray-100 text-gray-500',             label: '未检测',    tooltip: '尚未进行过健康检测' },
+  healthy:       { cls: 'bg-emerald-50 text-emerald-600 border border-emerald-200', label: '正常',      tooltip: '最近请求成功，渠道正常工作中' },
+  cooling_down:  { cls: 'bg-amber-50 text-amber-600 border border-amber-200',       label: '额度冷却',  tooltip: '因额度/限流原因暂不可用，按冷却时间自动恢复' },
+  unhealthy:     { cls: 'bg-red-50 text-red-500 border border-red-200',            label: '异常',     tooltip: '渠道出现故障，正在按退避策略重试' },
+  unknown:       { cls: 'bg-gray-100 text-gray-500 border border-gray-200',        label: '未检测',    tooltip: '尚未进行过健康检测' },
 };
 
+function parseCooldownTimestamp(value: string): number {
+  const iso = value.includes('T') ? value : value.replace(' ', 'T');
+  return Date.parse(/(?:Z|[+-]\d{2}:?\d{2})$/i.test(iso) ? iso : `${iso}+08:00`);
+}
+
+function formatRemaining(seconds: number): string {
+  const minutes = Math.floor(seconds / 60).toString().padStart(2, '0');
+  const remainder = (seconds % 60).toString().padStart(2, '0');
+  return `${minutes}:${remainder}`;
+}
+
 export function HealthBadge({ health_status, is_active, cooldown_until }: HealthBadgeProps) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!cooldown_until) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [cooldown_until]);
+
   if (!is_active) {
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-400" title="该渠道已被管理员停用">
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-400 border border-gray-200" title="该渠道已被管理员停用">
         已停用
       </span>
     );
   }
 
   const cfg = badgeConfig[health_status] || badgeConfig.unknown;
+  const cooldownTimestamp = cooldown_until ? parseCooldownTimestamp(cooldown_until) : NaN;
+  const remainingSeconds = Number.isFinite(cooldownTimestamp) && cooldownTimestamp > now
+    ? Math.ceil((cooldownTimestamp - now) / 1000)
+    : 0;
+  const label = remainingSeconds > 0 ? `额度冷却 ${formatRemaining(remainingSeconds)}` : cfg.label;
   let tip = cfg.tooltip;
   if (health_status === 'cooling_down' && cooldown_until) {
     tip += ` — 预计 ${cooldown_until} 后恢复（管理员可手动检测提前恢复）`;
@@ -44,7 +70,7 @@ export function HealthBadge({ health_status, is_active, cooldown_until }: Health
 
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${cfg.cls}`} title={tip}>
-      {cfg.label}
+      {label}
     </span>
   );
 }
