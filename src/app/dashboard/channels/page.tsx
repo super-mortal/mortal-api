@@ -392,11 +392,12 @@ export default function ChannelsPage() {
     setChannels(reordered);
 
     // Persist new priority order
+    const total = reordered.length;
     const results = await Promise.allSettled(
       reordered.map((ch, idx) =>
         apiFetch('/admin/channels', {
           method: 'PATCH',
-          body: JSON.stringify({ id: ch.id, priority: idx }),
+          body: JSON.stringify({ id: ch.id, priority: total - idx }),
         })
       )
     );
@@ -563,7 +564,8 @@ export default function ChannelsPage() {
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">优先级</label>
                     <input type="number" value={panelForm.priority} onChange={e => setPanelForm({...panelForm, priority: Number(e.target.value)})}
-                      className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+                      className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" placeholder="数字越大越靠前，0=自动" />
+                    <p className="text-[10px] text-gray-400 mt-1">数字越大优先级越高，0 表示自动分配</p>
                   </div>
                 </div>
                 <div className="mt-3">
@@ -854,7 +856,8 @@ export default function ChannelsPage() {
             <div>
               <label className="block text-xs text-gray-500 mb-1">优先级</label>
               <input type="number" value={modalForm.priority} onChange={e => setModalForm({...modalForm, priority: Number(e.target.value)})}
-                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20" placeholder="数字越大越靠前，0=自动" />
+              <p className="text-[10px] text-gray-400 mt-1">数字越大优先级越高，0 表示自动分配</p>
             </div>
           </div>
           <div>

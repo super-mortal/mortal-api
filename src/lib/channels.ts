@@ -11,7 +11,7 @@ import { encryptApiKey, decryptApiKey } from './crypto';
 
 export function listChannels(): Channel[] {
   const db = getDb();
-  return db.prepare('SELECT * FROM channels ORDER BY priority ASC, created_at ASC').all() as Channel[];
+  return db.prepare('SELECT * FROM channels ORDER BY priority DESC, created_at ASC').all() as Channel[];
 }
 
 export function getChannelById(id: string): Channel | undefined {
