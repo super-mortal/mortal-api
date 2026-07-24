@@ -4,8 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRelayKeyByKey, recordAndCheckSpending, getAllowedChannelIds, checkRelayKeyQuota } from '@/lib/keys';
 import {
-  resolveModel,
-  getModelsForAuto,
+  resolveRoute,
   resolveChannelApiKey,
   getChannelById,
   recordChannelSuccess,
@@ -47,179 +46,12 @@ export async function POST(request: NextRequest) {
   const hasModelRestriction = keyAllowedModels.length > 0;
 
   const isStream = body.stream === true;
-  let modelName = body.model || 'auto';
-  let upstreamModelId = modelName;
-
-  // 3. Resolve model → channel
-
-  if (modelName === 'auto') {
-    const all = getModelsForAuto();
-    if (!all.length) return NextResponse.json({ error: { message: 'No available channels', type: 'server_error' } }, { status: 503 });
-    // Filter by allowed channels if needed
-    let filtered = hasChannelRestriction ? all.filter(m => keyAllowedChannels.includes(m.channel.id)) : all;
-    // Filter by allowed models if needed
-    if (hasModelRestriction) {
-      filtered = filtered.filter(m => keyAllowedModels.includes(m.modelId));
-    }
-    if (!filtered.length) return NextResponse.json({ error: { message: 'No available channels for this API key', type: 'server_error' } }, { status: 503 });
-    const picked = filtered[Math.floor(Math.random() * filtered.length)];
-    const autoChannel = picked.channel;
-    upstreamModelId = picked.modelId;
-    // 解析计费用名称：有别名就用别名，否则用原始 model_id
-    const aliasRow = getDb().prepare(`
-      SELECT ma.alias_name FROM model_aliases ma
-      JOIN channel_models cm ON cm.id = ma.channel_model_id
-      WHERE cm.model_id = ? AND ma.is_active = 1 LIMIT 1
-    `).get(upstreamModelId) as { alias_name: string } | undefined;
-    const billingName = aliasRow?.alias_name || upstreamModelId;
-
-    // Pre-request quota check
-    const autoEstimatedTokens = estimateTokens(JSON.stringify(body.messages));
-    const autoEstimatedCost = calculateCost(billingName, autoEstimatedTokens, 0, 0);
-    const autoQuotaCheck = checkRelayKeyQuota(apiKey, autoEstimatedTokens, autoEstimatedCost);
-    if (!autoQuotaCheck.valid) {
-      return NextResponse.json({ error: { message: autoQuotaCheck.reason || 'Insufficient quota', type: 'insufficient_quota' } }, { status: 403 });
-    }
-
-    if (!autoChannel || !autoChannel.is_active) return NextResponse.json({ error: { message: 'Channel unavailable', type: 'server_error' } }, { status: 503 });
-
-    const autoChannelApiKey = resolveChannelApiKey(autoChannel);
-    if (!autoChannelApiKey) {
-      recordChannelFailure(autoChannel.id, 'failure');
-      return NextResponse.json({ error: { message: `No API key for ${autoChannel.name}`, type: 'server_error' } }, { status: 502 });
-    }
-
-    // 4. Build upstream request body
-    const upstreamBody = {
-      model: upstreamModelId,
-      messages: body.messages,
-      stream: isStream,
-      temperature: body.temperature,
-      top_p: body.top_p,
-      max_tokens: body.max_tokens,
-      stop: body.stop,
-      presence_penalty: body.presence_penalty,
-      frequency_penalty: body.frequency_penalty,
-      tools: body.tools,
-      tool_choice: body.tool_choice,
-      response_format: body.response_format,
-      seed: body.seed,
-    };
-
-    try {
-      if (isStream) {
-        const result = await callUpstreamStreaming(autoChannel, upstreamBody, autoChannelApiKey);
-
-        const recordingStream = new TransformStream<Uint8Array, Uint8Array>();
-        const writer = recordingStream.writable.getWriter();
-        const reader = result.stream.getReader();
-        let totalCompletionTokens = 0;
-        let cachedInputTokens = 0;
-
-        (async () => {
-          try {
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) {
-                const prompt_tokens = body.messages ? Math.ceil(JSON.stringify(body.messages).length / 2) : 0;
-                const cost = calculateCost(billingName, prompt_tokens, totalCompletionTokens, cachedInputTokens);
-                createCallLog({
-                  relay_key_id: relayKey.id, relay_key_name: relayKey.name,
-                  model: billingName, channel_id: autoChannel.id, channel_name: autoChannel.name,
-                  prompt_tokens,
-                  completion_tokens: totalCompletionTokens,
-                  cached_input_tokens: cachedInputTokens,
-                  cost,
-                  status: 'success',
-                  ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-                });
-                recordAndCheckSpending(relayKey.id, cost);
-                recordChannelSuccess(autoChannel.id);
-                await writer.close();
-                return;
-              }
-              const text = new TextDecoder().decode(value);
-              for (const line of text.split('\n').filter((l: string) => l.startsWith('data: '))) {
-                const data = line.slice(6).trim();
-                if (data === '[DONE]') continue;
-                try {
-                  const parsed = JSON.parse(data);
-                  if (parsed.usage) {
-                    if (parsed.usage.completion_tokens) totalCompletionTokens = parsed.usage.completion_tokens;
-                    const cacheTokens = extractCachedInputTokens(parsed.usage);
-                    if (cacheTokens > 0) cachedInputTokens = cacheTokens;
-                  } else {
-                    for (const choice of parsed.choices || []) { if (choice.delta?.content) totalCompletionTokens += Math.ceil(choice.delta.content.length / 2); }
-                  }
-                } catch {}
-              }
-              await writer.write(value);
-            }
-          } catch (err) {
-            createCallLog({
-              relay_key_id: relayKey.id, relay_key_name: relayKey.name,
-              model: billingName, channel_id: autoChannel.id, channel_name: autoChannel.name,
-              prompt_tokens: 0, completion_tokens: totalCompletionTokens,
-              cached_input_tokens: cachedInputTokens,
-              cost: 0,
-              status: 'fail', error_message: err instanceof Error ? err.message : typeof err === 'string' ? err : '流式连接中断',
-              ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-            });
-            recordAndCheckSpending(relayKey.id, 0);
-            await writer.close();
-          }
-        })();
-
-        return new Response(recordingStream.readable, {
-          headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' },
-        });
-      } else {
-        const result = await callUpstream(autoChannel, upstreamBody, autoChannelApiKey);
-        const { prompt_tokens, completion_tokens, total_tokens } = result.response.usage;
-        const cost = calculateCost(billingName, prompt_tokens, completion_tokens, result.cachedInputTokens || 0);
-
-        createCallLog({
-          relay_key_id: relayKey.id, relay_key_name: relayKey.name,
-          model: billingName, channel_id: autoChannel.id, channel_name: autoChannel.name,
-          prompt_tokens, completion_tokens,
-          cached_input_tokens: result.cachedInputTokens,
-          cost,
-          status: 'success',
-          ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-        });
-        recordAndCheckSpending(relayKey.id, cost);
-        recordChannelSuccess(autoChannel.id);
-
-        result.response.model = body.model || 'auto';
-        return NextResponse.json(result.response);
-      }
-    } catch (err: any) {
-      const isRateLimit = err.status === 429;
-      if (isRateLimit) {
-        recordChannelFailure(autoChannel.id, 'quota');
-      } else {
-        recordChannelFailure(autoChannel.id, 'failure');
-      }
-      createCallLog({
-        relay_key_id: relayKey.id, relay_key_name: relayKey.name,
-        model: billingName, channel_id: autoChannel.id, channel_name: autoChannel.name,
-        prompt_tokens: 0, completion_tokens: 0,
-        cost: 0,
-        status: 'fail', error_message: err.body || (err instanceof Error ? err.message : typeof err === 'string' ? err : '未知上游错误(未捕获具体异常)'),
-        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
-      });
-      recordAndCheckSpending(relayKey.id, 0);
-
-      const status = err.status || 502;
-      let errorBody: any;
-      try {
-        errorBody = JSON.parse(err.body || '{}');
-      } catch {
-        errorBody = { error: { message: err.body || err.message || 'Upstream error', type: 'server_error' } };
-      }
-      return NextResponse.json(errorBody, { status });
-    }
+  let modelName = body.model;
+  if (!modelName || modelName === 'auto') {
+    return NextResponse.json({ error: { message: 'model field is required and must not be "auto" (auto routing removed)', type: 'invalid_request_error' } }, { status: 400 });
   }
+  let upstreamModelId = '';
+  let publicName = modelName;
 
   // ── Specific model with retry + failover ──
   // Try same channel up to 3 times, then failover to next available channel.
@@ -242,17 +74,17 @@ export async function POST(request: NextRequest) {
   for (let attempt = 0; attempt < 9; attempt++) {
     // ── Select next available channel (first time or after failover) ──
     if (channel === null) {
-      const resolved = resolveModel(
+      const resolved = resolveRoute(
         modelName,
         keyAllowedChannels.length > 0 ? keyAllowedChannels : undefined,
         excludedChannelIds.length > 0 ? excludedChannelIds : undefined,
       );
       if (!resolved) break;
 
-      // Check channel restriction
+      // Check channel restriction (now using resolved.channelId)
       if (hasChannelRestriction && !keyAllowedChannels.includes(resolved.channelId)) break;
-      // Check model restriction
-      if (hasModelRestriction && !keyAllowedModels.includes(modelName) && !keyAllowedModels.includes(resolved.upstreamModelId)) break;
+      // Check model restriction against publicName only
+      if (hasModelRestriction && !keyAllowedModels.includes(resolved.publicName)) break;
 
       channel = getChannelById(resolved.channelId);
       if (!channel || !channel.is_active) {
@@ -270,6 +102,7 @@ export async function POST(request: NextRequest) {
       }
 
       upstreamModelId = resolved.upstreamModelId;
+      publicName = resolved.publicName;
       retriesOnCurrentChannel = 0;
     }
 
@@ -309,7 +142,7 @@ export async function POST(request: NextRequest) {
                 const cost = calculateCost(modelName, prompt_tokens, totalCompletionTokens, cachedInputTokens);
                 createCallLog({
                   relay_key_id: relayKey.id, relay_key_name: relayKey.name,
-                  model: modelName, channel_id: channel.id, channel_name: channel.name,
+                  model: publicName, channel_id: channel.id, channel_name: channel.name,
                   prompt_tokens,
                   completion_tokens: totalCompletionTokens,
                   cached_input_tokens: cachedInputTokens,
@@ -342,7 +175,7 @@ export async function POST(request: NextRequest) {
           } catch (err) {
             createCallLog({
               relay_key_id: relayKey.id, relay_key_name: relayKey.name,
-              model: modelName, channel_id: channel.id, channel_name: channel.name,
+              model: publicName, channel_id: channel.id, channel_name: channel.name,
               prompt_tokens: 0, completion_tokens: totalCompletionTokens,
               cached_input_tokens: cachedInputTokens,
               cost: 0,
@@ -364,7 +197,7 @@ export async function POST(request: NextRequest) {
 
         createCallLog({
           relay_key_id: relayKey.id, relay_key_name: relayKey.name,
-          model: modelName, channel_id: channel.id, channel_name: channel.name,
+          model: publicName, channel_id: channel.id, channel_name: channel.name,
           prompt_tokens, completion_tokens,
           cached_input_tokens: result.cachedInputTokens,
           cost,
@@ -402,7 +235,7 @@ export async function POST(request: NextRequest) {
     const allChannels = listChannels().filter(c => c.is_active);
     const coolingChannels = allChannels.filter(c => c.health_status === 'cooling_down');
     const healthyCount = allChannels.filter(c => c.health_status === 'healthy').length;
-    errorMsg = `无可用的渠道。共 ${allChannels.length} 个活跃渠道，其中 ${coolingChannels.length} 个处于冷却状态，${healthyCount} 个健康 — 但均未配置模型 "${modelName}"`;
+    errorMsg = `无可用的渠道。共 ${allChannels.length} 个活跃渠道，其中 ${coolingChannels.length} 个处于冷却状态，${healthyCount} 个健康 — 但均未配置模型 "${publicName}"`;
   } else if (lastError) {
     errorMsg = lastError.body || (lastError instanceof Error ? lastError.message : typeof lastError === 'string' ? lastError : '上游调用失败');
   } else {
@@ -411,7 +244,7 @@ export async function POST(request: NextRequest) {
 
   createCallLog({
     relay_key_id: relayKey.id, relay_key_name: relayKey.name,
-    model: modelName, channel_id: channel?.id || '', channel_name: channel?.name || (lastError ? 'unknown' : '无可用渠道'),
+    model: publicName, channel_id: channel?.id || '', channel_name: channel?.name || (lastError ? 'unknown' : '无可用渠道'),
     prompt_tokens: 0, completion_tokens: 0,
     cost: 0,
     status: 'fail', error_message: errorMsg,
