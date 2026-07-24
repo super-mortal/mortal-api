@@ -236,15 +236,41 @@ export async function generateExcel(
 
   ws1.mergeCells(`A2:${lastCol}2`);
   const s1 = ws1.getCell('A2');
-  s1.value = `总输入Token: ${s.totalInput.toLocaleString()}  |  总缓存输入Token: ${s.totalCached.toLocaleString()}  |  总输出Token: ${s.totalOutput.toLocaleString()}  |  总费用: ¥${s.totalCost.toFixed(4)}`;
-  s1.font = { size: 10, color: { argb: 'FF6B7280' } };
-  s1.alignment = { horizontal: 'center', vertical: 'middle' };
+  s1.value = {
+    richText: [
+      { text: '总输入Token: ', font: { size: 10, color: { argb: 'FF6B7280' } } },
+      { text: s.totalInput.toLocaleString(), font: { size: 10, color: { argb: 'FF3B82F6' } } },
+      { text: '  |  ', font: { size: 10, color: { argb: 'FF9CA3AF' } } },
+      { text: '总缓存输入Token: ', font: { size: 10, color: { argb: 'FF6B7280' } } },
+      { text: s.totalCached.toLocaleString(), font: { size: 10, color: { argb: 'FFA855F7' } } },
+      { text: '  |  ', font: { size: 10, color: { argb: 'FF9CA3AF' } } },
+      { text: '总输出Token: ', font: { size: 10, color: { argb: 'FF6B7280' } } },
+      { text: s.totalOutput.toLocaleString(), font: { size: 10, color: { argb: 'FF06B6D4' } } },
+      { text: '  |  ', font: { size: 10, color: { argb: 'FF9CA3AF' } } },
+      { text: '总费用: ', font: { size: 10, color: { argb: 'FF6B7280' } } },
+      { text: `¥${s.totalCost.toFixed(4)}`, font: { size: 10, color: { argb: 'FF10B981' }, bold: true } },
+    ],
+  };
+  s1.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
 
   ws1.mergeCells(`A3:${lastCol}3`);
   const s2 = ws1.getCell('A3');
-  s2.value = `总调用次数: ${s.total.toLocaleString()}  |  成功: ${s.succ.toLocaleString()}  |  失败: ${s.fail.toLocaleString()}  |  成功率: ${s.rate}%`;
-  s2.font = { size: 10, color: { argb: 'FF6B7280' } };
-  s2.alignment = { horizontal: 'center', vertical: 'middle' };
+  s2.value = {
+    richText: [
+      { text: '总调用次数: ', font: { size: 10, color: { argb: 'FF6B7280' } } },
+      { text: s.total.toLocaleString(), font: { size: 10, color: { argb: 'FF1F2937' } } },
+      { text: '  |  ', font: { size: 10, color: { argb: 'FF9CA3AF' } } },
+      { text: '成功: ', font: { size: 10, color: { argb: 'FF6B7280' } } },
+      { text: s.succ.toLocaleString(), font: { size: 10, color: { argb: 'FF10B981' } } },
+      { text: '  |  ', font: { size: 10, color: { argb: 'FF9CA3AF' } } },
+      { text: '失败: ', font: { size: 10, color: { argb: 'FF6B7280' } } },
+      { text: s.fail.toLocaleString(), font: { size: 10, color: { argb: 'FFEF4444' } } },
+      { text: '  |  ', font: { size: 10, color: { argb: 'FF9CA3AF' } } },
+      { text: '成功率: ', font: { size: 10, color: { argb: 'FF6B7280' } } },
+      { text: `${s.rate}%`, font: { size: 10, color: { argb: 'FF10B981' }, bold: true } },
+    ],
+  };
+  s2.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
 
   ws1.getRow(4).height = 6; // gap
 
