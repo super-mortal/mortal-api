@@ -115,6 +115,7 @@ export default function ChannelsPage() {
   const [pullEmptyDialog, setPullEmptyDialog] = useState<string | null>(null);
   const [pullFailDialog, setPullFailDialog] = useState<string | null>(null);
   const [pullErrDialog, setPullErrDialog] = useState<string | null>(null);
+  const [deletingModelId, setDeletingModelId] = useState<string | null>(null);
 
   interface PendingModelChange {
     alias?: string;
@@ -252,8 +253,19 @@ export default function ChannelsPage() {
     const models = modelsForChannel(panelEditId || '');
     const m = models.find(mm => mm.model_id === modelId);
     if (!m) return;
-    await apiFetch(`/admin/channels?id=${m.id}&type=channel-model`, { method: 'DELETE' });
-    fetchAll();
+    setDeletingModelId(modelId);
+    try {
+      const res = await apiFetch(`/admin/channels?id=${m.id}&type=channel-model`, { method: 'DELETE' });
+      if (!res.ok) {
+        setModelValidationError(`删除模型失败 (HTTP ${res.status})`);
+        return;
+      }
+      fetchAll();
+    } catch (e) {
+      setModelValidationError('删除模型失败: ' + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setDeletingModelId(null);
+    }
   };
 
   const handleModelDelete = (modelId: string) => {
@@ -727,8 +739,9 @@ export default function ChannelsPage() {
                             </span>
                             <button type="button"
                               onClick={(e) => { e.stopPropagation(); quickDeleteModel(m.model_id); }}
+                              disabled={deletingModelId === m.model_id}
                               title="删除该 model"
-                              className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                              className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                               <InlineIcon name="trash2" className="w-3.5 h-3.5" />
                             </button>
                           </span>
