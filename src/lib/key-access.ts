@@ -102,7 +102,9 @@ export function resetAccessPasswordToDefault(keyId: string): boolean {
         must_reset_password = 1
     WHERE id = ?
   `).run(enc, keyId);
-  deleteSessionsForKey(keyId);
+  if (r.changes > 0) {
+    deleteSessionsForKey(keyId);
+  }
   return r.changes > 0;
 }
 
