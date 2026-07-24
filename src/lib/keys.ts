@@ -103,3 +103,8 @@ export function getAllowedChannelIds(relayKey: RelayKey): string[] {
   if (!relayKey.allowed_channels) return [];
   return relayKey.allowed_channels.split(',').map(c => c.trim()).filter(Boolean);
 }
+
+export function resetAccessPasswordToDefaultById(id: string): boolean {
+  return (require('@/lib/key-access') as typeof import('@/lib/key-access'))
+    .resetAccessPasswordToDefault(id);
+}

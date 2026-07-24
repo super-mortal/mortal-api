@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-middleware';
-import { listRelayKeys, createRelayKey, updateRelayKey, deleteRelayKey, refreshRelayKey, getRelayKeyById } from '@/lib/keys';
+import {
+  listRelayKeys,
+  createRelayKey,
+  updateRelayKey,
+  deleteRelayKey,
+  refreshRelayKey,
+  getRelayKeyById,
+  resetAccessPasswordToDefaultById,
+} from '@/lib/keys';
 import { getDb } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
@@ -8,12 +16,10 @@ export async function GET(request: NextRequest) {
   if (err) return err;
   const { searchParams } = new URL(request.url);
 
-  // Get channels data along with keys for the frontend
   if (searchParams.get('scope') === 'full') {
     const keys = listRelayKeys();
     const db = getDb();
     const channels = db.prepare('SELECT id, name FROM channels ORDER BY name').all();
-    // 返回别名映射：model_id → alias_name（去重，优先级取第一个找到的）
     const aliases = db.prepare(`
       SELECT DISTINCT cm.model_id, ma.alias_name FROM model_aliases ma
       JOIN channel_models cm ON cm.id = ma.channel_model_id
@@ -35,7 +41,14 @@ export async function POST(request: NextRequest) {
   if (err) return err;
   try {
     const body = await request.json();
-    const key = createRelayKey(body.name || 'New Key', body.spend_limit ?? 0, body.expires_at || null, body.allowed_models || '', body.allowed_channels || '', body.is_pinned ? 1 : 0);
+    const key = createRelayKey(
+      body.name || 'New Key',
+      body.spend_limit ?? 0,
+      body.expires_at || null,
+      body.allowed_models || '',
+      body.allowed_channels || '',
+      body.is_pinned ? 1 : 0
+    );
     return NextResponse.json({ key }, { status: 201 });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
@@ -47,6 +60,14 @@ export async function PATCH(request: NextRequest) {
   if (err) return err;
   try {
     const body = await request.json();
+
+    // 分支: 重置访问密码
+    if (body.action === 'reset_access_password') {
+      if (!body.id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+      const ok = resetAccessPasswordToDefaultById(body.id);
+      return NextResponse.json({ success: ok });
+    }
+
     const updated = updateRelayKey(body.id, {
       name: body.name,
       spend_limit: body.spend_limit,
