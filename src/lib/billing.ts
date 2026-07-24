@@ -295,14 +295,10 @@ export async function generateExcel(
   // ===== Sheet 3: 按模型汇总 =====
   const ws3 = wb.addWorksheet('按模型汇总');
   const colDef3 = [
-    { header: '模型ID', key: 'model', width: 24 },
-    { header: '模型别名', key: 'model_alias', width: 20 },
-    { header: '输入单价', key: 'prompt_price', width: 14 },
-    { header: '输出单价', key: 'completion_price', width: 14 },
-    { header: '缓存单价', key: 'cached_prompt_price', width: 14 },
+    { header: '模型ID', key: 'display_id', width: 24 },
     { header: '调用次数', key: 'calls', width: 12 },
-    { header: '总Token', key: 'tokens', width: 14 },
-    { header: '总费用(元)', key: 'total_cost', width: 16 },
+    { header: '总 Tokens', key: 'tokens', width: 14 },
+    { header: '总费用', key: 'total_cost', width: 16 },
   ];
   ws3.columns = colDef3;
   colDef3.forEach((col, i) => {
@@ -310,7 +306,16 @@ export async function generateExcel(
     cell.value = col.header;
   });
   applyHeaderStyle(ws3.getRow(1));
-  model.forEach((row, i) => {
+
+  // Smart model-id display: show alias when set, otherwise the raw model id
+  const modelData = model.map(m => ({
+    display_id: m.model_alias || m.model,
+    calls: m.calls,
+    tokens: m.tokens.toLocaleString(),
+    total_cost: `¥ ${m.total_cost.toFixed(4)}`,
+  }));
+
+  modelData.forEach((row, i) => {
     const r = ws3.getRow(2 + i);
     colDef3.forEach((col, j) => {
       const cell = r.getCell(j + 1);
@@ -318,7 +323,8 @@ export async function generateExcel(
       cell.value = v !== null && v !== undefined ? v : '';
     });
   });
-  applyCenter(ws3, [...CENTER_NUM_COLS], 1, model.length + 1);
+  // Center every cell in this sheet (header + all data columns)
+  applyCenter(ws3, colDef3.map(c => c.key), 1, model.length + 1);
 
   const wbBuffer = await wb.xlsx.writeBuffer();
   return { buffer: wbBuffer as unknown as Buffer, filename: `billing-${Date.now()}.xlsx` };
