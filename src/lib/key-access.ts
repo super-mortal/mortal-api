@@ -50,13 +50,14 @@ export function setAccessPassword(name: string, pwd: string): SetResult {
   if (!isPasswordStrong(pwd)) return { ok: false, reason: 'WEAK_PASSWORD' };
   const k = getRelayKeyByName(name);
   if (!k) return { ok: false, reason: 'NOT_FOUND' };
-  if (k.access_password_enc) return { ok: false, reason: 'ALREADY_SET' };
   const enc = encryptApiKey(pwd);
-  getDb().prepare(`
+  // 原子写:只有 access_password_enc 仍为 NULL 的行才会被更新
+  const r = getDb().prepare(`
     UPDATE relay_keys
     SET access_password_enc = ?, access_password_set_at = datetime('now', '+8 hours')
-    WHERE id = ?
+    WHERE id = ? AND access_password_enc IS NULL
   `).run(enc, k.id);
+  if (r.changes === 0) return { ok: false, reason: 'ALREADY_SET' };
   return { ok: true, relayKeyId: k.id };
 }
 
