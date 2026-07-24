@@ -224,6 +224,14 @@ export default function ChannelsPage() {
     }
   };
 
+  const quickDeleteModel = async (modelId: string) => {
+    const models = modelsForChannel(panelEditId || '');
+    const m = models.find(mm => mm.model_id === modelId);
+    if (!m) return;
+    await apiFetch(`/admin/channels?id=${m.id}&type=channel-model`, { method: 'DELETE' });
+    fetchAll();
+  };
+
   const handleModelDelete = (modelId: string) => {
     setDeleteModelConfirm(modelId);
   };
@@ -676,7 +684,7 @@ export default function ChannelsPage() {
                               {pricingMap[m.model_id] ? '¥' : '未定价'}
                             </span>
                             <button type="button"
-                              onClick={(e) => { e.stopPropagation(); handleModelDelete(m.model_id); }}
+                              onClick={(e) => { e.stopPropagation(); quickDeleteModel(m.model_id); }}
                               title="删除该 model"
                               className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors">
                               <InlineIcon name="trash2" className="w-3.5 h-3.5" />
