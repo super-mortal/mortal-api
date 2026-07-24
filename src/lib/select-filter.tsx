@@ -6,7 +6,7 @@ import { InlineIcon } from './icon';
 export interface SelectOption {
   label: string;
   value: string;
-  color?: 'green' | 'red' | 'gray';
+  color?: 'green' | 'red' | 'amber' | 'gray';
 }
 
 interface SelectFilterProps {
@@ -20,6 +20,7 @@ interface SelectFilterProps {
 const colorDot: Record<string, string> = {
   green: 'bg-emerald-500',
   red: 'bg-red-400',
+  amber: 'bg-amber-400',
   gray: 'bg-gray-300',
 };
 

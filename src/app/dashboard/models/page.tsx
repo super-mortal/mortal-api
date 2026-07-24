@@ -120,11 +120,17 @@ export default function ModelsPage() {
       // 分组中至少有一个渠道匹配筛选
       if (!group.channels.some(c => c.name === filterChannel)) return false;
     }
-    if (filterStatus === '正常') {
+    if (filterStatus === 'healthy') {
       if (!group.channels.some(c => c.health === 'healthy' && c.isActive)) return false;
     }
-    if (filterStatus === '异常') {
+    if (filterStatus === 'unhealthy') {
       if (!group.channels.some(c => c.health === 'unhealthy')) return false;
+    }
+    if (filterStatus === 'cooling_down') {
+      if (!group.channels.some(c => c.health === 'cooling_down')) return false;
+    }
+    if (filterStatus === 'unknown') {
+      if (!group.channels.some(c => c.health === 'unknown')) return false;
     }
     if (filterStatus === '停用') {
       if (!group.channels.some(c => !c.isActive)) return false;
@@ -162,8 +168,10 @@ export default function ModelsPage() {
           <SelectFilter
             options={[
               { label: '全部状态', value: 'all' },
-              { label: '正常', value: '正常', color: 'green' },
-              { label: '异常', value: '异常', color: 'red' },
+              { label: '正常', value: 'healthy', color: 'green' },
+              { label: '异常', value: 'unhealthy', color: 'red' },
+              { label: '额度冷却', value: 'cooling_down', color: 'amber' },
+              { label: '未检测', value: 'unknown', color: 'gray' },
               { label: '停用', value: '停用', color: 'gray' },
             ]}
             value={filterStatus}
