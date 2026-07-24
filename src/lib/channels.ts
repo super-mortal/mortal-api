@@ -238,6 +238,7 @@ export function resolveRoute(
         cm.model_id AS upstream_model_id,
         cm.channel_id AS channel_id,
         c.health_status AS health_status,
+        c.priority AS channel_priority,
         1 AS source_priority
       FROM model_aliases ma
       JOIN channel_models cm ON cm.id = ma.channel_model_id
@@ -252,6 +253,7 @@ export function resolveRoute(
         cm.model_id AS upstream_model_id,
         cm.channel_id AS channel_id,
         c.health_status AS health_status,
+        c.priority AS channel_priority,
         2 AS source_priority
       FROM channel_models cm
       JOIN channels c ON c.id = cm.channel_id
@@ -267,7 +269,8 @@ export function resolveRoute(
         WHEN 'unknown' THEN 2
         WHEN 'cooling_down' THEN 3
         ELSE 4
-      END ASC
+      END ASC,
+      channel_priority DESC
     LIMIT 1
   `;
 
