@@ -27,7 +27,7 @@ const neededIcons = [
   'chevron-down', 'chevron-left', 'chevron-right', 'chevron-up',
   'chevrons-left', 'chevrons-right',
   'check-check', 'sparkles', 'zap', 'arrow-right', 'arrow-left',
-  'loader-circle', 'bot', 'server', 'database', 'shield', 'clock',
+  'loader-circle', 'bot', 'server', 'database', 'shield', 'shield-check', 'lock', 'clock',
   'trending-up', 'chart-line', 'chart-pie', 'chart-area', 'gauge',
   'activity', 'circle', 'circle-check', 'circle-x', 'circle-alert',
   'triangle-alert', 'info', 'toggle-left', 'toggle-right',
