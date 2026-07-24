@@ -216,6 +216,35 @@ function initSchema(db: Database.Database) {
 
     db.prepare("INSERT INTO _migrations (name) VALUES ('v5_model_pricing')").run();
   }
+
+  // Migration v6: rewrite model_pricing.model_id from upstream model_id to public_name
+  const pricingV6Migrated = db.prepare("SELECT name FROM _migrations WHERE name = 'v6_pricing_public_name'").get();
+  if (!pricingV6Migrated) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS model_pricing_backup AS SELECT * FROM model_pricing;
+      DROP TABLE model_pricing;
+      CREATE TABLE model_pricing (
+        model_id TEXT PRIMARY KEY,
+        prompt_price REAL NOT NULL DEFAULT 0,
+        completion_price REAL NOT NULL DEFAULT 0,
+        cached_prompt_price REAL NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours'))
+      );
+      INSERT INTO model_pricing (model_id, prompt_price, completion_price, cached_prompt_price, updated_at)
+      SELECT
+        COALESCE(ma.alias_name, cm.model_id) AS public_name,
+        p.prompt_price, p.completion_price, p.cached_prompt_price, p.updated_at
+      FROM model_pricing_backup p
+      JOIN channel_models cm ON cm.model_id = p.model_id
+      LEFT JOIN model_aliases ma ON ma.channel_model_id = cm.id AND ma.is_active = 1;
+      INSERT OR IGNORE INTO model_pricing (model_id, prompt_price, completion_price, cached_prompt_price, updated_at)
+      SELECT model_id, prompt_price, completion_price, cached_prompt_price, updated_at
+      FROM model_pricing_backup
+      WHERE model_id NOT IN (SELECT model_id FROM model_pricing);
+      DROP TABLE model_pricing_backup;
+      INSERT INTO _migrations (name) VALUES ('v6_pricing_public_name');
+    `);
+  }
 }
 
 export function closeDb() {
