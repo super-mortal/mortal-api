@@ -40,6 +40,13 @@ export interface ModelSummaryRow {
   total_cost: number;
 }
 
+export interface BillingSummary {
+  totalRequests: number;
+  totalTokens: number;
+  totalCost: number;
+  avgLatency: number;
+}
+
 export interface ExportQuery {
   relay_key_id: string;
   start_date: string;
@@ -127,6 +134,25 @@ export function queryModelSummary(q: ExportQuery): ModelSummaryRow[] {
   return result;
 }
 
+export function queryBillingSummary(q: ExportQuery): BillingSummary {
+  const db = getDb();
+  const params: string[] = [];
+  const wheres: string[] = [];
+  if (q.relay_key_id) { wheres.push('relay_key_id = ?'); params.push(q.relay_key_id); }
+  wheres.push('created_at >= ?'); params.push(q.start_date);
+  wheres.push('created_at <= ?'); params.push(q.end_date);
+
+  const row = db.prepare(`
+    SELECT COUNT(*) as totalRequests,
+           COALESCE(SUM(total_tokens), 0) as totalTokens,
+           COALESCE(SUM(cost), 0) as totalCost,
+           COALESCE(ROUND(AVG(latency_ms)), 0) as avgLatency
+    FROM call_logs WHERE ${wheres.join(' AND ')}
+  `).get(...params) as BillingSummary;
+
+  return row;
+}
+
 // ============================================================
 // Excel generator
 // ============================================================
@@ -170,9 +196,13 @@ function applyHeaderStyle(row: ExcelJS.Row) {
 }
 
 export async function generateExcel(
-  detail: DetailRow[], daily: DailySummaryRow[], model: ModelSummaryRow[]
+  detail: DetailRow[],
+  daily: DailySummaryRow[],
+  model: ModelSummaryRow[],
+  options?: { includeLatency?: boolean },
 ): Promise<{ buffer: Buffer; filename: string }> {
   const wb = new ExcelJS.Workbook();
+  const includeLatency = options?.includeLatency ?? true;
 
   // ===== Sheet 1: 明细 =====
   const ws1 = wb.addWorksheet('明细');
@@ -185,7 +215,7 @@ export async function generateExcel(
     { header: '输出Token', key: 'completion_tokens', width: 14 },
     { header: '总Token', key: 'total_tokens', width: 12 },
     { header: '费用(元)', key: 'cost', width: 14 },
-    { header: '延迟 (ms)', key: 'latency_ms', width: 12 },
+    ...(includeLatency ? [{ header: '延迟 (ms)', key: 'latency_ms', width: 12 }] : []),
     { header: '状态', key: 'status', width: 10 },
     { header: 'IP', key: 'ip', width: 16 },
     { header: '日志ID', key: 'id', width: 24 },

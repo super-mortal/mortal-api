@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { InlineIcon } from '@/lib/icon';
+import { Modal } from '@/lib/modal';
 import { apiFetch } from '@/lib/fetch-with-auth';
 import { SelectFilter } from '@/lib/select-filter';
 import { DatePicker } from '@/lib/date-picker';
@@ -13,6 +14,20 @@ interface ExportRecord {
   keyName: string;
   period: string;
 }
+
+interface BillingSummary {
+  totalRequests: number;
+  totalTokens: number;
+  totalCost: number;
+  avgLatency: number;
+}
+
+const EMPTY_SUMMARY: BillingSummary = {
+  totalRequests: 0,
+  totalTokens: 0,
+  totalCost: 0,
+  avgLatency: 0,
+};
 
 function todayStr(): string {
   const now = new Date();
@@ -32,8 +47,32 @@ export default function BillingPage() {
   const [startDate, setStartDate] = useState(todayStr());
   const [endDate, setEndDate] = useState(todayStr());
   const [exporting, setExporting] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [includeLatency, setIncludeLatency] = useState(true);
+  const [summary, setSummary] = useState<BillingSummary>(EMPTY_SUMMARY);
   const [history, setHistory] = useState<ExportRecord[]>([]);
   const [activePreset, setActivePreset] = useState('today');
+
+  useEffect(() => {
+    const params = new URLSearchParams({
+      start_date: `${startDate} 00:00:00`,
+      end_date: `${endDate} 23:59:59`,
+    });
+    if (selectedKeyId) params.set('relay_key_id', selectedKeyId);
+
+    let ignore = false;
+    apiFetch(`/admin/billing?${params}`).then(async res => {
+      if (ignore) return;
+      if (!res.ok) {
+        setSummary(EMPTY_SUMMARY);
+        return;
+      }
+      const data = await res.json();
+      if (!ignore) setSummary(data.summary || EMPTY_SUMMARY);
+    });
+
+    return () => { ignore = true; };
+  }, [endDate, selectedKeyId, startDate]);
 
   useEffect(() => {
     apiFetch('/admin/keys').then(res => {
@@ -92,6 +131,7 @@ export default function BillingPage() {
           relay_key_id: selectedKeyId,
           start_date: startDate + ' 00:00:00',
           end_date: endDate + ' 23:59:59',
+          includeLatency,
         }),
       });
       if (!res.ok) {
@@ -116,6 +156,7 @@ export default function BillingPage() {
         keyName,
         period: `${startDate} ~ ${endDate}`,
       });
+      setExportDialogOpen(false);
     } catch (e) {
       alert('导出失败，请重试');
     } finally {
@@ -129,6 +170,76 @@ export default function BillingPage() {
         <h1 className="text-lg sm:text-xl font-semibold text-gray-900">账单导出</h1>
         <p className="text-xs sm:text-sm text-gray-500 mt-0.5">按密钥和时间范围导出使用明细与汇总账单（Excel）</p>
       </div>
+
+      <div className="flex flex-wrap gap-2.5">
+        <div className="inline-flex items-center gap-1.5 bg-blue-50 border border-blue-200 px-2.5 py-1.5 rounded-md">
+          <span className="text-xs text-blue-500 font-medium">总请求</span>
+          <span className="text-sm text-blue-800 font-bold font-mono">{summary.totalRequests.toLocaleString()}</span>
+        </div>
+        <div className="inline-flex items-center gap-1.5 bg-purple-50 border border-purple-200 px-2.5 py-1.5 rounded-md">
+          <span className="text-xs text-purple-500 font-medium">总 Tokens</span>
+          <span className="text-sm text-purple-800 font-bold font-mono">{summary.totalTokens.toLocaleString()}</span>
+        </div>
+        <div className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 px-2.5 py-1.5 rounded-md">
+          <span className="text-xs text-emerald-500 font-medium">总费用</span>
+          <span className="text-sm text-emerald-800 font-bold font-mono">¥ {summary.totalCost.toFixed(4)}</span>
+        </div>
+        <div className="inline-flex items-center gap-1.5 bg-cyan-50 border border-cyan-200 px-2.5 py-1.5 rounded-md">
+          <span className="text-xs text-cyan-500 font-medium">平均延迟</span>
+          <span className="text-sm text-cyan-800 font-bold font-mono">{summary.avgLatency.toLocaleString()}ms</span>
+        </div>
+      </div>
+
+      <Modal
+        open={exportDialogOpen}
+        onClose={() => { if (!exporting) setExportDialogOpen(false); }}
+        title="导出账单"
+      >
+        <div className="space-y-3">
+          <p className="text-xs text-gray-500">
+            时间范围: {startDate} ~ {endDate} · 共 {summary.totalRequests.toLocaleString()} 条记录
+          </p>
+          <label className={`flex items-start gap-3 p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+            includeLatency ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 bg-white'
+          }`}>
+            <input
+              type="checkbox"
+              checked={includeLatency}
+              onChange={e => setIncludeLatency(e.target.checked)}
+              className="mt-1 accent-indigo-600"
+            />
+            <div>
+              <div className="text-sm font-semibold text-gray-900">包含延迟 (latency_ms) 列</div>
+              <div className="text-xs text-gray-500 mt-0.5">每个请求耗时，便于排查慢调用</div>
+            </div>
+          </label>
+          <label className={`flex items-start gap-3 p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+            !includeLatency ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 bg-white'
+          }`}>
+            <input
+              type="checkbox"
+              checked={!includeLatency}
+              onChange={e => { if (e.target.checked) setIncludeLatency(false); }}
+              className="mt-1 accent-indigo-600"
+            />
+            <div>
+              <div className="text-sm font-medium text-gray-700">不包含延迟列</div>
+              <div className="text-xs text-gray-500 mt-0.5">表格更精简</div>
+            </div>
+          </label>
+          <div className="flex gap-2 justify-end pt-3 border-t border-gray-100">
+            <button onClick={() => setExportDialogOpen(false)} disabled={exporting}
+              className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors">
+              取消
+            </button>
+            <button onClick={handleExport} disabled={exporting}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors">
+              {exporting && <InlineIcon name="loaderCircle" className="w-4 h-4 animate-spin" />}
+              {exporting ? '正在导出...' : '确认导出'}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 shadow-sm space-y-4">
         {/* Key filter */}
@@ -182,7 +293,7 @@ export default function BillingPage() {
 
         {/* Export button */}
         <div className="flex justify-end pt-2">
-          <button onClick={handleExport} disabled={exporting}
+          <button onClick={() => setExportDialogOpen(true)} disabled={exporting}
             className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm">
             {exporting ? (
               <InlineIcon name="loaderCircle" className="w-4 h-4 animate-spin" />

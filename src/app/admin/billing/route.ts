@@ -4,10 +4,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-middleware';
 import {
-  queryDetail, queryDailySummary, queryModelSummary,
+  queryDetail, queryDailySummary, queryModelSummary, queryBillingSummary,
   generateExcel, getRelayKeyName,
   ExportQuery,
 } from '@/lib/billing';
+
+export async function GET(request: NextRequest) {
+  const err = requireAdmin(request);
+  if (err) return err;
+
+  const { searchParams } = new URL(request.url);
+  const startDate = searchParams.get('start_date')?.replace('T', ' ');
+  const endDate = searchParams.get('end_date')?.replace('T', ' ');
+  if (!startDate || !endDate) {
+    return NextResponse.json({ error: 'start_date and end_date are required' }, { status: 400 });
+  }
+
+  const q: ExportQuery = {
+    relay_key_id: searchParams.get('relay_key_id') || '',
+    start_date: startDate,
+    end_date: endDate,
+  };
+  return NextResponse.json({ summary: queryBillingSummary(q) });
+}
 
 export async function POST(request: NextRequest) {
   const err = requireAdmin(request);
@@ -15,10 +34,11 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { relay_key_id } = body as {
+    const { relay_key_id, includeLatency } = body as {
       relay_key_id: string;
       start_date: string;
       end_date: string;
+      includeLatency?: boolean;
     };
     const startDate = body.start_date?.replace('T', ' ');
     const endDate = body.end_date?.replace('T', ' ');
@@ -44,7 +64,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '未找到数据' }, { status: 404 });
     }
 
-    const { buffer, filename } = await generateExcel(detail, daily, modelRows);
+    const { buffer, filename } = await generateExcel(detail, daily, modelRows, {
+      includeLatency: includeLatency ?? true,
+    });
     return new Response(new Uint8Array(buffer), {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
