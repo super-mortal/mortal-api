@@ -110,6 +110,7 @@ export default function ChannelsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string } | null>(null);
   const [deleteModelConfirm, setDeleteModelConfirm] = useState<string | null>(null);
   const [modelErrModal, setModelErrModal] = useState(false);
+  const [modelValidationError, setModelValidationError] = useState<string | null>(null);
   const [pricingMap, setPricingMap] = useState<Record<string, { prompt_price: number | string; completion_price: number | string; cached_prompt_price: number | string }>>({});
   const [pullEmptyDialog, setPullEmptyDialog] = useState<string | null>(null);
   const [pullFailDialog, setPullFailDialog] = useState<string | null>(null);
@@ -163,7 +164,7 @@ export default function ChannelsPage() {
     const hasPrice = p || c || ch;
     const validateDecimal = (v: string, label: string): boolean => {
       if (v === '' || v === '0') return true;
-      if (!/^\d+\.\d+$/.test(v)) { alert(`${label} 价格必须包含小数点，如 28.0`); return false; }
+      if (!/^\d+\.\d+$/.test(v)) { setModelValidationError(`${label} 价格必须包含小数点，如 28.0`); return false; }
       return true;
     };
     if (hasPrice) {
@@ -173,21 +174,21 @@ export default function ChannelsPage() {
     // Direct API commit — no longer two-step via pendingModels
     const models = modelsForChannel(panelEditId || '');
     const m = models.find(mm => mm.model_id === modelId);
-    if (!m) { alert('模型不存在'); return; }
+    if (!m) { setModelValidationError('模型不存在'); return; }
 
     try {
       // 1. Handle alias: delete old, create new
       const als = aliasesForModel(m.id);
       if (als[0]) {
         const delRes = await apiFetch(`/admin/channels?id=${als[0].id}&type=alias`, { method: 'DELETE' });
-        if (!delRes.ok) { alert('删除旧别名失败'); return; }
+        if (!delRes.ok) { setModelValidationError('删除旧别名失败'); return; }
       }
       if (alias) {
         const createRes = await apiFetch('/admin/channels', {
           method: 'POST',
           body: JSON.stringify({ _type: 'alias', alias_name: alias, channel_model_id: m.id })
         });
-        if (!createRes.ok) { alert('创建别名失败'); return; }
+        if (!createRes.ok) { setModelValidationError('创建别名失败'); return; }
       }
 
       // 2. Handle prices
@@ -214,7 +215,7 @@ export default function ChannelsPage() {
           setTimeout(() => setSyncFeedback(null), 3000);
           refreshPricingMap();
         } else {
-          alert('保存价格失败');
+          setModelValidationError('保存价格失败');
           return;
         }
       }
@@ -223,7 +224,7 @@ export default function ChannelsPage() {
       setPendingModels(prev => { const n = { ...prev }; delete n[modelId]; return n; });
       fetchAll();
     } catch (e) {
-      alert('保存失败: ' + (e instanceof Error ? e.message : String(e)));
+      setModelValidationError('保存失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -937,6 +938,15 @@ export default function ChannelsPage() {
         onConfirm={() => setModelErrModal(false)}
         title="提示"
         message="模型已存在或创建失败。"
+        confirmText="知道了"
+        variant="info"
+      />
+      <ConfirmDialog
+        open={!!modelValidationError}
+        onClose={() => setModelValidationError(null)}
+        onConfirm={() => setModelValidationError(null)}
+        title="提示"
+        message={modelValidationError || ''}
         confirmText="知道了"
         variant="info"
       />
