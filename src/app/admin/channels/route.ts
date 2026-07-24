@@ -12,12 +12,24 @@ import {
 } from '@/lib/channels';
 import { healthCheckChannel, getChatUrl } from '@/lib/proxy';
 import { listAllPricing } from '@/lib/model-pricing';
+import { getDb } from '@/lib/db';
+import { decryptApiKey } from '@/lib/crypto';
 
 export async function GET(request: NextRequest) {
   const err = requireAdmin(request);
   if (err) return err;
   const { searchParams } = new URL(request.url);
   const scope = searchParams.get('scope');
+  const targetId = searchParams.get('id');
+
+  if (scope === 'api-key' && targetId) {
+    const db = getDb();
+    const row = db.prepare('SELECT api_key FROM channels WHERE id = ?').get(targetId) as { api_key: string } | undefined;
+    if (!row) return NextResponse.json({ error: '渠道不存在' }, { status: 404 });
+    const apiKey = decryptApiKey(row.api_key);
+    console.log('[api-key-view]', { channel_id: targetId, at: new Date().toISOString() });
+    return NextResponse.json({ api_key: apiKey });
+  }
 
   const allChannels = listChannels();
   const healthSummary = getChannelHealthSummary(allChannels.map(c => c.id));
