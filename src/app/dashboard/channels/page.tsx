@@ -655,7 +655,12 @@ export default function ChannelsPage() {
                             <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${pricingMap[m.model_id] ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-amber-50 text-amber-600 border border-amber-200'}`}>
                               {pricingMap[m.model_id] ? '¥' : '未定价'}
                             </span>
-                            <InlineIcon name={isExpanded ? 'chevronUp' : 'chevronDown'} className="w-3.5 h-3.5 text-gray-400" />
+                            <button type="button"
+                              onClick={(e) => { e.stopPropagation(); handleModelDelete(m.model_id); }}
+                              title="删除该 model"
+                              className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                              <InlineIcon name="trash2" className="w-3.5 h-3.5" />
+                            </button>
                           </span>
                         </div>
 
