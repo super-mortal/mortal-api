@@ -1,8 +1,16 @@
-# Mortal API
+<p align="center">
+  <img src="./public/favicon.svg" width="48" height="48" alt="Mortal API" />
+</p>
 
-> AI 大模型 API 中转站 — 兼容 OpenAI API 格式，支持多模型路由、Key 管理、渠道管理、调用统计、账单导出
+<h1 align="center">Mortal API</h1>
 
-**GitHub**: [https://github.com/super-mortal/mortal-api](https://github.com/super-mortal/mortal-api)
+<p align="center">
+  AI 大模型 API 中转站 — 兼容 OpenAI API 格式，支持多模型路由、Key 管理、渠道管理、调用统计、账单导出
+</p>
+
+<p align="center">
+  <a href="https://supermortal.cn">Blog</a> · <a href="#快速开始">快速开始</a> · <a href="#功能特性">功能特性</a> · <a href="#api-使用">API 使用</a>
+</p>
 
 ---
 
@@ -109,12 +117,7 @@ sequenceDiagram
     Note over MW: 路径兼容处理
     MW->>CC: 转发请求
     CC->>CC: 验证 API Key
-    CC->>Channels: 解析模型 → 找渠道
-    alt auto 路由
-        Channels->>Channels: 随机选可用渠道
-    else 指定模型
-        Channels->>Channels: 查模型别名 → 确定渠道
-    end
+    CC->>Channels: 解析模型 → 查别名 → 确定渠道
     CC->>Proxy: 构造上游请求
     Proxy->>Provider: 转发（流式/非流式）
     Provider-->>Proxy: 响应
@@ -145,7 +148,7 @@ sequenceDiagram
 
 ### 代理能力
 - **OpenAI 兼容** — 完全兼容 OpenAI Chat Completions API，支持流式/非流式
-- **多模型路由** — 支持 `auto` 自动路由、指定模型、模型别名映射
+- **多模型路由** — 支持指定模型、模型别名映射，同模型多渠道 failover + 自动重试
 - **路径兼容** — 自动处理 `/api/v1/...`、`/v1/v1/...`、裸 `/chat/completions` 等误配置
 
 ### 管理后台
@@ -352,7 +355,7 @@ curl https://你的域名/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer sk-mortal-xxx" \
   -d '{
-    "model": "auto",
+    "model": "deepseek-v4-pro",
     "messages": [{"role": "user", "content": "你好"}],
     "stream": true
   }'
@@ -369,7 +372,7 @@ curl https://你的域名/v1/models \
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
-| `model` | string | 模型名（`auto` 自动路由，或指定模型/别名） |
+| `model` | string | 模型名（指定模型或别名） |
 | `messages` | array | 对话消息 |
 | `stream` | boolean | 是否流式输出 |
 | `temperature` | number | 采样温度 |
@@ -513,8 +516,6 @@ mortal-api/
 
 1. **别名映射**：用户调用 `my-model` → 映射到渠道 A 的 `deepseek-v4-pro`
 2. **直连模型**：用户调用 `deepseek-v4-pro` → 直接路由到渠道 A
-3. **自动路由**：`model: "auto"` → 随机选择一个可用渠道
-
 ### 数据存储
 
 - **SQLite** 零配置数据库，文件存储在 `data/relay.db`
@@ -556,3 +557,11 @@ mortal-api/
 ## 许可证
 
 MIT — 详见 [LICENSE](LICENSE) 文件
+
+---
+
+## 关于
+
+<p align="center">
+  <a href="https://supermortal.cn" target="_blank">supermortal.cn</a> — 个人博客 · 技术 · 思考
+</p>
