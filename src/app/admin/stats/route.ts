@@ -81,7 +81,9 @@ export async function GET(request: NextRequest) {
       COALESCE(SUM(total_tokens), 0) as tokens,
       COALESCE(SUM(completion_tokens), 0) as completion_tokens,
       COALESCE(SUM(cached_input_tokens), 0) as cached_tokens,
-      COALESCE(SUM(prompt_tokens - cached_input_tokens), 0) as uncached_tokens
+      COALESCE(SUM(prompt_tokens - cached_input_tokens), 0) as uncached_tokens,
+      COALESCE(SUM(cost), 0) as total_cost,
+      COALESCE(SUM(cost) * 1.0 / NULLIF(COUNT(*), 0), 0) as avg_cost
     FROM call_logs ${whereClause}
     GROUP BY model
     ORDER BY calls DESC

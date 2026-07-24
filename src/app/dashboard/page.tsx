@@ -18,7 +18,7 @@ interface DashboardData {
     total_cost: number;
   };
   dailyStats: { date: string; calls: number; tokens: number; completion_tokens: number; cached_tokens: number; uncached_tokens: number; cost: number }[];
-  modelStats: { model: string; calls: number; tokens: number; completion_tokens: number; cached_tokens: number; uncached_tokens: number; total_cost: number }[];
+  modelStats: { model: string; calls: number; tokens: number; completion_tokens: number; cached_tokens: number; uncached_tokens: number; total_cost: number; avg_cost: number }[];
 }
 
 interface RelayKey { id: string; name: string; key: string; }
@@ -96,15 +96,17 @@ export default function DashboardPage() {
   const successRate = data.stats.total_calls > 0
     ? ((data.stats.success_calls / data.stats.total_calls) * 100).toFixed(1) : '0';
 
-  const todayCost = data.dailyStats.length > 0
-    ? '¥' + (data.dailyStats[data.dailyStats.length - 1].cost?.toFixed(4) || '0.0000')
-    : '¥0.0000';
+  const rangeLabel = activeDate === 'today' ? '今日' : activeDate === '7d' ? '7 天' : activeDate === '30d' ? '30 天' : '全部';
+  const costCardLabel = activeDate === 'today' ? '今日消费' : '区间消费';
+  const costCardValue = activeDate === 'today'
+    ? (data.dailyStats.length > 0 ? data.dailyStats[data.dailyStats.length - 1].cost?.toFixed(4) : '0.0000')
+    : data.stats.total_cost.toFixed(4);
 
   const statCards = [
     { label: '总调用次数', value: data.stats.total_calls.toLocaleString(), sub: `成功率 ${successRate}%`, color: 'text-gray-900', icon: 'activity' },
     { label: '成功', value: data.stats.success_calls.toLocaleString(), sub: '调用', color: 'text-emerald-600', icon: 'check' },
     { label: '失败', value: data.stats.fail_calls.toLocaleString(), sub: '调用', color: data.stats.fail_calls > 0 ? 'text-red-500' : 'text-gray-900', icon: 'x' },
-    { label: '今日消费', value: todayCost, sub: '今日', color: 'text-emerald-600', icon: 'dollar-sign' },
+    { label: costCardLabel, value: '¥' + costCardValue, sub: rangeLabel, color: 'text-emerald-600', icon: 'dollar-sign' },
     { label: '输出 Tokens', value: data.stats.total_completion_tokens.toLocaleString(), sub: 'Completion', color: 'text-purple-500', icon: 'checkCheck' },
     { label: '命中缓存', value: data.stats.total_cached_input_tokens.toLocaleString(), sub: '缓存输入 Tokens', color: 'text-emerald-500', icon: 'zap' },
     { label: '未命中缓存', value: data.stats.total_uncached_input_tokens.toLocaleString(), sub: '未缓存输入 Tokens', color: 'text-amber-500', icon: 'flame' },
@@ -346,8 +348,8 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-1">按模型消费排行</h3>
-          <p className="text-xs text-gray-400 mb-4">各模型消费金额</p>
+          <h3 className="text-sm font-semibold text-gray-900 mb-1">模型平均调用成本排行</h3>
+          <p className="text-xs text-gray-400 mb-4">按总消费 ÷ 调用次数，单位 元/次</p>
           {data.modelStats.length > 0 ? (
             <div className="h-44 sm:h-48">
               <ResponsiveContainer width="100%" height="100%">
@@ -356,8 +358,8 @@ export default function DashboardPage() {
                   <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                   <YAxis type="category" dataKey="model" width={80} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                   <Tooltip contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px' }}
-                    formatter={(value: any) => [`¥${Number(value).toFixed(4)}`, '消费']} />
-                  <Bar dataKey="total_cost" fill="#6366f1" name="消费(元)" radius={[0, 4, 4, 0]} />
+                    formatter={(value: any) => [`¥${Number(value).toFixed(4)}/次`, '平均成本']} />
+                  <Bar dataKey="avg_cost" fill="#6366f1" name="消费(元)" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
