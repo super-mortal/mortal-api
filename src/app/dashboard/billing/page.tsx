@@ -171,25 +171,6 @@ export default function BillingPage() {
         <p className="text-xs sm:text-sm text-gray-500 mt-0.5">按密钥和时间范围导出使用明细与汇总账单（Excel）</p>
       </div>
 
-      <div className="flex flex-wrap gap-2.5">
-        <div className="inline-flex items-center gap-1.5 bg-blue-50 border border-blue-200 px-2.5 py-1.5 rounded-md">
-          <span className="text-xs text-blue-500 font-medium">总请求</span>
-          <span className="text-sm text-blue-800 font-bold font-mono">{summary.totalRequests.toLocaleString()}</span>
-        </div>
-        <div className="inline-flex items-center gap-1.5 bg-purple-50 border border-purple-200 px-2.5 py-1.5 rounded-md">
-          <span className="text-xs text-purple-500 font-medium">总 Tokens</span>
-          <span className="text-sm text-purple-800 font-bold font-mono">{summary.totalTokens.toLocaleString()}</span>
-        </div>
-        <div className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 px-2.5 py-1.5 rounded-md">
-          <span className="text-xs text-emerald-500 font-medium">总费用</span>
-          <span className="text-sm text-emerald-800 font-bold font-mono">¥ {summary.totalCost.toFixed(4)}</span>
-        </div>
-        <div className="inline-flex items-center gap-1.5 bg-cyan-50 border border-cyan-200 px-2.5 py-1.5 rounded-md">
-          <span className="text-xs text-cyan-500 font-medium">平均延迟</span>
-          <span className="text-sm text-cyan-800 font-bold font-mono">{summary.avgLatency.toLocaleString()}ms</span>
-        </div>
-      </div>
-
       <Modal
         open={exportDialogOpen}
         onClose={() => { if (!exporting) setExportDialogOpen(false); }}
