@@ -17,6 +17,7 @@ export interface RelayKey {
   updated_at: string;
   access_password_enc: string | null;     // NEW
   access_password_set_at: string | null;  // NEW
+  must_reset_password: number;       // NEW: 1 = 需改密, 0 = 正常
 }
 
 export interface Channel {

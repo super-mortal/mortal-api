@@ -308,6 +308,16 @@ function initSchema(db: Database.Database) {
     `);
     db.prepare("INSERT INTO _migrations (name) VALUES ('v6_key_access')").run();
   }
+
+  // Migration: must_reset_password column for admin-reset flow
+  const mrMigrated = db.prepare("SELECT name FROM _migrations WHERE name = 'v7_must_reset_password'").get();
+  if (!mrMigrated) {
+    const cols = db.prepare("PRAGMA table_info('relay_keys')").all() as { name: string }[];
+    if (!cols.find(c => c.name === 'must_reset_password')) {
+      db.exec("ALTER TABLE relay_keys ADD COLUMN must_reset_password INTEGER NOT NULL DEFAULT 0");
+    }
+    db.prepare("INSERT INTO _migrations (name) VALUES ('v7_must_reset_password')").run();
+  }
 }
 
 export function closeDb() {
