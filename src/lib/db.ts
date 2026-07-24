@@ -282,6 +282,32 @@ function initSchema(db: Database.Database) {
     }
     db.prepare("INSERT INTO _migrations (name) VALUES ('v8_latency_ms')").run();
   }
+
+  // Migration: key public stats page — access_password + sessions
+  const keyAccessMigrated = db.prepare("SELECT name FROM _migrations WHERE name = 'v6_key_access'").get();
+  if (!keyAccessMigrated) {
+    const relayKeyCols = db.prepare("PRAGMA table_info('relay_keys')").all() as { name: string }[];
+    if (!relayKeyCols.find(c => c.name === 'access_password_enc')) {
+      db.exec("ALTER TABLE relay_keys ADD COLUMN access_password_enc TEXT");
+    }
+    if (!relayKeyCols.find(c => c.name === 'access_password_set_at')) {
+      db.exec("ALTER TABLE relay_keys ADD COLUMN access_password_set_at TEXT");
+    }
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS key_access_sessions (
+        id TEXT PRIMARY KEY,
+        relay_key_id TEXT NOT NULL,
+        ip TEXT NOT NULL,
+        user_agent TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours')),
+        expires_at TEXT NOT NULL,
+        FOREIGN KEY (relay_key_id) REFERENCES relay_keys(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_kas_relay_key ON key_access_sessions(relay_key_id);
+      CREATE INDEX IF NOT EXISTS idx_kas_expires ON key_access_sessions(expires_at);
+    `);
+    db.prepare("INSERT INTO _migrations (name) VALUES ('v6_key_access')").run();
+  }
 }
 
 export function closeDb() {

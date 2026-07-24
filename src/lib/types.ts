@@ -15,6 +15,8 @@ export interface RelayKey {
   allowed_channels: string;
   created_at: string;
   updated_at: string;
+  access_password_enc: string | null;     // NEW
+  access_password_set_at: string | null;  // NEW
 }
 
 export interface Channel {
