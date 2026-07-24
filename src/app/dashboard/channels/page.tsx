@@ -110,7 +110,7 @@ export default function ChannelsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string } | null>(null);
   const [deleteModelConfirm, setDeleteModelConfirm] = useState<string | null>(null);
   const [modelErrModal, setModelErrModal] = useState(false);
-  const [pricingMap, setPricingMap] = useState<Record<string, { prompt_price: number; completion_price: number; cached_prompt_price: number }>>({});
+  const [pricingMap, setPricingMap] = useState<Record<string, { prompt_price: number | string; completion_price: number | string; cached_prompt_price: number | string }>>({});
   const [pullEmptyDialog, setPullEmptyDialog] = useState<string | null>(null);
   const [pullFailDialog, setPullFailDialog] = useState<string | null>(null);
   const [pullErrDialog, setPullErrDialog] = useState<string | null>(null);
@@ -131,6 +131,16 @@ export default function ChannelsPage() {
   const [modalForm, setModalForm] = useState({ name: '', base_url: '', api_key: '', priority: 0, notes: '' });
   const [modalEditId, setModalEditId] = useState<string | null>(null);
 
+  const refreshPricingMap = useCallback(async () => {
+    const r = await apiFetch('/admin/pricing');
+    if (r.ok) {
+      const d = await r.json();
+      const map: Record<string, any> = {};
+      d.pricing.forEach((p: any) => { map[p.model_id] = p; });
+      setPricingMap(map);
+    }
+  }, []);
+
   const fetchAll = useCallback(async () => {
     const res = await apiFetch('/admin/channels?scope=models');
     if (res.ok) { const d = await res.json(); setChannels(d.channels); setChannelModels(d.channelModels || []); setAliases(d.aliases || []); }
@@ -138,15 +148,7 @@ export default function ChannelsPage() {
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
-  useEffect(() => {
-    apiFetch('/admin/pricing').then(r => r.ok && r.json()).then(d => {
-      if (d?.pricing) {
-        const map: Record<string, any> = {};
-        d.pricing.forEach((p: any) => { map[p.model_id] = p; });
-        setPricingMap(map);
-      }
-    });
-  }, [fetchAll]);
+  useEffect(() => { refreshPricingMap(); }, [refreshPricingMap]);
 
   const modelsForChannel = (chId: string) => channelModels.filter(m => m.channel_id === chId);
   const aliasesForModel = (cmId: string) => aliases.filter(a => a.channel_model_id === cmId);
@@ -210,6 +212,7 @@ export default function ChannelsPage() {
             setSyncFeedback(`价格已保存`);
           }
           setTimeout(() => setSyncFeedback(null), 3000);
+          refreshPricingMap();
         } else {
           alert('保存价格失败');
           return;
@@ -291,6 +294,7 @@ export default function ChannelsPage() {
           }
           // 3 秒后自动清除
           setTimeout(() => setSyncFeedback(null), 3000);
+          refreshPricingMap();
         }
       }
     }
@@ -742,7 +746,8 @@ export default function ChannelsPage() {
                                   <div className="text-[10px] text-gray-400 mb-0.5">标准输入</div>
                                   <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white">
                                     <input type="text" inputMode="decimal"
-                                      defaultValue={pricingMap[m.model_id]?.prompt_price ?? ''}
+                                      value={pricingMap[m.model_id]?.prompt_price ?? ''}
+                                      onChange={e => setPricingMap(prev => ({ ...prev, [m.model_id]: { ...prev[m.model_id], prompt_price: e.target.value } }))}
                                       id={`price-prompt-${m.model_id}`}
                                       className="w-full px-2 py-1.5 text-sm font-mono text-right border-0 focus:outline-none focus:ring-0 [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:hidden [&::-webkit-outer-spin-button]:hidden" />
                                     <span className="text-[10px] text-gray-400 bg-gray-50 px-2 py-1.5 shrink-0">元/M</span>
@@ -752,7 +757,8 @@ export default function ChannelsPage() {
                                   <div className="text-[10px] text-gray-400 mb-0.5">输出</div>
                                   <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white">
                                     <input type="text" inputMode="decimal"
-                                      defaultValue={pricingMap[m.model_id]?.completion_price ?? ''}
+                                      value={pricingMap[m.model_id]?.completion_price ?? ''}
+                                      onChange={e => setPricingMap(prev => ({ ...prev, [m.model_id]: { ...prev[m.model_id], completion_price: e.target.value } }))}
                                       id={`price-completion-${m.model_id}`}
                                       className="w-full px-2 py-1.5 text-sm font-mono text-right border-0 focus:outline-none focus:ring-0 [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:hidden [&::-webkit-outer-spin-button]:hidden" />
                                     <span className="text-[10px] text-gray-400 bg-gray-50 px-2 py-1.5 shrink-0">元/M</span>
@@ -762,7 +768,8 @@ export default function ChannelsPage() {
                                   <div className="text-[10px] text-gray-400 mb-0.5">缓存输入</div>
                                   <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white">
                                     <input type="text" inputMode="decimal"
-                                      defaultValue={pricingMap[m.model_id]?.cached_prompt_price ?? ''}
+                                      value={pricingMap[m.model_id]?.cached_prompt_price ?? ''}
+                                      onChange={e => setPricingMap(prev => ({ ...prev, [m.model_id]: { ...prev[m.model_id], cached_prompt_price: e.target.value } }))}
                                       id={`price-cached-${m.model_id}`}
                                       className="w-full px-2 py-1.5 text-sm font-mono text-right border-0 focus:outline-none focus:ring-0 [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:hidden [&::-webkit-outer-spin-button]:hidden" />
                                     <span className="text-[10px] text-gray-400 bg-gray-50 px-2 py-1.5 shrink-0">元/M</span>
