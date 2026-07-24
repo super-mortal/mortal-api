@@ -32,7 +32,7 @@ const neededIcons = [
   'activity', 'circle', 'circle-check', 'circle-x', 'circle-alert',
   'triangle-alert', 'info', 'toggle-left', 'toggle-right',
   'external-link', 'menu', 'home', 'hard-drive', 'cpu', 'globe',
-  'settings', 'ellipsis-vertical', 'ban', 'funnel-x',
+  'settings', 'ellipsis-vertical', 'ban', 'funnel-x', 'helpCircle',
 ];
 
 fs.mkdirSync(ICONS_DIR, { recursive: true });
@@ -43,7 +43,8 @@ fs.mkdirSync(ICONS_DIR, { recursive: true });
   for (const name of neededIcons) {
     try {
       await new Promise((resolve, reject) => {
-        const url = `https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/${name}.svg`;
+        const sourceName = name === 'helpCircle' ? 'circle-question-mark' : name;
+        const url = `https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/${sourceName}.svg`;
         https.get(url, (res) => {
           if (res.statusCode !== 200) { console.warn(`  ⚠ ${name}: HTTP ${res.statusCode}`); resolve(false); return; }
           let data = '';

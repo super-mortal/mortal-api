@@ -464,42 +464,52 @@ export default function ChannelsPage() {
                         <div className="flex items-center gap-2 mb-0.5">
                           <h3 className="font-semibold text-gray-900 text-sm sm:text-base">{ch.name}</h3>
                           <HealthBadge health_status={ch.health_status} is_active={ch.is_active} cooldown_until={ch.cooldown_until} />
+                          <span className="group relative shrink-0">
+                            <button type="button" className="p-1 rounded text-gray-300 hover:text-gray-500">
+                              <InlineIcon name="helpCircle" className="w-3.5 h-3.5" />
+                            </button>
+                            <span className="absolute -top-2 left-6 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500 w-72">
+                              渠道顺序 = 优先级（数字小=靠前；同优先级按创建时间；0=自动）。实际请求路由只看健康度。
+                            </span>
+                          </span>
                         </div>
                         <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-gray-500 mt-0.5">
                           <code className="text-gray-400 font-mono text-[10px]">{ch.base_url}</code>
                           {ch.notes && <span>· {ch.notes}</span>}
-                          <span>· 优先 {ch.priority}</span>
+                          <span>· {ch.priority === 0 ? <span className="text-gray-400">自动</span> : <>优先 {ch.priority}</>}</span>
                           <span>· 模型: {models.length} 个</span>
                         </div>
                       </div>
-                        <div className="mt-2 md:mt-0 md:mx-3 md:flex-1 hidden md:block">
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="hidden md:block">
                           <HealthBar recent_checks={ch.recent_checks || []} uptime_pct={ch.uptime_pct ?? 100} avg_latency_ms={ch.avg_latency_ms ?? 0} />
                         </div>
-                      <div className="flex items-center gap-0.5 shrink-0">
-                        <span className="group relative">
-                          <button onClick={() => { setModalForm({ name: ch.name, base_url: ch.base_url, api_key: '••••••••••••••••••', priority: ch.priority, notes: ch.notes }); setModalEditId(ch.id); setChModal(true); }}
-                            className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all border border-transparent hover:border-blue-200"><InlineIcon name="pencil" className="w-4 h-4" /></button>
-                          <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">编辑</span>
-                        </span>
-                        {/* 连通检测 — unchanged */}
-                        <span className="group relative">
-                          <button onClick={() => openCheckModal(ch)}
-                            className="p-2 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all border border-transparent hover:border-emerald-200"><InlineIcon name="activity" className="w-4 h-4" /></button>
-                          <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">连通检测</span>
-                        </span>
-                        <span className="group relative">
-                          <button onClick={() => { setPanelForm({ name: ch.name, base_url: ch.base_url, api_key: ch.api_key ? '••••••••••••••••••' : '', priority: ch.priority, notes: ch.notes }); setPanelEditId(ch.id); setModelChannelId(ch.id); setSidePanelOpen(true); }}
-                            className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all border border-transparent hover:border-indigo-200"><InlineIcon name="chevronDown" className="w-4 h-4" /></button>
-                          <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">展开</span>
-                        </span>
-                        <Switch
-                          checked={!!ch.is_active}
-                          onChange={() => toggleChannel(ch.id, ch.is_active)}
-                        />
-                        <span className="group relative">
-                          <button onClick={() => deleteChannel(ch.id)} className="p-2 rounded-lg text-red-300 hover:text-red-500 hover:bg-red-50 transition-all border border-transparent hover:border-red-200"><InlineIcon name="trash2" className="w-4 h-4" /></button>
-                          <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">删除</span>
-                        </span>
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <span className="group relative">
+                            <button onClick={() => { setModalForm({ name: ch.name, base_url: ch.base_url, api_key: '••••••••••••••••••', priority: ch.priority, notes: ch.notes }); setModalEditId(ch.id); setChModal(true); }}
+                              className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all border border-transparent hover:border-blue-200"><InlineIcon name="pencil" className="w-4 h-4" /></button>
+                            <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">编辑</span>
+                          </span>
+                          {/* 连通检测 — unchanged */}
+                          <span className="group relative">
+                            <button onClick={() => openCheckModal(ch)}
+                              className="p-2 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all border border-transparent hover:border-emerald-200"><InlineIcon name="activity" className="w-4 h-4" /></button>
+                            <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">连通检测</span>
+                          </span>
+                          <span className="group relative">
+                            <button onClick={() => { setPanelForm({ name: ch.name, base_url: ch.base_url, api_key: ch.api_key ? '••••••••••••••••••' : '', priority: ch.priority, notes: ch.notes }); setPanelEditId(ch.id); setModelChannelId(ch.id); setSidePanelOpen(true); }}
+                              className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all border border-transparent hover:border-indigo-200"><InlineIcon name="chevronDown" className="w-4 h-4" /></button>
+                            <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">展开</span>
+                          </span>
+                          <Switch
+                            checked={!!ch.is_active}
+                            onChange={() => toggleChannel(ch.id, ch.is_active)}
+                          />
+                          <span className="group relative">
+                            <button onClick={() => deleteChannel(ch.id)} className="p-2 rounded-lg text-red-300 hover:text-red-500 hover:bg-red-50 transition-all border border-transparent hover:border-red-200"><InlineIcon name="trash2" className="w-4 h-4" /></button>
+                            <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">删除</span>
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
