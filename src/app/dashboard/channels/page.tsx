@@ -560,7 +560,22 @@ export default function ChannelsPage() {
                       className="w-full px-3 py-2.5 pr-10 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
                       placeholder={panelEditId ? '••••••••••••••••••' : 'sk-...'} />
                     {panelEditId && (
-                      <button type="button" onClick={() => setShowApiKey(!showApiKey)}
+                      <button type="button"
+                        onClick={async () => {
+                          if (showApiKey) {
+                            setShowApiKey(false);
+                            setPanelForm(f => ({ ...f, api_key: '••••••••••••••••••' }));
+                            return;
+                          }
+                          try {
+                            const res = await apiFetch(`/admin/channels?scope=api-key&id=${panelEditId}`);
+                            if (res.ok) {
+                              const d = await res.json();
+                              setPanelForm(f => ({ ...f, api_key: d.api_key }));
+                              setShowApiKey(true);
+                            }
+                          } catch (e) { console.error('拉取 api key 失败', e); }
+                        }}
                         className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded text-gray-400 hover:text-gray-600">
                         {showApiKey ? <InlineIcon name="eyeOff" className="w-4 h-4" /> : <InlineIcon name="eye" className="w-4 h-4" />}
                       </button>
