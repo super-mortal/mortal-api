@@ -4,29 +4,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-middleware';
 import {
-  queryDetail, queryDailySummary, queryModelSummary, queryBillingSummary,
+  queryDetail, queryDailySummary, queryModelSummary,
   generateExcel, getRelayKeyName,
   ExportQuery,
 } from '@/lib/billing';
-
-export async function GET(request: NextRequest) {
-  const err = requireAdmin(request);
-  if (err) return err;
-
-  const { searchParams } = new URL(request.url);
-  const startDate = searchParams.get('start_date')?.replace('T', ' ');
-  const endDate = searchParams.get('end_date')?.replace('T', ' ');
-  if (!startDate || !endDate) {
-    return NextResponse.json({ error: 'start_date and end_date are required' }, { status: 400 });
-  }
-
-  const q: ExportQuery = {
-    relay_key_id: searchParams.get('relay_key_id') || '',
-    start_date: startDate,
-    end_date: endDate,
-  };
-  return NextResponse.json({ summary: queryBillingSummary(q) });
-}
 
 export async function POST(request: NextRequest) {
   const err = requireAdmin(request);

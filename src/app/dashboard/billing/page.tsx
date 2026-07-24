@@ -15,20 +15,6 @@ interface ExportRecord {
   period: string;
 }
 
-interface BillingSummary {
-  totalRequests: number;
-  totalTokens: number;
-  totalCost: number;
-  avgLatency: number;
-}
-
-const EMPTY_SUMMARY: BillingSummary = {
-  totalRequests: 0,
-  totalTokens: 0,
-  totalCost: 0,
-  avgLatency: 0,
-};
-
 function todayStr(): string {
   const now = new Date();
   const y = now.getFullYear();
@@ -49,30 +35,8 @@ export default function BillingPage() {
   const [exporting, setExporting] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [includeLatency, setIncludeLatency] = useState(true);
-  const [summary, setSummary] = useState<BillingSummary>(EMPTY_SUMMARY);
   const [history, setHistory] = useState<ExportRecord[]>([]);
   const [activePreset, setActivePreset] = useState('today');
-
-  useEffect(() => {
-    const params = new URLSearchParams({
-      start_date: `${startDate} 00:00:00`,
-      end_date: `${endDate} 23:59:59`,
-    });
-    if (selectedKeyId) params.set('relay_key_id', selectedKeyId);
-
-    let ignore = false;
-    apiFetch(`/admin/billing?${params}`).then(async res => {
-      if (ignore) return;
-      if (!res.ok) {
-        setSummary(EMPTY_SUMMARY);
-        return;
-      }
-      const data = await res.json();
-      if (!ignore) setSummary(data.summary || EMPTY_SUMMARY);
-    });
-
-    return () => { ignore = true; };
-  }, [endDate, selectedKeyId, startDate]);
 
   useEffect(() => {
     apiFetch('/admin/keys').then(res => {
@@ -178,7 +142,7 @@ export default function BillingPage() {
       >
         <div className="space-y-3">
           <p className="text-xs text-gray-500">
-            时间范围: {startDate} ~ {endDate} · 共 {summary.totalRequests.toLocaleString()} 条记录
+            时间范围: {startDate} ~ {endDate}
           </p>
           <label className={`flex items-start gap-3 p-3 border-2 rounded-lg cursor-pointer transition-colors ${
             includeLatency ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 bg-white'
