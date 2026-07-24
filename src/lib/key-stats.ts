@@ -7,6 +7,8 @@ export interface KeySummary {
   totalCalls: number;
   promptTokens: number;
   completionTokens: number;
+  cachedInputTokens: number;
+  totalTokens: number;
   totalCost: number;
   firstCallAt: string | null;
   lastCallAt: string | null;
@@ -18,6 +20,8 @@ export function getKeySummary(relayKeyId: string): KeySummary {
       COUNT(*) AS totalCalls,
       COALESCE(SUM(prompt_tokens), 0) AS promptTokens,
       COALESCE(SUM(completion_tokens), 0) AS completionTokens,
+      COALESCE(SUM(COALESCE(cached_input_tokens, 0)), 0) AS cachedInputTokens,
+      COALESCE(SUM(total_tokens), 0) AS totalTokens,
       COALESCE(SUM(COALESCE(cost, 0)), 0) AS totalCost,
       MIN(created_at) AS firstCallAt,
       MAX(created_at) AS lastCallAt
