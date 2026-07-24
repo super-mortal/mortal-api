@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
 import {
-  getRelayKeyPasswordStatus,
+  getKeyAccessState,
   getSessionById,
 } from '@/lib/key-access';
 import {
@@ -12,6 +12,7 @@ import {
 import { getRelayKeyById } from '@/lib/keys';
 import SetupForm from './setup-form';
 import LoginForm from './login-form';
+import ChangePasswordForm from './change-password-form';
 import StatsView from './stats-view';
 
 export default async function KeyPublicPage({
@@ -25,8 +26,8 @@ export default async function KeyPublicPage({
   const { days: daysStr } = await searchParams;
   const days = daysStr === '7' ? 7 : 30;
 
-  const status = getRelayKeyPasswordStatus(name);
-  if (!status) notFound();
+  const state = getKeyAccessState(name);
+  if (!state) notFound();
 
   const cookieStore = await cookies();
   const sessionId = cookieStore.get('mps')?.value;
@@ -53,6 +54,7 @@ export default async function KeyPublicPage({
     }
   }
 
-  if (!status.hasPassword) return <SetupForm keyName={name} />;
+  if (!state.hasPassword) return <SetupForm keyName={name} />;
+  if (state.mustReset) return <ChangePasswordForm keyName={name} />;
   return <LoginForm keyName={name} />;
 }
