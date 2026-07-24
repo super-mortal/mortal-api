@@ -17,47 +17,69 @@ export function isPasswordStrong(pwd: string): boolean {
 }
 
 export function getRelayKeyByName(name: string) {
-  return getDb().prepare('SELECT * FROM relay_keys WHERE name = ?').get(name) as
+  return getDb().prepare('SELECT id, name, is_active, access_password_enc, access_password_set_at, must_reset_password FROM relay_keys WHERE name = ?').get(name) as
     | {
         id: string;
         name: string;
         is_active: number;
         access_password_enc: string | null;
         access_password_set_at: string | null;
+        must_reset_password: number;
       }
     | undefined;
 }
 
-export function getRelayKeyPasswordStatus(name: string): {
+export interface KeyAccessState {
   exists: boolean;
   isActive: boolean;
   hasPassword: boolean;
-} | null {
+  mustReset: boolean;
+}
+
+export function getKeyAccessState(name: string): KeyAccessState | null {
   const k = getRelayKeyByName(name);
   if (!k) return null;
   return {
     exists: true,
     isActive: k.is_active === 1,
     hasPassword: !!k.access_password_enc,
+    mustReset: k.must_reset_password === 1,
   };
+}
+
+/** @deprecated use getKeyAccessState */
+export function getRelayKeyPasswordStatus(name: string): KeyAccessState | null {
+  return getKeyAccessState(name);
 }
 
 export type SetResult =
   | { ok: true; relayKeyId: string }
-  | { ok: false; reason: 'NOT_FOUND' | 'ALREADY_SET' | 'WEAK_PASSWORD' };
+  | {
+      ok: false;
+      reason:
+        | 'NOT_FOUND'
+        | 'ALREADY_SET'
+        | 'WEAK_PASSWORD'
+        | 'PASSWORD_ALREADY_SET_AND_NOT_RESET';
+    };
 
 export function setAccessPassword(name: string, pwd: string): SetResult {
   if (!isPasswordStrong(pwd)) return { ok: false, reason: 'WEAK_PASSWORD' };
   const k = getRelayKeyByName(name);
   if (!k) return { ok: false, reason: 'NOT_FOUND' };
   const enc = encryptApiKey(pwd);
-  // 原子写:只有 access_password_enc 仍为 NULL 的行才会被更新
+  // 原子写:首次设密 (NULL) 或 改密 (must_reset=1) 都接受;否则拒绝
   const r = getDb().prepare(`
     UPDATE relay_keys
-    SET access_password_enc = ?, access_password_set_at = datetime('now', '+8 hours')
-    WHERE id = ? AND access_password_enc IS NULL
+    SET access_password_enc = ?,
+        access_password_set_at = datetime('now', '+8 hours'),
+        must_reset_password = 0
+    WHERE id = ?
+      AND (access_password_enc IS NULL OR must_reset_password = 1)
   `).run(enc, k.id);
-  if (r.changes === 0) return { ok: false, reason: 'ALREADY_SET' };
+  if (r.changes === 0) {
+    return { ok: false, reason: 'PASSWORD_ALREADY_SET_AND_NOT_RESET' };
+  }
   return { ok: true, relayKeyId: k.id };
 }
 
@@ -75,7 +97,9 @@ export function resetAccessPasswordToDefault(keyId: string): boolean {
   const enc = encryptApiKey(DEFAULT_ACCESS_PASSWORD);
   const r = getDb().prepare(`
     UPDATE relay_keys
-    SET access_password_enc = ?, access_password_set_at = datetime('now', '+8 hours')
+    SET access_password_enc = ?,
+        access_password_set_at = datetime('now', '+8 hours'),
+        must_reset_password = 1
     WHERE id = ?
   `).run(enc, keyId);
   deleteSessionsForKey(keyId);
