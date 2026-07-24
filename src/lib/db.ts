@@ -230,7 +230,7 @@ function initSchema(db: Database.Database) {
         cached_prompt_price REAL NOT NULL DEFAULT 0,
         updated_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours'))
       );
-      INSERT INTO model_pricing (model_id, prompt_price, completion_price, cached_prompt_price, updated_at)
+      INSERT OR IGNORE INTO model_pricing (model_id, prompt_price, completion_price, cached_prompt_price, updated_at)
       SELECT
         COALESCE(ma.alias_name, cm.model_id) AS public_name,
         p.prompt_price, p.completion_price, p.cached_prompt_price, p.updated_at
