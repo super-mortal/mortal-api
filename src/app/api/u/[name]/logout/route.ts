@@ -9,6 +9,6 @@ export async function POST(
   const cookie = request.cookies.get('mps');
   if (cookie?.value) deleteSession(cookie.value);
   const res = NextResponse.json({ success: true });
-  res.cookies.set('mps', '', { path: `/u/${name}`, maxAge: 0 });
+  res.cookies.set('mps', '', { path: '/', maxAge: 0 });
   return res;
 }

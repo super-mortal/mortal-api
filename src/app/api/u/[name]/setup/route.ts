@@ -40,7 +40,7 @@ export async function POST(
   res.cookies.set('mps', session.id, {
     httpOnly: true,
     sameSite: 'lax',
-    path: `/u/${name}`,
+    path: '/',
     maxAge: 30 * 24 * 3600,
   });
   return res;
