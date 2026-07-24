@@ -99,7 +99,7 @@ export default function KeysPage() {
       const alias = aliasByModelId[m.model_id];
       options.push({
         label: alias ? `${m.model_id} (${alias})` : m.model_id,
-        value: m.model_id,
+        value: alias || m.model_id,  // 改：存 public_name
       });
     });
     return options.sort((a, b) => a.label.localeCompare(b.label));

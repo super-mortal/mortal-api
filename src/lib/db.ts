@@ -247,6 +247,32 @@ function initSchema(db: Database.Database) {
       INSERT INTO _migrations (name) VALUES ('v6_pricing_public_name');
     `);
   }
+
+  // Migration v7: rewrite relay_keys.allowed_models from upstream model_id to public_name
+  const allowedModelsV7Migrated = db.prepare("SELECT name FROM _migrations WHERE name = 'v7_allowed_models_public_name'").get();
+  if (!allowedModelsV7Migrated) {
+    // For each comma-separated value in allowed_models:
+    //   - if it's an upstream model_id with an active alias → rewrite to alias
+    //   - else → leave unchanged
+    // Process row-by-row using a small Node-side loop (SQLite has no array_split natively)
+    const rows = db.prepare(`SELECT id, allowed_models FROM relay_keys WHERE allowed_models != ''`).all() as Array<{ id: string; allowed_models: string }>;
+    const updateStmt = db.prepare(`UPDATE relay_keys SET allowed_models = ?, updated_at = datetime('now', '+8 hours') WHERE id = ?`);
+    const aliasLookup = db.prepare(`
+      SELECT DISTINCT cm.model_id, ma.alias_name
+      FROM model_aliases ma
+      JOIN channel_models cm ON cm.id = ma.channel_model_id
+      WHERE ma.is_active = 1
+    `).all() as Array<{ model_id: string; alias_name: string }>;
+    const aliasMap = new Map(aliasLookup.map(r => [r.model_id, r.alias_name]));
+
+    for (const row of rows) {
+      const tokens = row.allowed_models.split(',').map(t => t.trim()).filter(Boolean);
+      const rewritten = tokens.map(t => aliasMap.get(t) || t);
+      const joined = rewritten.join(',');
+      if (joined !== row.allowed_models) updateStmt.run(joined, row.id);
+    }
+    db.prepare(`INSERT INTO _migrations (name) VALUES ('v7_allowed_models_public_name')`).run();
+  }
 }
 
 export function closeDb() {
