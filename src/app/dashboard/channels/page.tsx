@@ -148,7 +148,24 @@ export default function ChannelsPage() {
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
-  useEffect(() => { refreshPricingMap(); }, [refreshPricingMap]);
+  useEffect(() => {
+    let cancelled = false;
+    const loadPricing = async () => {
+      try {
+        const r = await apiFetch('/admin/pricing');
+        if (!r.ok) return;
+        const d = await r.json();
+        if (cancelled) return;
+        const map: Record<string, any> = {};
+        d.pricing.forEach((p: any) => { map[p.model_id] = p; });
+        setPricingMap(map);
+      } catch (e) {
+        if (!cancelled) console.error('加载价格失败', e);
+      }
+    };
+    loadPricing();
+    return () => { cancelled = true; };
+  }, []);
 
   const modelsForChannel = (chId: string) => channelModels.filter(m => m.channel_id === chId);
   const aliasesForModel = (cmId: string) => aliases.filter(a => a.channel_model_id === cmId);
