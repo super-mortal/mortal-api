@@ -40,6 +40,10 @@ export async function POST(
   const isFirstSetup = !k.access_password_enc;
   const providedCurrent = typeof currentPassword === 'string' && currentPassword.length > 0;
 
+  if (!isFirstSetup && k.must_reset_password !== 1) {
+    return NextResponse.json({ error: '该 Key 当前无需改密' }, { status: 409 });
+  }
+
   // 3. 首次设密 vs 改密路径分流
   if (isFirstSetup) {
     if (providedCurrent) {
