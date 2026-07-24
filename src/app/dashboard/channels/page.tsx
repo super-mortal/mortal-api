@@ -491,11 +491,11 @@ export default function ChannelsPage() {
                       <div className="hidden md:flex items-center gap-3 absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2">
                         <HealthBadge health_status={ch.health_status} is_active={ch.is_active} cooldown_until={ch.cooldown_until} />
                         <div className="flex gap-[2px]">
-                          {(ch.recent_checks || []).slice(0, 24).concat(Array(Math.max(0, 24 - (ch.recent_checks || []).length)).fill({ ok: 1 })).slice(0, 24).map((c, i) => (
+                          {[...(ch.recent_checks || []).slice(-24), ...Array.from({ length: Math.max(0, 24 - (ch.recent_checks || []).length) }, () => ({ ok: null, kind: null }))].slice(0, 24).map((c, i) => (
                             <span
                               key={i}
                               className="inline-block w-[4px] h-[16px] rounded-[1px]"
-                              style={{ background: c.ok === 1 ? '#10b981' : c.ok === 0 ? '#ef4444' : '#fbbf24' }}
+                              style={{ background: c.ok === 1 ? '#10b981' : c.ok === 0 && c.kind === 'quota' ? '#fbbf24' : c.ok === 0 ? '#ef4444' : '#9ca3af' }}
                             />
                           ))}
                         </div>
