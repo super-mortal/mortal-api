@@ -273,6 +273,15 @@ function initSchema(db: Database.Database) {
     }
     db.prepare(`INSERT INTO _migrations (name) VALUES ('v7_allowed_models_public_name')`).run();
   }
+
+  // Migration v8: add latency_ms column to call_logs
+  const v8Migrated = db.prepare("SELECT name FROM _migrations WHERE name = 'v8_latency_ms'").get();
+  if (!v8Migrated) {
+    if (!cols.find(c => c.name === 'latency_ms')) {
+      db.exec("ALTER TABLE call_logs ADD COLUMN latency_ms INTEGER NOT NULL DEFAULT 0");
+    }
+    db.prepare("INSERT INTO _migrations (name) VALUES ('v8_latency_ms')").run();
+  }
 }
 
 export function closeDb() {
