@@ -105,6 +105,7 @@ export default function ChannelsPage() {
   const [newModelId, setNewModelId] = useState('');
   const [showAddModel, setShowAddModel] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [modalShowApiKey, setModalShowApiKey] = useState(false);
 
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string } | null>(null);
   const [deleteModelConfirm, setDeleteModelConfirm] = useState<string | null>(null);
@@ -295,7 +296,7 @@ export default function ChannelsPage() {
   const saveModalChannel = async () => {
     const isEdit = !!modalEditId;
     const body: Record<string, any> = isEdit ? { id: modalEditId, ...modalForm } : modalForm;
-    if (isEdit && !body.api_key) delete body.api_key;
+    if (isEdit && (!body.api_key || body.api_key === '••••••••••••••••••')) delete body.api_key;
     const res = await apiFetch('/admin/channels', { method: isEdit ? 'PATCH' : 'POST', body: JSON.stringify(body) });
     if (res.ok) { setChModal(false); fetchAll(); }
   };
@@ -476,7 +477,7 @@ export default function ChannelsPage() {
                         </div>
                       <div className="flex items-center gap-0.5 shrink-0">
                         <span className="group relative">
-                          <button onClick={() => { setModalForm({ name: ch.name, base_url: ch.base_url, api_key: '', priority: ch.priority, notes: ch.notes }); setModalEditId(ch.id); setChModal(true); }}
+                          <button onClick={() => { setModalForm({ name: ch.name, base_url: ch.base_url, api_key: '••••••••••••••••••', priority: ch.priority, notes: ch.notes }); setModalEditId(ch.id); setChModal(true); }}
                             className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all border border-transparent hover:border-blue-200"><InlineIcon name="pencil" className="w-4 h-4" /></button>
                           <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none z-50 delay-500">编辑</span>
                         </span>
@@ -819,7 +820,7 @@ export default function ChannelsPage() {
       )}
 
       {/* Channel Create/Edit Modal */}
-      <Modal open={chModal} onClose={() => { setChModal(false); setModalForm({ name: '', base_url: '', api_key: '', priority: 0, notes: '' }); setModalEditId(null); }} title={modalEditId ? '编辑渠道' : '新建渠道'}>
+      <Modal open={chModal} onClose={() => { setChModal(false); setModalForm({ name: '', base_url: '', api_key: '', priority: 0, notes: '' }); setModalEditId(null); setModalShowApiKey(false); }} title={modalEditId ? '编辑渠道' : '新建渠道'}>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -840,8 +841,33 @@ export default function ChannelsPage() {
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">API Key <span className="text-gray-400">（加密存储）</span></label>
-            <input type="password" value={modalForm.api_key} onChange={e => setModalForm({...modalForm, api_key: e.target.value})}
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono" placeholder={modalEditId ? '留空保持不变' : 'sk-...'} />
+            <div className="relative">
+              <input type={modalShowApiKey ? 'text' : 'password'} value={modalForm.api_key}
+                onChange={e => setModalForm({...modalForm, api_key: e.target.value})}
+                className="w-full px-3 py-2.5 pr-10 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
+                placeholder={modalEditId ? '••••••••••••••••••' : 'sk-...'} />
+              {modalEditId && (
+                <button type="button"
+                  onClick={async () => {
+                    if (modalShowApiKey) {
+                      setModalShowApiKey(false);
+                      setModalForm(f => ({ ...f, api_key: '••••••••••••••••••' }));
+                      return;
+                    }
+                    try {
+                      const res = await apiFetch(`/admin/channels?scope=api-key&id=${modalEditId}`);
+                      if (res.ok) {
+                        const d = await res.json();
+                        setModalForm(f => ({ ...f, api_key: d.api_key }));
+                        setModalShowApiKey(true);
+                      }
+                    } catch (e) { console.error('拉取 api key 失败', e); }
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded text-gray-400 hover:text-gray-600">
+                  {modalShowApiKey ? <InlineIcon name="eyeOff" className="w-4 h-4" /> : <InlineIcon name="eye" className="w-4 h-4" />}
+                </button>
+              )}
+            </div>
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">备注</label>
