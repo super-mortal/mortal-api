@@ -15,7 +15,7 @@
   - Billing row 3 colors: 总调用次数 `#1F2937` neutral dark · 成功 `#10B981` green · 失败 `#EF4444` red · 成功率 `#10B981` green + bold.
   - All labels and the `|` separator use gray: labels `#6B7280`, separator `#9CA3AF`.
   - HealthBar layout: 12 + 12 with `w-px h-4 bg-gray-300` vertical divider between the two halves.
-- **Dashboard billing page 4 summary badges are deleted entirely** (the cards above the 3-tab nav). The 3 tabs (`明细` / `按天汇总` / `按模型汇总`) and the export button must continue to work.
+- **Dashboard billing page 4 summary badges are deleted entirely** (the cards above the filter / export button card). The filter card and the export Modal must continue to work.
 - **Tailwind utility classes only for new code.** Existing inline-style colors inside ExcelJS cell.font objects stay (those are server-side string literals).
 - **HealthBar dot colors stay**: success `#10B981`, quota-cooling `#FBBF24`, failure `#EF4444`, no-data `#9CA3AF`. Dot order stays oldest-left → newest-right.
 - **HealthBar 12+12 change is desktop-only** (inside the `hidden md:flex` block). Mobile compact row at line ~551 stays as-is.
@@ -139,17 +139,17 @@ Expected commit on `main`. No push yet.
 
 **Interfaces:**
 - Consumes: existing page state and props — unchanged.
-- Produces: same exported `default function BillingPage()` — unchanged. Internal: the 4 summary cards JSX block and any now-unused state/imports are removed. Tabs (`明细` / `按天汇总` / `按模型汇总`) and the export button still work.
+- Produces: same exported `default function BillingPage()` — unchanged. Internal: the 4 summary cards JSX block and any now-unused state/imports are removed. Filter card and export Modal still work.
 
 **Removal scope:**
-- The 4 color-coded summary cards rendered above the 3-tab nav (总请求 / 总 Tokens / 总费用 / 平均延迟).
+- The 4 color-coded summary cards rendered above the filter card (总请求 / 总 Tokens / 总费用 / 平均延迟).
 - Any `summary` state, `useEffect`/`useCallback` that fetches it, and the `BillingSummary` import if it becomes unused.
 - The `queryBillingSummary` function in `src/lib/billing.ts` is **NOT removed** — it's still imported by `src/app/admin/billing/route.ts`. Check before deleting any imports.
 
 - [ ] **Step 1: Locate the 4 summary cards and their feeding state**
 
 Read `src/app/dashboard/billing/page.tsx` top-to-bottom. Identify:
-1. The 4 cards' JSX block (rendered above the tab nav).
+1. The 4 cards' JSX block (rendered above the filter / export button card).
 2. Any `summary` state (`useState<BillingSummary | null>` or similar).
 3. Any `fetchSummary` / `useEffect(() => { fetchSummary(); }, [...])` block.
 4. Any imports that become unused after removal (`BillingSummary` type, `queryBillingSummary` if it's only used for this card).
@@ -163,12 +163,13 @@ If the only call site is `billing/page.tsx`, ask the user before deleting the fu
 
 - [ ] **Step 3: Delete the 4 summary cards JSX block**
 
-Remove the entire JSX block rendering the 4 cards (typically a `<div>` with grid layout wrapping 4 card divs). Keep the 3-tab nav (`明细` / `按天汇总` / `按模型汇总`) intact immediately below where the cards were.
+Remove the entire JSX block rendering the 4 cards (typically a `<div>` with grid layout wrapping 4 card divs). Keep the filter card and export Modal intact immediately below where the cards were.
 
 Before-and-after sanity check: open the file in your editor and confirm the page still has:
-- Page header (title + export button)
-- Tab nav (3 tabs)
-- Conditional content per active tab (`明细` / `按天汇总` / `按模型汇总` tables)
+- Page header (title)
+- Export Modal (opened by the "导出账单" button)
+- Filter card (密钥筛选, 时间范围 preset buttons, 自定义 date pickers, 导出按钮)
+- History card (conditional on `history.length > 0`)
 
 - [ ] **Step 4: Delete now-unused state and effects**
 
@@ -297,12 +298,74 @@ Expected commit on `main`. No push yet.
 
 ---
 
+### Task 4 (cleanup, post-review): Remove Dead Summary Code Path
+
+**Files:**
+- Modify: `src/app/dashboard/billing/page.tsx`
+- Modify: `src/app/admin/billing/route.ts`
+- Modify: `src/lib/billing.ts`
+
+**Why:** After Task 2 removed the 4 dashboard summary cards, the only remaining consumer of `queryBillingSummary` is the dashboard's hidden Modal text "共 N 条记录". The backend `GET /admin/billing` route was the only other call site. Whole-branch review flagged this as dead code.
+
+**Interfaces:**
+- Consumes: existing `BillingPage` component, existing `POST /admin/billing` handler — unchanged.
+- Produces: same module signatures. Internal: `BillingSummary` interface + `EMPTY_SUMMARY` + `summary` state + the `useEffect` that fetches `/admin/billing` are removed from the frontend page; the Modal text reverts to plain `时间范围: {startDate} ~ {endDate}` (no count); the backend `GET /admin/billing` handler and its import of `queryBillingSummary` are removed; `queryBillingSummary` and the `BillingSummary` interface are removed from `src/lib/billing.ts`.
+
+- [ ] **Step 1: Delete from `src/app/dashboard/billing/page.tsx`**
+
+Remove (in this order):
+1. `interface BillingSummary { ... }`
+2. `const EMPTY_SUMMARY: BillingSummary = { ... };`
+3. `const [summary, setSummary] = useState<BillingSummary>(EMPTY_SUMMARY);`
+4. The `useEffect` that fetches `/admin/billing` and calls `setSummary(...)` (the one with `[endDate, selectedKeyId, startDate]` deps).
+5. Modal text change: `<p>时间范围: {startDate} ~ {endDate} · 共 {summary.totalRequests.toLocaleString()} 条记录</p>` → `<p>时间范围: {startDate} ~ {endDate}</p>`.
+
+React imports (`useEffect`, `useState`, `useCallback`) all stay — still used elsewhere.
+
+- [ ] **Step 2: Delete from `src/app/admin/billing/route.ts`**
+
+1. Remove `queryBillingSummary` from the `import { ... } from '@/lib/billing'` statement.
+2. Delete the entire `export async function GET(request: NextRequest) { ... }` handler.
+
+The `POST` handler is untouched.
+
+- [ ] **Step 3: Delete from `src/lib/billing.ts`**
+
+1. Delete `interface BillingSummary { ... }`.
+2. Delete `export function queryBillingSummary(q: ExportQuery): BillingSummary { ... }`.
+
+All other exports (`ExportQuery`, `DetailRow`, `DailySummaryRow`, `ModelSummaryRow`, `getRelayKeyName`, `queryDetail`, `queryDailySummary`, `queryModelSummary`, `computeSummary`, `applyCenter`, `applyHeaderStyle`, `generateExcel`) are untouched.
+
+- [ ] **Step 4: Verify**
+
+Run: `npx tsc --noEmit`
+Expected: exit 0, no output.
+
+Run: `grep -rn "queryBillingSummary\|BillingSummary\|EMPTY_SUMMARY" D:/project/mortal-api/src`
+Expected: no matches.
+
+Run: `grep -n "summary" D:/project/mortal-api/src/app/dashboard/billing/page.tsx`
+Expected: no matches.
+
+- [ ] **Step 5: Commit**
+
+```bash
+cd D:/project/mortal-api
+git add src/app/dashboard/billing/page.tsx src/app/admin/billing/route.ts src/lib/billing.ts
+git commit -m "refactor(billing): remove dead summary state + GET handler + queryBillingSummary"
+```
+
+Expected commit on `main`. No push yet. (Final push happens once all tasks + spec-doc fix land together.)
+
+---
+
 ## Self-Review
 
 1. **Spec coverage:**
    - Feature 1 (color summary rows) → Task 1 ✓
    - Feature 1b (delete 4 dashboard badges) → Task 2 ✓
    - Feature 2 (HealthBar 12+12) → Task 3 ✓
+   - Cleanup (remove dead summary path) → Task 4 ✓ (added post-review)
    - All 9 color tokens in spec appear in Task 1's run definitions ✓
    - Divider class `w-px h-4 bg-gray-300` matches spec exactly ✓
 
@@ -315,7 +378,7 @@ Expected commit on `main`. No push yet.
 3. **Type consistency:**
    - `computeSummary(detail)` return shape — used only internally, unchanged
    - `generateExcel(detail, daily, model, options?)` signature — unchanged across Task 1
-   - `BillingSummary` type — only deleted from billing/page.tsx in Task 2, not from billing.ts (no in-place edits to types)
+   - `BillingSummary` type — deleted everywhere (Task 2 frontend, Task 4 backend + library) consistently
    - HealthBar JSX props (`health_status`, `is_active`, `cooldown_until`) — unchanged
 
 No issues found; plan is ready.

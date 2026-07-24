@@ -15,7 +15,7 @@
 ## Global Constraints
 
 - **Visual companion decisions are binding**: both solutions (color palette = "dashboard 4-color + red/green" for quality; HealthBar layout = 12 + 12 with 1px divider) were chosen by the user in the brainstorming session on 2026-07-24 and are not open for reinterpretation.
-- **Dashboard billing page 4-color summary badges are removed entirely** — they will not move to the export, only the Excel file's existing 2 summary rows gain color. The badges currently shown above the 3-tab nav must be deleted from the page.
+- **Dashboard billing page 4-color summary badges are removed entirely** — they will not move to the export, only the Excel file's existing 2 summary rows gain color. The badges currently shown above the export control card must be deleted from the page.
 - **Existing color palette stays as-is**: `#3B82F6` blue, `#A855F7` purple, `#06B6D4` cyan, `#10B981` green, `#EF4444`/`#DC2626` red, `#047857` darker green for emphasis, `#6B7280` neutral gray for labels and pipes.
 - **Tailwind utility classes only** — no inline styles for new code; existing inline-style colors stay (they are inside ExcelJS strings which are unaffected).
 - **HealthBar colors stay**: success `#10B981`, quota-cooling `#FBBF24`, failure `#EF4444`, no-data `#9CA3AF`.
@@ -71,7 +71,7 @@ s1.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
 
 ### Dashboard Billing Page — Remove the 4 Summary Badges
 
-`src/app/dashboard/billing/page.tsx` currently renders 4 color-coded summary cards above the 3-tab nav (总额 / 总Tokens / 总费用 / 平均延迟). These are the cards referenced in the brainstorming session as "总请求/总Tokens/总费用/平均延迟" — and were confirmed to be removed in this change.
+`src/app/dashboard/billing/page.tsx` currently renders 4 color-coded summary cards above the filter card (总额 / 总Tokens / 总费用 / 平均延迟). These are the cards referenced in the brainstorming session as "总请求/总Tokens/总费用/平均延迟" — and were confirmed to be removed in this change.
 
 **Action:** delete the JSX block rendering those 4 cards (and the `summary` state / `queryBillingSummary` call that fed them, if they're now unused). The page must still render the 3 tabs (`明细` / `按天汇总` / `按模型汇总`) and the export dialog button.
 
