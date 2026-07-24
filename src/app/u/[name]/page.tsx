@@ -36,7 +36,7 @@ export default async function KeyPublicPage({
     const sess = getSessionById(sessionId);
     if (sess && new Date(sess.expires_at.replace(' ', 'T') + 'Z').getTime() > Date.now()) {
       const key = getRelayKeyById(sess.relay_key_id);
-      if (key && key.name === name) {
+      if (key && key.name === name && !state.mustReset) {
         const summary = getKeySummary(key.id);
         const trend = getKeyDailyTrend(key.id, days);
         const recent = getKeyRecentLogs(key.id, 50);
