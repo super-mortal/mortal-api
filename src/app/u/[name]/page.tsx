@@ -24,7 +24,7 @@ export default async function KeyPublicPage({
 }) {
   const { name } = await params;
   const { days: daysStr } = await searchParams;
-  const days = daysStr === '7' ? 7 : 30;
+  const days = daysStr === '30' ? 30 : daysStr === '1' ? 1 : 7;
 
   const state = getKeyAccessState(name);
   if (!state) notFound();
