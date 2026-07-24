@@ -1,5 +1,7 @@
 // ============================================================
 // Model Pricing — CRUD + Cost Calculation
+// NOTE: model_id column's SEMANTIC is now "public_name" (alias if set, else upstream model_id)
+// See db.ts v6 migration.
 // ============================================================
 import { getDb } from './db';
 import { ModelPricing } from './types';
@@ -33,8 +35,9 @@ export function upsertModelPricing(data: {
   return getModelPricing(data.model_id)!;
 }
 
+/** Calculate cost for a request. `modelId` must be the public_name (alias if set, else upstream id). */
 export function calculateCost(
-  modelId: string,
+  modelId: string,  // public_name
   promptTokens: number,
   completionTokens: number,
   cachedInputTokens: number
